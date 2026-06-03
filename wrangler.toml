@@ -5,11 +5,6 @@ main = "src/worker.js"
 [assets]
 directory = "./public"
 
-# To enable calendar blocking for retreats, create a KV namespace:
-# 1. Go to Cloudflare Dashboard → Workers & Pages → KV
-# 2. Create namespace "BOOKINGS" and copy the ID below
-# 3. Set an admin password: wrangler secret put ADMIN_SECRET
-#
-# [[kv_namespaces]]
-# binding = "BOOKINGS"
-# id = "YOUR_KV_NAMESPACE_ID_HERE"
+[[kv_namespaces]]
+binding = "BOOKINGS"
+id = "8d5879ddbfb64e4ca94643fa844645fd"

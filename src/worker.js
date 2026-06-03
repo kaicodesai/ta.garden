@@ -44,6 +44,8 @@ export default {
     if (p === '/api/admin/properties'       && m === 'GET')   return adminListProperties(request, env, cors);
     if (p === '/api/admin/property'         && m === 'POST')  return adminSaveProperty(request, env, cors);
     if (p === '/api/admin/property'         && m === 'DELETE')return adminDeleteProperty(request, env, cors);
+    if (p === '/api/admin/notify'          && m === 'POST')  return adminNotify(request, env, cors);
+    if (p === '/api/admin/note'            && m === 'POST')  return adminSaveNote(request, env, cors);
     if (p === '/api/admin/block'            && m === 'POST')  return adminBlock(request, env, cors);
     if (p === '/api/admin/unblock'          && m === 'POST')  return adminUnblock(request, env, cors);
     if (p === '/api/admin/ical-sync'        && m === 'POST')  return adminIcalSync(request, env, cors);
@@ -244,6 +246,51 @@ async function adminDeleteProperty(request, env, cors) {
   return Response.json({ success: true }, { headers: cors });
 }
 
+// ── Admin: notify guest (confirm / decline) ───────────────────────────────────
+
+async function adminNotify(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { enquiryId, propertyId = 'ta-garden', action, customMessage } = await request.json();
+  const key = enquiriesKey(propertyId);
+  const val = await env.BOOKINGS.get(key);
+  const enquiries = val ? JSON.parse(val) : [];
+  const idx = enquiries.findIndex(e => e.id === enquiryId);
+  if (idx === -1) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+
+  const enq = enquiries[idx];
+  const newStatus = action === 'confirm' ? 'confirmed' : 'cancelled';
+  enquiries[idx].status = newStatus;
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+
+  const html    = action === 'confirm' ? buildConfirmEmail(enq, customMessage) : buildDeclineEmail(enq, customMessage);
+  const subject = action === 'confirm'
+    ? `Your booking at Ta.Garden is confirmed — ${enq.room}`
+    : `Re: Your enquiry at Ta.Garden — ${enq.room}`;
+
+  await resend('Ta.Garden <onboarding@resend.dev>', enq.email, subject, html);
+  return Response.json({ success: true, status: newStatus }, { headers: cors });
+}
+
+// ── Admin: save internal note ─────────────────────────────────────────────────
+
+async function adminSaveNote(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { id, note, propertyId = 'ta-garden' } = await request.json();
+  const key = enquiriesKey(propertyId);
+  const val = await env.BOOKINGS.get(key);
+  const enquiries = val ? JSON.parse(val) : [];
+  const idx = enquiries.findIndex(e => e.id === id);
+  if (idx >= 0) {
+    enquiries[idx].note = note;
+    await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+  }
+  return Response.json({ success: true }, { headers: cors });
+}
+
 // ── Admin: block / unblock ────────────────────────────────────────────────────
 
 async function adminBlock(request, env, cors) {
@@ -368,6 +415,72 @@ function buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateIn
     </table>
     ${message ? `<div style="padding:16px;background:#fff;border-left:3px solid #a0856c;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;margin-bottom:8px;">Message</div><div style="font-size:14px;line-height:1.75;">${message}</div></div>` : ''}
     <div>${waBtn}<a href="mailto:${email}?subject=Re: ${encodeURIComponent(room)}" style="display:inline-block;padding:12px 26px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;">Email ${name.split(' ')[0]}</a></div>
+  </div>
+</div>`;
+}
+
+function buildConfirmEmail(enq, customMessage) {
+  const price = calcPrice(enq.room, enq.stayType, enq.checkIn, enq.checkOut);
+  return `
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
+  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Booking Confirmed</div>
+  </div>
+  <div style="padding:32px;background:#f5f0eb;">
+    <p style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;margin:0 0 20px;">Your booking is confirmed, ${enq.name.split(' ')[0]}.</p>
+    <div style="background:#fff;border:1px solid rgba(136,145,125,0.2);padding:20px;margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+        <div>
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:4px;">Room</div>
+          <div style="font-size:16px;font-family:Georgia,serif;">${enq.room}</div>
+        </div>
+        ${price ? `<div style="text-align:right;">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:4px;">Estimated Total</div>
+          <div style="font-size:24px;font-family:Georgia,serif;font-weight:300;">$${price.total.toLocaleString()}</div>
+          <div style="font-size:11px;color:#88917d;">${price.breakdown}</div>
+        </div>` : ''}
+      </div>
+      <div style="border-top:1px solid rgba(136,145,125,0.15);padding-top:12px;display:flex;gap:32px;">
+        <div><div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;">Check-in</div><div style="font-size:14px;">${fmt(enq.checkIn)}</div></div>
+        <div><div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;">Check-out</div><div style="font-size:14px;">${fmt(enq.checkOut)}</div></div>
+      </div>
+    </div>
+    ${customMessage ? `<div style="padding:16px;background:#fff;border-left:3px solid #86a2a6;margin-bottom:24px;font-size:14px;line-height:1.8;color:#1a1a18;">${customMessage.replace(/\n/g,'<br>')}</div>` : ''}
+    <div style="margin-bottom:24px;">
+      <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Next Steps</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">01</span><span>Complete your first month's payment to secure your room</span></div>
+        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">02</span><span>Review and sign the Ta.Garden House Agreement (sent separately)</span></div>
+        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">03</span><span>We'll confirm check-in details closer to your arrival date</span></div>
+      </div>
+    </div>
+    <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" style="display:block;text-align:center;padding:15px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;">Complete Payment via Stripe →</a>
+  </div>
+  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
+    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Questions? hi@soulandlunawellness.com</div>
+  </div>
+</div>`;
+}
+
+function buildDeclineEmail(enq, customMessage) {
+  return `
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
+  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Cam Nam Island · Hội An, Vietnam</div>
+  </div>
+  <div style="padding:32px;background:#f5f0eb;">
+    <p style="font-family:Georgia,serif;font-size:18px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Dear ${enq.name.split(' ')[0]},</p>
+    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 16px;">Thank you so much for your interest in <strong>${enq.room}</strong> at Ta.Garden. We truly appreciate you taking the time to reach out.</p>
+    ${customMessage
+      ? `<div style="padding:16px;background:#fff;border-left:3px solid #a0856c;margin-bottom:20px;font-size:14px;line-height:1.8;color:#1a1a18;">${customMessage.replace(/\n/g,'<br>')}</div>`
+      : `<p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 16px;">Unfortunately we're unable to accommodate your requested dates at this time.</p>`}
+    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;">We hope to welcome you to Ta.Garden at another time — please don't hesitate to reach out again.</p>
+    <p style="font-size:14px;color:#4a4a45;margin:0;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
+  </div>
+  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
+    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">hi@soulandlunawellness.com</div>
   </div>
 </div>`;
 }

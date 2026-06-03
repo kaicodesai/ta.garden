@@ -85,11 +85,54 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .badge-prop { background: rgba(160,133,108,0.1); color: var(--terra); margin-left: 4px; }
 .price-n { font-family: 'Cormorant Garamond', serif; font-size: 18px; }
 .dt { font-size: 12px; color: var(--mid); line-height: 1.65; }
-.ss { padding: 5px 10px; border: 1px solid; background: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; outline: none; }
-.ss.pending   { border-color: var(--amber); color: var(--amber); }
-.ss.confirmed { border-color: var(--green); color: var(--green); }
-.ss.cancelled { border-color: var(--red);   color: var(--red);   }
+.status-badge { display: inline-block; padding: 3px 10px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid; border-radius: 2px; }
+.status-badge.pending   { border-color: var(--amber); color: var(--amber); }
+.status-badge.confirmed { border-color: var(--green); color: var(--green); }
+.status-badge.cancelled { border-color: var(--red);   color: var(--red); opacity: 0.6; }
+.act-btn { padding: 5px 12px; border: 1px solid; background: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.act-confirm { border-color: rgba(76,175,125,0.45); color: var(--green); }
+.act-confirm:hover { background: rgba(76,175,125,0.12); }
+.act-decline { border-color: rgba(184,92,92,0.35); color: var(--red); }
+.act-decline:hover { background: rgba(184,92,92,0.08); }
+.act-note { border-color: rgba(136,145,125,0.3); color: var(--mid); }
+.act-note:hover { border-color: var(--terra); color: var(--terra); }
+.act-wa { border-color: rgba(37,211,102,0.35); color: #25D366; }
+.act-wa:hover { background: rgba(37,211,102,0.08); }
+.note-bubble { background: rgba(160,133,108,0.1); border-left: 2px solid var(--terra); padding: 6px 10px; font-size: 11px; color: var(--terra); margin-top: 6px; line-height: 1.5; }
 .empty { text-align: center; padding: 48px; color: var(--mid); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-box { background: var(--white); width: 100%; max-width: 560px; }
+.modal-head { background: var(--dark); padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; color: var(--cream); }
+.modal-close { background: none; border: none; color: rgba(237,224,209,0.4); font-size: 22px; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: var(--cream); }
+.modal-body { padding: 24px; }
+.modal-guest-info { background: var(--light); padding: 14px 16px; margin-bottom: 18px; font-size: 13px; }
+.modal-guest-name { font-weight: 400; font-size: 15px; margin-bottom: 4px; }
+.modal-guest-sub { font-size: 12px; color: var(--mid); line-height: 1.6; }
+.modal-lbl { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); margin-bottom: 6px; display: block; }
+.modal-ta { width: 100%; padding: 10px 12px; background: var(--light); border: 1px solid rgba(136,145,125,0.24); color: var(--dark); font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 300; outline: none; resize: vertical; min-height: 100px; }
+.modal-ta:focus { border-color: var(--teal); }
+.modal-hint { font-size: 11px; color: var(--mid); margin-top: 6px; line-height: 1.6; }
+.modal-foot { padding: 16px 24px; border-top: 1px solid rgba(136,145,125,0.14); display: flex; gap: 10px; justify-content: flex-end; }
+.btn-confirm-send { padding: 11px 24px; background: var(--green); color: #fff; border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; }
+.btn-decline-send { padding: 11px 24px; background: var(--red); color: #fff; border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; }
+.btn-cancel-modal { padding: 11px 18px; background: none; border: 1px solid rgba(136,145,125,0.3); color: var(--mid); font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+
+/* Arrivals widget */
+.arrivals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.arrivals-card { background: var(--white); border: 1px solid rgba(136,145,125,0.12); padding: 18px; }
+.arrivals-title { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); margin-bottom: 12px; }
+.arrival-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(136,145,125,0.09); }
+.arrival-item:last-child { border-bottom: none; }
+.arrival-name { font-size: 13px; font-weight: 400; }
+.arrival-room { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-top: 2px; }
+.arrival-date { font-size: 12px; color: var(--terra); text-align: right; }
+.arrival-days { font-size: 10px; color: var(--mid); }
+.no-arrivals { font-size: 13px; color: var(--mid); padding: 8px 0; }
 
 /* ── Timeline ── */
 .tl-wrap { overflow-x: auto; background: var(--white); border: 1px solid rgba(136,145,125,0.12); }
@@ -303,6 +346,29 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
   </div>
 </div>
 
+<!-- ACTION MODAL (confirm / decline / note) -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">Confirm Booking</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-guest-info">
+        <div class="modal-guest-name" id="modalGuestName"></div>
+        <div class="modal-guest-sub" id="modalGuestSub"></div>
+      </div>
+      <label class="modal-lbl" id="modalLbl">Message to guest</label>
+      <textarea class="modal-ta" id="modalMsg" rows="5"></textarea>
+      <div class="modal-hint" id="modalHint"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel-modal" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm-send" id="modalSendBtn">Send →</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 let secret = '', currentProp = null, allProps = [], allEnquiries = [], allBlocked = [], icalEvents = [], filterStatus = 'all', pickedColorVal = '#86a2a6';
@@ -413,18 +479,76 @@ function setFilter(f, btn) {
   renderEnquiries();
 }
 
+function renderArrivals() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in14  = new Date(today); in14.setDate(today.getDate() + 14);
+  const upcoming = allEnquiries.filter(e => {
+    if (e.status !== 'confirmed' || !e.checkIn) return false;
+    const d = new Date(e.checkIn + 'T00:00:00');
+    return d >= today && d <= in14;
+  }).sort((a,b) => new Date(a.checkIn) - new Date(b.checkIn));
+
+  const checkouts = allEnquiries.filter(e => {
+    if (e.status !== 'confirmed' || !e.checkOut) return false;
+    const d = new Date(e.checkOut + 'T00:00:00');
+    return d >= today && d <= in14;
+  }).sort((a,b) => new Date(a.checkOut) - new Date(b.checkOut));
+
+  if (!upcoming.length && !checkouts.length) return '';
+
+  const arrHtml = upcoming.length ? upcoming.map(e => {
+    const d = new Date(e.checkIn + 'T00:00:00');
+    const diff = Math.round((d - today) / 86400000);
+    const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `in ${diff} days`;
+    return `<div class="arrival-item">
+      <div>
+        <div class="arrival-name">${e.name}</div>
+        <div class="arrival-room">${(e.room||'').replace('The ','')}</div>
+      </div>
+      <div><div class="arrival-date">${fmt(e.checkIn)}</div><div class="arrival-days">${label}</div></div>
+    </div>`;
+  }).join('') : '<div class="no-arrivals">No arrivals in the next 14 days</div>';
+
+  const depHtml = checkouts.length ? checkouts.map(e => {
+    const d = new Date(e.checkOut + 'T00:00:00');
+    const diff = Math.round((d - today) / 86400000);
+    const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `in ${diff} days`;
+    return `<div class="arrival-item">
+      <div>
+        <div class="arrival-name">${e.name}</div>
+        <div class="arrival-room">${(e.room||'').replace('The ','')}</div>
+      </div>
+      <div><div class="arrival-date">${fmt(e.checkOut)}</div><div class="arrival-days">${label}</div></div>
+    </div>`;
+  }).join('') : '<div class="no-arrivals">No departures in the next 14 days</div>';
+
+  return `<div class="arrivals-grid">
+    <div class="arrivals-card"><div class="arrivals-title">Upcoming Arrivals</div>${arrHtml}</div>
+    <div class="arrivals-card"><div class="arrivals-title">Upcoming Departures</div>${depHtml}</div>
+  </div>`;
+}
+
 function renderEnquiries() {
   const list = filterStatus === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === filterStatus);
   const c = document.getElementById('enqContainer');
-  if (!list.length) { c.innerHTML = '<div class="empty">No enquiries yet for this property.</div>'; return; }
-  c.innerHTML = `<table class="tbl">
-    <thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Est. Total</th><th>Message</th><th>Status</th></tr></thead>
-    <tbody>${list.map(e => `<tr>
+  const arrivalsHtml = renderArrivals();
+  if (!list.length) { c.innerHTML = arrivalsHtml + '<div class="empty">No enquiries yet for this property.</div>'; return; }
+  c.innerHTML = arrivalsHtml + `<table class="tbl">
+    <thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Est. Total</th><th>Message</th><th>Status &amp; Actions</th></tr></thead>
+    <tbody>${list.map(e => {
+      const isPending   = e.status === 'pending';
+      const isConfirmed = e.status === 'confirmed';
+      const waLink = e.phone ? `<a href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" target="_blank" class="act-btn act-wa">WhatsApp</a>` : '';
+      const confirmBtn = !isConfirmed ? `<button class="act-btn act-confirm" onclick="openConfirmModal('${e.id}')">Confirm</button>` : '';
+      const declineBtn = e.status !== 'cancelled' ? `<button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">Decline</button>` : '';
+      const noteBtn = `<button class="act-btn act-note" onclick="openNoteModal('${e.id}')">Note</button>`;
+      const noteBubble = e.note ? `<div class="note-bubble">${e.note.replace(/</g,'&lt;')}</div>` : '';
+      return `<tr>
       <td>
         <div class="g-name">${e.name}</div>
         <div class="g-sub">
           <a href="mailto:${e.email}" style="color:var(--terra);text-decoration:none;">${e.email}</a>
-          ${e.phone ? `<br><a href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" class="g-wa">WhatsApp: ${e.phone}</a>` : ''}
+          ${e.phone ? `<br><span style="color:#25D366;">${e.phone}</span>` : ''}
         </div>
         <div style="font-size:10px;color:var(--mid);margin-top:3px;">${fmtDt(e.createdAt)}</div>
       </td>
@@ -437,29 +561,122 @@ function renderEnquiries() {
         <div>Out: ${fmt(e.checkOut)}</div>
       </td>
       <td class="price-n">${e.price ? '$'+e.price.toLocaleString() : '—'}</td>
-      <td style="font-size:12px;color:var(--mid);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(e.message||'').replace(/"/g,'')}">${e.message||'—'}</td>
-      <td>
-        <select class="ss ${e.status}" onchange="doUpdateStatus('${e.id}',this)">
-          <option value="pending"   ${e.status==='pending'  ?'selected':''}>Pending</option>
-          <option value="confirmed" ${e.status==='confirmed'?'selected':''}>Confirmed</option>
-          <option value="cancelled" ${e.status==='cancelled'?'selected':''}>Cancelled</option>
-        </select>
+      <td style="font-size:12px;color:var(--mid);max-width:140px;">
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(e.message||'').replace(/"/g,'&quot;')}">${e.message||'—'}</div>
+        ${noteBubble}
       </td>
-    </tr>`).join('')}</tbody>
+      <td>
+        <span class="status-badge ${e.status}">${e.status}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">
+          ${confirmBtn}${declineBtn}${noteBtn}${waLink}
+        </div>
+      </td>
+    </tr>`;
+    }).join('')}</tbody>
   </table>`;
 }
 
-async function doUpdateStatus(id, sel) {
-  const status = sel.value;
-  sel.className = 'ss ' + status;
-  await fetch('/api/admin/enquiry', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
-    body: JSON.stringify({ id, status, propertyId: currentProp.id }),
-  });
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+
+let modalEnquiryId = null;
+
+function openConfirmModal(id) {
+  modalEnquiryId = id;
   const e = allEnquiries.find(x => x.id === id);
-  if (e) e.status = status;
-  renderStats();
+  if (!e) return;
+  document.getElementById('modalTitle').textContent = 'Confirm Booking';
+  document.getElementById('modalGuestName').textContent = e.name;
+  document.getElementById('modalGuestSub').innerHTML = `${e.room} &nbsp;·&nbsp; ${fmt(e.checkIn)} → ${fmt(e.checkOut)}`;
+  document.getElementById('modalLbl').textContent = 'Personal message to guest (optional)';
+  document.getElementById('modalMsg').value = `Hi ${e.name.split(' ')[0]}, your booking at Ta.Garden is confirmed. We're excited to welcome you!`;
+  document.getElementById('modalHint').textContent = 'The guest will receive a full booking summary with payment link.';
+  document.getElementById('modalSendBtn').textContent = 'Send Confirmation →';
+  document.getElementById('modalSendBtn').className = 'btn-confirm-send';
+  document.getElementById('modalSendBtn').onclick = () => doNotify('confirm');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openDeclineModal(id) {
+  modalEnquiryId = id;
+  const e = allEnquiries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('modalTitle').textContent = 'Decline Enquiry';
+  document.getElementById('modalGuestName').textContent = e.name;
+  document.getElementById('modalGuestSub').innerHTML = `${e.room} &nbsp;·&nbsp; ${fmt(e.checkIn)} → ${fmt(e.checkOut)}`;
+  document.getElementById('modalLbl').textContent = 'Message to guest';
+  document.getElementById('modalMsg').value = `Unfortunately we're unable to accommodate your requested dates at this time. We hope to welcome you to Ta.Garden in the future.`;
+  document.getElementById('modalHint').textContent = 'A polite decline email will be sent. The enquiry will be marked as cancelled.';
+  document.getElementById('modalSendBtn').textContent = 'Send Decline →';
+  document.getElementById('modalSendBtn').className = 'btn-decline-send';
+  document.getElementById('modalSendBtn').onclick = () => doNotify('decline');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openNoteModal(id) {
+  modalEnquiryId = id;
+  const e = allEnquiries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('modalTitle').textContent = 'Internal Note';
+  document.getElementById('modalGuestName').textContent = e.name;
+  document.getElementById('modalGuestSub').innerHTML = `${e.room} &nbsp;·&nbsp; ${fmt(e.checkIn)} → ${fmt(e.checkOut)}`;
+  document.getElementById('modalLbl').textContent = 'Note (internal only — not sent to guest)';
+  document.getElementById('modalMsg').value = e.note || '';
+  document.getElementById('modalHint').textContent = 'Notes are visible only to you in the admin dashboard.';
+  document.getElementById('modalSendBtn').textContent = 'Save Note →';
+  document.getElementById('modalSendBtn').className = 'btn-confirm-send';
+  document.getElementById('modalSendBtn').onclick = doSaveNote;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  modalEnquiryId = null;
+}
+
+async function doNotify(action) {
+  const id = modalEnquiryId;
+  const msg = document.getElementById('modalMsg').value.trim();
+  const btn = document.getElementById('modalSendBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/admin/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ enquiryId: id, propertyId: currentProp.id, action, customMessage: msg }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      const e = allEnquiries.find(x => x.id === id);
+      if (e) e.status = d.status;
+      closeModal();
+      renderStats();
+      renderEnquiries();
+    } else {
+      btn.disabled = false; btn.textContent = 'Error — try again';
+    }
+  } catch {
+    btn.disabled = false; btn.textContent = 'Error — try again';
+  }
+}
+
+async function doSaveNote() {
+  const id   = modalEnquiryId;
+  const note = document.getElementById('modalMsg').value.trim();
+  const btn  = document.getElementById('modalSendBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await fetch('/api/admin/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id, note, propertyId: currentProp.id }),
+    });
+    const e = allEnquiries.find(x => x.id === id);
+    if (e) e.note = note;
+    closeModal();
+    renderEnquiries();
+  } catch {
+    btn.disabled = false; btn.textContent = 'Error — try again';
+  }
 }
 
 // ── Timeline ──────────────────────────────────────────────────────────────────

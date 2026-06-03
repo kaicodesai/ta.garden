@@ -96,14 +96,16 @@ function icalKey(propId) {
 async function handleEnquiry(request, env, cors) {
   try {
     const { name, email, phone, room, stayType, checkIn, checkOut, message, propertyId = 'ta-garden' } = await request.json();
-    if (!name || !email || !room || !checkIn) {
+    if (!name || !email || !room) {
       return Response.json({ error: 'Missing required fields' }, { status: 400, headers: cors });
     }
 
     const price    = calcPrice(room, stayType, checkIn, checkOut);
-    const dateInfo = stayType === 'monthly'
-      ? `Move-in: ${fmt(checkIn)}  →  Move-out: ${fmt(checkOut) || 'TBD'}`
-      : `Check-in: ${fmt(checkIn)}  →  Check-out: ${fmt(checkOut)}`;
+    const dateInfo = checkIn
+      ? (stayType === 'monthly'
+          ? `Move-in: ${fmt(checkIn)}  →  Move-out: ${fmt(checkOut) || 'TBD'}`
+          : `Check-in: ${fmt(checkIn)}  →  Check-out: ${fmt(checkOut) || 'TBD'}`)
+      : 'Dates: flexible / TBD';
     const stayLabel = stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
 
     if (env.BOOKINGS) {

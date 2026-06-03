@@ -235,6 +235,62 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   .hero-title { font-size: 46px; line-height: 0.92; }
   .footer-links { flex-direction: column; gap: 1rem; align-items: center; }
 }
+
+/* ── Booking Modal ─────────────────────────────── */
+.btn-book-room { display: block; width: 100%; margin-top: 1.4rem; padding: 12px; background: transparent; border: 1px solid rgba(136,145,125,0.3); color: var(--mid); font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: all 0.25s; text-align: center; }
+.btn-book-room:hover { border-color: var(--terra); color: var(--terra); background: rgba(160,133,108,0.04); }
+.room-card.featured .btn-book-room { border-color: rgba(134,162,166,0.3); color: var(--teal); }
+.room-card.featured .btn-book-room:hover { border-color: var(--teal); background: rgba(134,162,166,0.08); color: #a8c8cc; }
+
+.booking-overlay { position: fixed; inset: 0; background: rgba(26,26,24,0.75); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.booking-overlay.open { opacity: 1; pointer-events: all; }
+.booking-modal { background: var(--white); width: 100%; max-width: 740px; max-height: 92vh; overflow-y: auto; }
+.bm-header { background: var(--dark); padding: 24px 28px; display: flex; justify-content: space-between; align-items: center; }
+.bm-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; color: var(--cream); }
+.bm-close { background: none; border: none; color: rgba(237,224,209,0.45); font-size: 26px; line-height: 1; cursor: pointer; padding: 0; }
+.bm-close:hover { color: var(--cream); }
+.bm-body { padding: 28px; }
+
+.stay-tabs { display: flex; border: 1px solid rgba(136,145,125,0.28); margin-bottom: 24px; }
+.stay-tab { flex: 1; padding: 10px; background: none; border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); cursor: pointer; transition: all 0.2s; }
+.stay-tab.active { background: var(--dark); color: var(--cream); }
+
+.cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.cal-nav { background: none; border: 1px solid rgba(136,145,125,0.28); padding: 6px 14px; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); cursor: pointer; transition: all 0.2s; }
+.cal-nav:hover { border-color: var(--terra); color: var(--terra); }
+.cal-month { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; color: var(--dark); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 10px; }
+.cal-dow { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; padding: 6px 0; color: var(--mid); }
+.cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: var(--dark); border: 1px solid transparent; transition: all 0.15s; position: relative; min-height: 36px; }
+.cal-day:hover:not(.cal-empty):not(.cal-blocked):not(.cal-past) { border-color: var(--terra); color: var(--terra); }
+.cal-day.cal-today::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--terra); }
+.cal-day.cal-blocked { color: rgba(136,145,125,0.3); cursor: not-allowed; text-decoration: line-through; background: rgba(136,145,125,0.06); }
+.cal-day.cal-past { color: rgba(136,145,125,0.3); cursor: not-allowed; }
+.cal-day.cal-empty { cursor: default; }
+.cal-day.cal-sel { background: var(--dark); color: var(--cream); border-color: var(--dark); }
+.cal-day.cal-in-range { background: rgba(134,162,166,0.14); }
+.cal-hint { font-size: 11px; color: var(--mid); margin-bottom: 8px; min-height: 16px; }
+.cal-selected-info { font-size: 12px; color: var(--terra); margin-top: 8px; min-height: 18px; letter-spacing: 0.03em; }
+.cal-legend { display: flex; gap: 16px; margin-top: 12px; margin-bottom: 20px; }
+.cal-leg { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); }
+.cal-leg-dot { width: 10px; height: 10px; border: 1px solid; }
+.cal-leg-dot.d-avail { border-color: rgba(136,145,125,0.4); }
+.cal-leg-dot.d-block { background: rgba(136,145,125,0.08); border-color: rgba(136,145,125,0.2); }
+.cal-leg-dot.d-sel { background: var(--dark); border-color: var(--dark); }
+
+.bm-submit-row { margin-top: 4px; }
+.btn-apply { width: 100%; padding: 15px; background: var(--dark); color: var(--cream); border: none; font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; }
+.btn-apply:hover { background: #2a2a26; }
+.btn-apply:disabled { opacity: 0.5; cursor: not-allowed; }
+.bm-status { margin-top: 12px; font-size: 13px; text-align: center; min-height: 20px; }
+.bm-status.ok { color: var(--teal); }
+.bm-status.err { color: var(--terra); }
+
+@media (max-width: 600px) {
+  .bm-body { padding: 20px; }
+  .stay-tabs { font-size: 9px; }
+  .cal-day { font-size: 12px; min-height: 32px; }
+}
 </style>
 </head>
 <body>
@@ -354,6 +410,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
           <span class="price-period">/ month</span>
         </div>
         <div class="price-vnd">8,750,000 VND</div>
+        <button class="btn-book-room" onclick="openBooking('The River Room')">Enquire / Book This Room &rarr;</button>
       </div>
 
       <div class="room-card wide">
@@ -373,6 +430,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
             <span class="price-period">/ month</span>
           </div>
           <div class="price-vnd">10,000,000 VND</div>
+          <button class="btn-book-room" onclick="openBooking('The Balcony Room')">Enquire / Book This Room &rarr;</button>
         </div>
       </div>
 
@@ -396,6 +454,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
           </div>
           <div class="price-vnd">17,000,000 VND</div>
           <p class="featured-note">Comparable Hội An river properties on Airbnb: $60–90/night. The Sky Suite is exceptional value for a fully private top-floor monthly stay.</p>
+          <button class="btn-book-room" onclick="openBooking('The Sky Suite')">Enquire / Book This Room &rarr;</button>
         </div>
       </div>
 
@@ -506,32 +565,33 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
         <p class="form-title serif">Send an Enquiry</p>
         <div class="form-group">
           <label class="form-label">Full Name</label>
-          <input type="text" class="form-control" placeholder="Your full name">
+          <input type="text" class="form-control" id="sf-name" placeholder="Your full name">
         </div>
         <div class="form-group">
           <label class="form-label">Email Address</label>
-          <input type="email" class="form-control" placeholder="your@email.com">
+          <input type="email" class="form-control" id="sf-email" placeholder="your@email.com">
         </div>
         <div class="form-group">
           <label class="form-label">Which room interests you?</label>
-          <select class="form-control">
+          <select class="form-control" id="sf-room">
             <option value="">Select a room...</option>
-            <option>The River Room &mdash; Floor 2 ($350/mo)</option>
-            <option>The Balcony Room &mdash; Floor 2 ($400/mo)</option>
-            <option>The Sky Suite &mdash; Floor 3 ($680/mo)</option>
+            <option value="The River Room">The River Room &mdash; Floor 2 ($350/mo)</option>
+            <option value="The Balcony Room">The Balcony Room &mdash; Floor 2 ($400/mo)</option>
+            <option value="The Sky Suite">The Sky Suite &mdash; Floor 3 ($680/mo)</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Desired Move-In Date</label>
-          <input type="date" class="form-control">
+          <input type="date" class="form-control" id="sf-date">
         </div>
         <div class="form-group">
           <label class="form-label">Tell us a little about yourself</label>
-          <textarea class="form-control" rows="3" placeholder="What brings you to Hội An? How long are you planning to stay?"></textarea>
+          <textarea class="form-control" rows="3" id="sf-message" placeholder="What brings you to Hội An? How long are you planning to stay?"></textarea>
         </div>
-        <button type="submit" class="btn-apply">Submit Enquiry &rarr;</button>
+        <button type="button" class="btn-apply" id="sf-btn" onclick="submitSectionForm()">Submit Enquiry &rarr;</button>
+        <div id="sf-status" style="margin-top:10px;font-size:13px;text-align:center;min-height:18px;"></div>
         <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" class="stripe-btn">Pay &amp; Confirm via Stripe &rarr;</a>
-        <p class="form-note" style="margin-top:0.6rem; color: var(--terra); font-size:11px;">&#128274; Your enquiry goes directly to Kai at Soul &amp; Luna Wellness. We respond within 24 hours.</p>
+        <p class="form-note" style="margin-top:0.6rem; color: var(--terra); font-size:11px;">&#128274; Your enquiry goes directly to Ashley at Soul &amp; Luna Wellness. We respond within 24 hours.</p>
         <p class="form-note">Payment via Stripe confirms your acceptance of the Ta.Garden House Agreement provided separately. First month required to secure your room.</p>
       </div>
     </div>
@@ -551,6 +611,297 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   </div>
   <div class="footer-copy">&copy; 2026 Ta.Garden &nbsp;&middot;&nbsp; Soul &amp; Luna Wellness &nbsp;&middot;&nbsp; Breathe. Nourish. Shine.</div>
 </footer>
+
+<!-- BOOKING MODAL -->
+<div class="booking-overlay" id="bookingOverlay" onclick="overlayClick(event)">
+  <div class="booking-modal">
+    <div class="bm-header">
+      <span class="bm-title serif" id="bmTitle">Enquire &amp; Book</span>
+      <button class="bm-close" onclick="closeBooking()" aria-label="Close">&times;</button>
+    </div>
+    <div class="bm-body">
+      <div class="stay-tabs">
+        <button class="stay-tab active" id="tab-monthly" onclick="setStayType('monthly')">Monthly Stay</button>
+        <button class="stay-tab" id="tab-short" onclick="setStayType('short')">Short Stay / Retreat</button>
+      </div>
+
+      <p class="cal-hint" id="calHint">Select your desired move-in date</p>
+      <div class="cal-header">
+        <button class="cal-nav" onclick="calShift(-1)">&larr; Prev</button>
+        <span class="cal-month serif" id="calMonthLabel"></span>
+        <button class="cal-nav" onclick="calShift(1)">Next &rarr;</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-selected-info" id="calInfo"></div>
+      <div class="cal-legend">
+        <div class="cal-leg"><div class="cal-leg-dot d-avail"></div>Available</div>
+        <div class="cal-leg"><div class="cal-leg-dot d-block"></div>Blocked</div>
+        <div class="cal-leg"><div class="cal-leg-dot d-sel"></div>Selected</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-control" id="bm-name" placeholder="Your full name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="bm-email" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message (optional)</label>
+        <textarea class="form-control" id="bm-message" rows="3" placeholder="Tell us about yourself or ask any questions"></textarea>
+      </div>
+      <div class="bm-submit-row">
+        <button class="btn-apply" id="bm-btn" onclick="submitModal()">Send Enquiry &rarr;</button>
+        <div class="bm-status" id="bm-status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  let calY, calM, stayType = 'monthly';
+  let selStart = null, selEnd = null, pickingEnd = false;
+  let blocked = [];
+  let currentRoom = '';
+
+  /* ── Open / close ── */
+  window.openBooking = function(roomName) {
+    currentRoom = roomName;
+    document.getElementById('bmTitle').textContent = roomName;
+    document.getElementById('bookingOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('bm-name').value = '';
+    document.getElementById('bm-email').value = '';
+    document.getElementById('bm-message').value = '';
+    document.getElementById('bm-status').textContent = '';
+    document.getElementById('bm-status').className = 'bm-status';
+    document.getElementById('bm-btn').textContent = 'Send Enquiry →';
+    document.getElementById('bm-btn').disabled = false;
+    resetCal();
+    fetchBlocked();
+  };
+
+  window.closeBooking = function() {
+    document.getElementById('bookingOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  window.overlayClick = function(e) {
+    if (e.target === document.getElementById('bookingOverlay')) closeBooking();
+  };
+
+  /* ── Stay type ── */
+  window.setStayType = function(t) {
+    stayType = t;
+    document.getElementById('tab-monthly').classList.toggle('active', t === 'monthly');
+    document.getElementById('tab-short').classList.toggle('active', t === 'short');
+    selStart = null; selEnd = null; pickingEnd = false;
+    document.getElementById('calHint').textContent = t === 'monthly'
+      ? 'Select your desired move-in date'
+      : 'Select your check-in date';
+    renderCal(); updateInfo();
+  };
+
+  /* ── Calendar ── */
+  function resetCal() {
+    const now = new Date();
+    calY = now.getFullYear(); calM = now.getMonth();
+    stayType = 'monthly';
+    selStart = null; selEnd = null; pickingEnd = false;
+    document.getElementById('tab-monthly').classList.add('active');
+    document.getElementById('tab-short').classList.remove('active');
+    document.getElementById('calHint').textContent = 'Select your desired move-in date';
+    renderCal(); updateInfo();
+  }
+
+  window.calShift = function(dir) {
+    calM += dir;
+    if (calM < 0) { calM = 11; calY--; }
+    if (calM > 11) { calM = 0; calY++; }
+    renderCal();
+  };
+
+  function d2s(y, m, d) {
+    return y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  }
+
+  function isBlocked(y, m, d) {
+    const s = d2s(y, m, d);
+    return blocked.some(r => s >= r.start && s <= r.end);
+  }
+
+  function isPast(y, m, d) {
+    const t = new Date(); t.setHours(0,0,0,0);
+    return new Date(y, m, d) < t;
+  }
+
+  function isToday(y, m, d) {
+    const t = new Date();
+    return y === t.getFullYear() && m === t.getMonth() && d === t.getDate();
+  }
+
+  function inRange(y, m, d) {
+    if (!selStart || !selEnd) return false;
+    const s = d2s(y, m, d);
+    return s > selStart && s < selEnd;
+  }
+
+  function renderCal() {
+    document.getElementById('calMonthLabel').textContent = MONTHS[calM] + ' ' + calY;
+    let h = DAYS.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+
+    const first = new Date(calY, calM, 1).getDay();
+    const total = new Date(calY, calM + 1, 0).getDate();
+
+    for (let i = 0; i < first; i++) h += '<div class="cal-day cal-empty"></div>';
+
+    for (let d = 1; d <= total; d++) {
+      const blk = isBlocked(calY, calM, d);
+      const past = isPast(calY, calM, d);
+      const today = isToday(calY, calM, d);
+      const s = d2s(calY, calM, d);
+      const isSel = s === selStart || s === selEnd;
+      const isRange = !isSel && inRange(calY, calM, d);
+
+      let cls = 'cal-day';
+      if (blk) cls += ' cal-blocked';
+      else if (past) cls += ' cal-past';
+      if (today) cls += ' cal-today';
+      if (isSel) cls += ' cal-sel';
+      if (isRange) cls += ' cal-in-range';
+
+      const onClick = (!blk && !past)
+        ? ' onclick="calDay(' + calY + ',' + calM + ',' + d + ')"'
+        : '';
+      h += '<div class="' + cls + '"' + onClick + '>' + d + '</div>';
+    }
+    document.getElementById('calGrid').innerHTML = h;
+  }
+
+  window.calDay = function(y, m, d) {
+    const s = d2s(y, m, d);
+    if (stayType === 'monthly') {
+      selStart = s; selEnd = null;
+      renderCal(); updateInfo(); return;
+    }
+    if (!pickingEnd || !selStart) {
+      selStart = s; selEnd = null; pickingEnd = true;
+      document.getElementById('calHint').textContent = 'Now select your check-out date';
+    } else {
+      if (s <= selStart) {
+        selStart = s; selEnd = null;
+        renderCal(); updateInfo(); return;
+      }
+      selEnd = s; pickingEnd = false;
+      document.getElementById('calHint').textContent = 'Dates selected — fill in your details below';
+    }
+    renderCal(); updateInfo();
+  };
+
+  function fmtDate(str) {
+    if (!str) return '';
+    const [y, m, d] = str.split('-');
+    return MONTHS[+m-1].slice(0,3) + ' ' + +d + ', ' + y;
+  }
+
+  function updateInfo() {
+    const el = document.getElementById('calInfo');
+    if (!selStart) { el.textContent = ''; return; }
+    if (stayType === 'monthly') { el.textContent = 'Move-in: ' + fmtDate(selStart); return; }
+    if (selStart && selEnd) {
+      const nights = Math.round((new Date(selEnd) - new Date(selStart)) / 86400000);
+      el.textContent = fmtDate(selStart) + ' → ' + fmtDate(selEnd) + '  (' + nights + ' night' + (nights !== 1 ? 's' : '') + ')';
+    } else {
+      el.textContent = 'Check-in: ' + fmtDate(selStart) + ' — select check-out';
+    }
+  }
+
+  async function fetchBlocked() {
+    try {
+      const r = await fetch('/api/availability');
+      const data = await r.json();
+      blocked = data.blocked || [];
+      renderCal();
+    } catch { blocked = []; }
+  }
+
+  /* ── Modal submit ── */
+  window.submitModal = async function() {
+    const name  = document.getElementById('bm-name').value.trim();
+    const email = document.getElementById('bm-email').value.trim();
+    const msg   = document.getElementById('bm-message').value.trim();
+    const st    = document.getElementById('bm-status');
+    const btn   = document.getElementById('bm-btn');
+
+    if (!name || !email) { setStatus(st, 'err', 'Please enter your name and email.'); return; }
+    if (!selStart) { setStatus(st, 'err', stayType === 'monthly' ? 'Please select a move-in date.' : 'Please select your dates.'); return; }
+    if (stayType === 'short' && !selEnd) { setStatus(st, 'err', 'Please also select a check-out date.'); return; }
+
+    btn.textContent = 'Sending…'; btn.disabled = true; st.textContent = '';
+
+    try {
+      const res = await fetch('/api/enquire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, room: currentRoom, stayType, checkIn: selStart, checkOut: selEnd, message: msg }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus(st, 'ok', '✓ Enquiry sent! Check your inbox for a confirmation. We’ll be in touch within 24 hours.');
+        btn.textContent = 'Enquiry Sent ✓';
+      } else throw new Error();
+    } catch {
+      setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');
+      btn.textContent = 'Send Enquiry →'; btn.disabled = false;
+    }
+  };
+
+  /* ── Section form submit ── */
+  window.submitSectionForm = async function() {
+    const name  = document.getElementById('sf-name').value.trim();
+    const email = document.getElementById('sf-email').value.trim();
+    const room  = document.getElementById('sf-room').value;
+    const date  = document.getElementById('sf-date').value;
+    const msg   = document.getElementById('sf-message').value.trim();
+    const st    = document.getElementById('sf-status');
+    const btn   = document.getElementById('sf-btn');
+
+    if (!name || !email || !room) { setStatus(st, 'err', 'Please fill in your name, email, and select a room.'); return; }
+
+    btn.textContent = 'Sending…'; btn.disabled = true; st.textContent = '';
+
+    try {
+      const res = await fetch('/api/enquire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, room, stayType: 'monthly', checkIn: date || null, checkOut: null, message: msg }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus(st, 'ok', '✓ Enquiry sent! We’ll be in touch within 24 hours. Check your inbox for confirmation.');
+        btn.textContent = 'Enquiry Sent ✓';
+      } else throw new Error();
+    } catch {
+      setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');
+      btn.textContent = 'Submit Enquiry →'; btn.disabled = false;
+    }
+  };
+
+  function setStatus(el, cls, msg) {
+    el.className = 'bm-status ' + cls;
+    el.textContent = msg;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeBooking();
+  });
+})();
+</script>
 
 </body>
 </html>

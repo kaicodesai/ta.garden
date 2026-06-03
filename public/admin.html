@@ -253,11 +253,14 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <div id="pane-enquiries">
       <div class="ph">
         <div class="ph-title serif">Booking Enquiries</div>
-        <div class="pills">
-          <button class="pill on" onclick="setFilter('all',this)">All</button>
-          <button class="pill"    onclick="setFilter('pending',this)">Pending</button>
-          <button class="pill"    onclick="setFilter('confirmed',this)">Confirmed</button>
-          <button class="pill"    onclick="setFilter('cancelled',this)">Cancelled</button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="btn-sm" id="refreshBtn" onclick="doRefresh()">↻ Refresh</button>
+          <div class="pills">
+            <button class="pill on" onclick="setFilter('all',this)">All</button>
+            <button class="pill"    onclick="setFilter('pending',this)">Pending</button>
+            <button class="pill"    onclick="setFilter('confirmed',this)">Confirmed</button>
+            <button class="pill"    onclick="setFilter('cancelled',this)">Cancelled</button>
+          </div>
         </div>
       </div>
       <div id="enqContainer"><div class="loading">Loading…</div></div>
@@ -452,9 +455,19 @@ function showTab(name) {
   document.querySelectorAll('.tab').forEach((el,i) => {
     el.classList.toggle('on', ['enquiries','timeline','blocking','properties'][i] === name);
   });
+  if (name === 'enquiries')  doRefresh();
   if (name === 'timeline')   renderTimeline();
   if (name === 'blocking')  { renderBlocked(); populateRoomSelect(); }
   if (name === 'properties') renderPropCards();
+}
+
+async function doRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  if (btn) { btn.textContent = '↻ Loading…'; btn.disabled = true; }
+  await loadCurrentProperty(currentProp.id);
+  renderStats();
+  renderEnquiries();
+  if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────

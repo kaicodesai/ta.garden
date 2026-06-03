@@ -38,6 +38,7 @@ export default {
     if (p === '/api/availability'           && m === 'GET')   return handleAvailability(request, env, cors);
 
     // Admin routes
+    if (p === '/api/admin/debug'            && m === 'GET')   return adminDebug(request, env, cors);
     if (p === '/api/admin/enquiries'        && m === 'GET')   return adminListEnquiries(request, env, cors);
     if (p === '/api/admin/enquiry'          && m === 'PATCH') return adminUpdateEnquiry(request, env, cors);
     if (p === '/api/admin/properties'       && m === 'GET')   return adminListProperties(request, env, cors);
@@ -55,7 +56,16 @@ export default {
 
 function checkAuth(request, env) {
   const h = request.headers.get('x-admin-secret');
-  return h && h === env.ADMIN_SECRET;
+  return h && env.ADMIN_SECRET && h.trim() === env.ADMIN_SECRET.trim();
+}
+
+async function adminDebug(request, env, cors) {
+  // Safe debug — never exposes the secret value, only whether it is set
+  return Response.json({
+    adminSecretSet:    !!env.ADMIN_SECRET,
+    adminSecretLength: env.ADMIN_SECRET ? env.ADMIN_SECRET.length : 0,
+    kvSet:             !!env.BOOKINGS,
+  }, { headers: cors });
 }
 
 function unauthorized(cors) {

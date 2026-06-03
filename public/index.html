@@ -572,6 +572,43 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
           <input type="email" class="form-control" id="sf-email" placeholder="your@email.com">
         </div>
         <div class="form-group">
+          <label class="form-label">WhatsApp Number</label>
+          <div style="display:flex;gap:6px;">
+            <select class="form-control" id="sf-code" style="max-width:110px;flex-shrink:0;">
+              <option value="+1">+1 US/CA</option>
+              <option value="+44">+44 UK</option>
+              <option value="+61">+61 AU</option>
+              <option value="+64">+64 NZ</option>
+              <option value="+65">+65 SG</option>
+              <option value="+84">+84 VN</option>
+              <option value="+66">+66 TH</option>
+              <option value="+60">+60 MY</option>
+              <option value="+62">+62 ID</option>
+              <option value="+81">+81 JP</option>
+              <option value="+82">+82 KR</option>
+              <option value="+86">+86 CN</option>
+              <option value="+852">+852 HK</option>
+              <option value="+886">+886 TW</option>
+              <option value="+33">+33 FR</option>
+              <option value="+49">+49 DE</option>
+              <option value="+31">+31 NL</option>
+              <option value="+46">+46 SE</option>
+              <option value="+47">+47 NO</option>
+              <option value="+45">+45 DK</option>
+              <option value="+41">+41 CH</option>
+              <option value="+34">+34 ES</option>
+              <option value="+39">+39 IT</option>
+              <option value="+55">+55 BR</option>
+              <option value="+52">+52 MX</option>
+              <option value="+91">+91 IN</option>
+              <option value="+27">+27 ZA</option>
+              <option value="+971">+971 UAE</option>
+              <option value="+972">+972 IL</option>
+            </select>
+            <input type="tel" class="form-control" id="sf-phone" placeholder="Your number">
+          </div>
+          <p style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-top:6px;">We'll reach out via WhatsApp</p>
+        <div class="form-group">
           <label class="form-label">Which room interests you?</label>
           <select class="form-control" id="sf-room">
             <option value="">Select a room...</option>
@@ -648,6 +685,44 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
         <input type="email" class="form-control" id="bm-email" placeholder="your@email.com">
       </div>
       <div class="form-group">
+        <label class="form-label">WhatsApp Number</label>
+        <div style="display:flex;gap:6px;">
+          <select class="form-control" id="bm-code" style="max-width:110px;flex-shrink:0;">
+            <option value="+1">+1 US/CA</option>
+            <option value="+44">+44 UK</option>
+            <option value="+61">+61 AU</option>
+            <option value="+64">+64 NZ</option>
+            <option value="+65">+65 SG</option>
+            <option value="+84">+84 VN</option>
+            <option value="+66">+66 TH</option>
+            <option value="+60">+60 MY</option>
+            <option value="+62">+62 ID</option>
+            <option value="+81">+81 JP</option>
+            <option value="+82">+82 KR</option>
+            <option value="+86">+86 CN</option>
+            <option value="+852">+852 HK</option>
+            <option value="+886">+886 TW</option>
+            <option value="+33">+33 FR</option>
+            <option value="+49">+49 DE</option>
+            <option value="+31">+31 NL</option>
+            <option value="+46">+46 SE</option>
+            <option value="+47">+47 NO</option>
+            <option value="+45">+45 DK</option>
+            <option value="+41">+41 CH</option>
+            <option value="+34">+34 ES</option>
+            <option value="+39">+39 IT</option>
+            <option value="+55">+55 BR</option>
+            <option value="+52">+52 MX</option>
+            <option value="+91">+91 IN</option>
+            <option value="+27">+27 ZA</option>
+            <option value="+971">+971 UAE</option>
+            <option value="+972">+972 IL</option>
+          </select>
+          <input type="tel" class="form-control" id="bm-phone" placeholder="Your number">
+        </div>
+        <p style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-top:6px;">We'll reach out via WhatsApp</p>
+      </div>
+      <div class="form-group">
         <label class="form-label">Message (optional)</label>
         <textarea class="form-control" id="bm-message" rows="3" placeholder="Tell us about yourself or ask any questions"></textarea>
       </div>
@@ -677,6 +752,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
     document.body.style.overflow = 'hidden';
     document.getElementById('bm-name').value = '';
     document.getElementById('bm-email').value = '';
+    document.getElementById('bm-phone').value = '';
     document.getElementById('bm-message').value = '';
     document.getElementById('bm-status').textContent = '';
     document.getElementById('bm-status').className = 'bm-status';
@@ -785,13 +861,10 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
 
   window.calDay = function(y, m, d) {
     const s = d2s(y, m, d);
-    if (stayType === 'monthly') {
-      selStart = s; selEnd = null;
-      renderCal(); updateInfo(); return;
-    }
+    const endLabel = stayType === 'monthly' ? 'Now select your move-out date' : 'Now select your check-out date';
     if (!pickingEnd || !selStart) {
       selStart = s; selEnd = null; pickingEnd = true;
-      document.getElementById('calHint').textContent = 'Now select your check-out date';
+      document.getElementById('calHint').textContent = endLabel;
     } else {
       if (s <= selStart) {
         selStart = s; selEnd = null;
@@ -812,12 +885,17 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   function updateInfo() {
     const el = document.getElementById('calInfo');
     if (!selStart) { el.textContent = ''; return; }
-    if (stayType === 'monthly') { el.textContent = 'Move-in: ' + fmtDate(selStart); return; }
+    const startLabel = stayType === 'monthly' ? 'Move-in: ' : 'Check-in: ';
+    const endLabel   = stayType === 'monthly' ? '— select move-out' : '— select check-out';
     if (selStart && selEnd) {
       const nights = Math.round((new Date(selEnd) - new Date(selStart)) / 86400000);
-      el.textContent = fmtDate(selStart) + ' → ' + fmtDate(selEnd) + '  (' + nights + ' night' + (nights !== 1 ? 's' : '') + ')';
+      if (stayType === 'monthly') {
+        el.textContent = fmtDate(selStart) + ' → ' + fmtDate(selEnd);
+      } else {
+        el.textContent = fmtDate(selStart) + ' → ' + fmtDate(selEnd) + '  (' + nights + ' night' + (nights !== 1 ? 's' : '') + ')';
+      }
     } else {
-      el.textContent = 'Check-in: ' + fmtDate(selStart) + ' — select check-out';
+      el.textContent = startLabel + fmtDate(selStart) + ' ' + endLabel;
     }
   }
 
@@ -834,13 +912,16 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   window.submitModal = async function() {
     const name  = document.getElementById('bm-name').value.trim();
     const email = document.getElementById('bm-email').value.trim();
+    const code  = document.getElementById('bm-code').value;
+    const phone = document.getElementById('bm-phone').value.trim();
     const msg   = document.getElementById('bm-message').value.trim();
     const st    = document.getElementById('bm-status');
     const btn   = document.getElementById('bm-btn');
+    const fullPhone = phone ? code + ' ' + phone : '';
 
     if (!name || !email) { setStatus(st, 'err', 'Please enter your name and email.'); return; }
     if (!selStart) { setStatus(st, 'err', stayType === 'monthly' ? 'Please select a move-in date.' : 'Please select your dates.'); return; }
-    if (stayType === 'short' && !selEnd) { setStatus(st, 'err', 'Please also select a check-out date.'); return; }
+    if (!selEnd) { setStatus(st, 'err', stayType === 'monthly' ? 'Please also select a move-out date.' : 'Please also select a check-out date.'); return; }
 
     btn.textContent = 'Sending…'; btn.disabled = true; st.textContent = '';
 
@@ -848,7 +929,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
       const res = await fetch('/api/enquire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, room: currentRoom, stayType, checkIn: selStart, checkOut: selEnd, message: msg }),
+        body: JSON.stringify({ name, email, phone: fullPhone, room: currentRoom, stayType, checkIn: selStart, checkOut: selEnd, message: msg }),
       });
       const data = await res.json();
       if (data.success) {
@@ -865,11 +946,14 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   window.submitSectionForm = async function() {
     const name  = document.getElementById('sf-name').value.trim();
     const email = document.getElementById('sf-email').value.trim();
+    const code  = document.getElementById('sf-code').value;
+    const phone = document.getElementById('sf-phone').value.trim();
     const room  = document.getElementById('sf-room').value;
     const date  = document.getElementById('sf-date').value;
     const msg   = document.getElementById('sf-message').value.trim();
     const st    = document.getElementById('sf-status');
     const btn   = document.getElementById('sf-btn');
+    const fullPhone = phone ? code + ' ' + phone : '';
 
     if (!name || !email || !room) { setStatus(st, 'err', 'Please fill in your name, email, and select a room.'); return; }
 
@@ -879,7 +963,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
       const res = await fetch('/api/enquire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, room, stayType: 'monthly', checkIn: date || null, checkOut: null, message: msg }),
+        body: JSON.stringify({ name, email, phone: fullPhone, room, stayType: 'monthly', checkIn: date || null, checkOut: null, message: msg }),
       });
       const data = await res.json();
       if (data.success) {

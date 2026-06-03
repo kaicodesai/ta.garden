@@ -32,7 +32,7 @@ export default {
 
 async function handleEnquiry(request, env, cors) {
   try {
-    const { name, email, room, stayType, checkIn, checkOut, message } = await request.json();
+    const { name, email, phone, room, stayType, checkIn, checkOut, message } = await request.json();
 
     if (!name || !email || !room || !checkIn) {
       return Response.json({ error: 'Missing required fields' }, { status: 400, headers: cors });
@@ -62,6 +62,7 @@ async function handleEnquiry(request, env, cors) {
     <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
       <tr><td style="padding:9px 0;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;width:130px;border-bottom:1px solid rgba(136,145,125,0.15);">Name</td><td style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);">${name}</td></tr>
       <tr><td style="padding:9px 0;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">Email</td><td style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);"><a href="mailto:${email}" style="color:#a0856c;text-decoration:none;">${email}</a></td></tr>
+      ${phone ? `<tr><td style="padding:9px 0;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">WhatsApp</td><td style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);"><a href="https://wa.me/${phone.replace(/[^0-9]/g,'')}" style="color:#a0856c;text-decoration:none;">${phone}</a></td></tr>` : ''}
       <tr><td style="padding:9px 0;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">Dates</td><td style="padding:9px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);">${dateInfo}</td></tr>
     </table>
     ${message ? `<div style="padding:16px;background:#fff;border-left:3px solid #a0856c;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:8px;">Message</div><div style="font-size:14px;line-height:1.75;color:#1a1a18;">${message}</div></div>` : ''}

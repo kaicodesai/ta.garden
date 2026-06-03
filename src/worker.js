@@ -54,17 +54,20 @@ export default {
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
-function checkAuth(request, env) {
+async function checkAuth(request, env) {
   const h = request.headers.get('x-admin-secret');
-  return h && env.ADMIN_SECRET && h.trim() === env.ADMIN_SECRET.trim();
+  if (!h || !env.BOOKINGS) return false;
+  // Password stored in KV so it can be set via the Cloudflare dashboard
+  const stored = await env.BOOKINGS.get('admin_password');
+  return stored && h.trim() === stored.trim();
 }
 
 async function adminDebug(request, env, cors) {
-  // Safe debug — never exposes the secret value, only whether it is set
+  const stored = env.BOOKINGS ? await env.BOOKINGS.get('admin_password') : null;
   return Response.json({
-    adminSecretSet:    !!env.ADMIN_SECRET,
-    adminSecretLength: env.ADMIN_SECRET ? env.ADMIN_SECRET.length : 0,
-    kvSet:             !!env.BOOKINGS,
+    kvSet:            !!env.BOOKINGS,
+    passwordInKV:     !!stored,
+    passwordLength:   stored ? stored.length : 0,
   }, { headers: cors });
 }
 
@@ -165,7 +168,7 @@ async function handleAvailability(request, env, cors) {
 // ── Admin: list all enquiries + blocked dates ─────────────────────────────────
 
 async function adminListEnquiries(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ enquiries: [], blocked: [], icalEvents: [] }, { headers: cors });
 
   const propId = new URL(request.url).searchParams.get('property') || 'ta-garden';
@@ -186,7 +189,7 @@ async function adminListEnquiries(request, env, cors) {
 // ── Admin: update enquiry status ──────────────────────────────────────────────
 
 async function adminUpdateEnquiry(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const { id, status, propertyId = 'ta-garden' } = await request.json();
@@ -203,7 +206,7 @@ async function adminUpdateEnquiry(request, env, cors) {
 // ── Admin: properties CRUD ────────────────────────────────────────────────────
 
 async function adminListProperties(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ properties: DEFAULT_PROPERTIES }, { headers: cors });
 
   const val = await env.BOOKINGS.get('properties');
@@ -212,7 +215,7 @@ async function adminListProperties(request, env, cors) {
 }
 
 async function adminSaveProperty(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const prop = await request.json();
@@ -229,7 +232,7 @@ async function adminSaveProperty(request, env, cors) {
 }
 
 async function adminDeleteProperty(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const { id } = await request.json();
@@ -244,7 +247,7 @@ async function adminDeleteProperty(request, env, cors) {
 // ── Admin: block / unblock ────────────────────────────────────────────────────
 
 async function adminBlock(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const { start, end, reason, roomId, propertyId = 'ta-garden' } = await request.json();
@@ -258,7 +261,7 @@ async function adminBlock(request, env, cors) {
 }
 
 async function adminUnblock(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const { id, propertyId = 'ta-garden' } = await request.json();
@@ -272,7 +275,7 @@ async function adminUnblock(request, env, cors) {
 // ── Admin: iCal sync from Airbnb ──────────────────────────────────────────────
 
 async function adminIcalSync(request, env, cors) {
-  if (!checkAuth(request, env)) return unauthorized(cors);
+  if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const { propertyId, icalUrl } = await request.json();

@@ -22,7 +22,7 @@ const DEFAULT_PROPERTIES = [
 ];
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const cors = {
       'Access-Control-Allow-Origin': '*',
@@ -34,7 +34,7 @@ export default {
     const p = url.pathname;
     const m = request.method;
 
-    if (p === '/api/enquire'               && m === 'POST')  return handleEnquiry(request, env, cors);
+    if (p === '/api/enquire'               && m === 'POST')  return handleEnquiry(request, env, cors, ctx);
     if (p === '/api/availability'           && m === 'GET')   return handleAvailability(request, env, cors);
 
     // Admin routes
@@ -66,10 +66,14 @@ async function checkAuth(request, env) {
 
 async function adminDebug(request, env, cors) {
   const stored = env.BOOKINGS ? await env.BOOKINGS.get('admin_password') : null;
+  const enqRaw = env.BOOKINGS ? await env.BOOKINGS.get('enquiries') : null;
+  const enquiries = enqRaw ? JSON.parse(enqRaw) : [];
   return Response.json({
     kvSet:            !!env.BOOKINGS,
     passwordInKV:     !!stored,
     passwordLength:   stored ? stored.length : 0,
+    enquiryCount:     enquiries.length,
+    latestEnquiry:    enquiries[0] ? { id: enquiries[0].id, name: enquiries[0].name, createdAt: enquiries[0].createdAt, status: enquiries[0].status } : null,
   }, { headers: cors });
 }
 
@@ -93,7 +97,7 @@ function icalKey(propId) {
 
 // ── Public: enquiry submission ────────────────────────────────────────────────
 
-async function handleEnquiry(request, env, cors) {
+async function handleEnquiry(request, env, cors, ctx) {
   try {
     const { name, email, phone, room, stayType, checkIn, checkOut, message, propertyId = 'ta-garden' } = await request.json();
     if (!name || !email || !room) {
@@ -122,18 +126,19 @@ async function handleEnquiry(request, env, cors) {
       await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
     }
 
+    // Send emails in background — never block or fail the submission response
     const adminHtml = buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateInfo, checkIn, checkOut, message, price });
-    const guestHtml = buildGuestEmail({ name, room, stayLabel, dateInfo });
-
-    await Promise.all([
-      ...TO_EMAILS.map(to => resend(FROM, to, `New Enquiry — ${room}`, adminHtml, email)),
+    const guestHtml = buildGuestEmail({ name, room, stayLabel, dateInfo, message });
+    const emailWork = Promise.all([
+      ...TO_EMAILS.map(to => resend(FROM, to, `New Enquiry — ${room} (${name})`, adminHtml, email)),
       resend('Ta.Garden <onboarding@resend.dev>', email, 'We received your enquiry — Ta.Garden', guestHtml),
-    ]);
+    ]).catch(err => console.error('Email send error:', err));
+    if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
     return Response.json({ success: true }, { headers: cors });
   } catch (err) {
     console.error(err);
-    return Response.json({ error: 'Failed to send' }, { status: 500, headers: cors });
+    return Response.json({ error: 'Failed to save enquiry' }, { status: 500, headers: cors });
   }
 }
 
@@ -415,7 +420,10 @@ function buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateIn
       <tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">Check-out</td><td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);">${checkOut ? fmt(checkOut) : '—'}</td></tr>
       ${price ? `<tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;">Duration</td><td style="padding:10px 0;font-size:14px;">${price.duration}</td></tr>` : ''}
     </table>
-    ${message ? `<div style="padding:16px;background:#fff;border-left:3px solid #a0856c;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;margin-bottom:8px;">Message</div><div style="font-size:14px;line-height:1.75;">${message}</div></div>` : ''}
+    <div style="background:#fff;border:1px solid rgba(160,133,108,0.3);border-left:4px solid #a0856c;padding:18px 20px;margin-bottom:20px;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;margin-bottom:10px;">Message from Guest</div>
+      <div style="font-size:15px;line-height:1.8;color:#1a1a18;font-style:${message ? 'normal' : 'italic'};">${message || 'No message provided.'}</div>
+    </div>
     <div>${waBtn}<a href="mailto:${email}?subject=Re: ${encodeURIComponent(room)}" style="display:inline-block;padding:12px 26px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;">Email ${name.split(' ')[0]}</a></div>
   </div>
 </div>`;
@@ -487,7 +495,7 @@ function buildDeclineEmail(enq, customMessage) {
 </div>`;
 }
 
-function buildGuestEmail({ name, room, stayLabel, dateInfo }) {
+function buildGuestEmail({ name, room, stayLabel, dateInfo, message }) {
   return `
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
   <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
@@ -496,17 +504,24 @@ function buildGuestEmail({ name, room, stayLabel, dateInfo }) {
   </div>
   <div style="padding:32px;background:#f5f0eb;">
     <p style="font-family:Georgia,serif;font-size:18px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Dear ${name.split(' ')[0]},</p>
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 14px;">Thank you for your enquiry about <strong>${room}</strong>. We've received your message and will be in touch within 24 hours.</p>
-    <div style="background:#fff;padding:16px;border:1px solid rgba(136,145,125,0.2);margin:20px 0;">
-      <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:10px;">Your Request</div>
-      <div style="font-size:14px;color:#1a1a18;margin-bottom:4px;">${room} &nbsp;·&nbsp; ${stayLabel}</div>
-      <div style="font-size:13px;color:#88917d;">${dateInfo}</div>
+    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 14px;">Thank you for reaching out about <strong>${room}</strong> at Ta.Garden. We've received your enquiry and will be in touch within 24 hours via email or WhatsApp.</p>
+    <div style="background:#fff;padding:20px;border:1px solid rgba(136,145,125,0.2);margin:20px 0;">
+      <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Your Enquiry Summary</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;width:100px;border-bottom:1px solid rgba(136,145,125,0.12);">Room</td><td style="padding:7px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);">${room}</td></tr>
+        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.12);">Stay Type</td><td style="padding:7px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);">${stayLabel}</td></tr>
+        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;${message?'border-bottom:1px solid rgba(136,145,125,0.12);':''}">Dates</td><td style="padding:7px 0;font-size:14px;${message?'border-bottom:1px solid rgba(136,145,125,0.12);''}">${dateInfo}</td></tr>
+        ${message ? `<tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;vertical-align:top;">Message</td><td style="padding:7px 0;font-size:14px;line-height:1.7;">${message}</td></tr>` : ''}
+      </table>
     </div>
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;">We look forward to welcoming you.</p>
-    <p style="font-size:14px;color:#4a4a45;margin:0;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
+    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 8px;">We look forward to welcoming you.</p>
+    <p style="font-size:14px;color:#4a4a45;margin:0 0 24px;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
+    <div style="border-top:1px solid rgba(136,145,125,0.2);padding-top:16px;font-size:12px;color:#88917d;line-height:1.7;">
+      Questions? Reply to this email or reach us at <a href="mailto:hi@soulandlunawellness.com" style="color:#a0856c;">hi@soulandlunawellness.com</a>
+    </div>
   </div>
   <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
-    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">hi@soulandlunawellness.com</div>
+    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Soul &amp; Luna Wellness · Ta.Garden · Hội An, Vietnam</div>
   </div>
 </div>`;
 }

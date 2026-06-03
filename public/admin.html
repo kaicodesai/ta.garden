@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ta.Garden · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --dark:  #1a1a18;
+  --cream: #ede0d1;
+  --teal:  #86a2a6;
+  --terra: #a0856c;
+  --light: #f5f0eb;
+  --mid:   #88917d;
+  --white: #fefcfa;
+  --green: #4caf7d;
+  --amber: #d4a055;
+  --red:   #b85c5c;
+}
+body { font-family: 'Jost', sans-serif; font-weight: 300; background: var(--light); color: var(--dark); min-height: 100vh; }
+
+/* Login */
+.login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.login-box { background: var(--white); padding: 48px 40px; width: 100%; max-width: 380px; border: 1px solid rgba(136,145,125,0.18); }
+.login-brand { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: var(--dark); margin-bottom: 4px; }
+.login-sub { font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--teal); margin-bottom: 32px; }
+.login-label { display: block; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); margin-bottom: 6px; }
+.login-input { width: 100%; padding: 11px 14px; background: var(--light); border: 1px solid rgba(136,145,125,0.28); color: var(--dark); font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; }
+.login-input:focus { border-color: var(--teal); }
+.login-btn { width: 100%; padding: 13px; background: var(--dark); color: var(--cream); border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; margin-top: 16px; transition: background 0.2s; }
+.login-btn:hover { background: #2a2a26; }
+.login-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 18px; }
+.login-note { font-size: 11px; color: var(--mid); margin-top: 16px; line-height: 1.6; }
+
+/* App shell */
+.app { display: none; flex-direction: column; min-height: 100vh; }
+.app.visible { display: flex; }
+.app-nav { background: var(--dark); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+.app-brand { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; color: var(--cream); letter-spacing: 0.06em; }
+.app-brand span { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); margin-left: 10px; }
+.signout-btn { background: none; border: 1px solid rgba(237,224,209,0.2); color: rgba(237,224,209,0.5); font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; padding: 6px 14px; cursor: pointer; transition: all 0.2s; }
+.signout-btn:hover { border-color: rgba(237,224,209,0.5); color: var(--cream); }
+
+.tabs { background: var(--dark); padding: 0 28px; display: flex; gap: 0; border-top: 1px solid rgba(237,224,209,0.08); }
+.tab { padding: 12px 20px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(237,224,209,0.4); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Jost', sans-serif; }
+.tab:hover { color: rgba(237,224,209,0.7); }
+.tab.active { color: var(--cream); border-bottom-color: var(--teal); }
+
+.content { flex: 1; padding: 28px; max-width: 1200px; width: 100%; margin: 0 auto; }
+
+/* Stats bar */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--white); padding: 16px 20px; border: 1px solid rgba(136,145,125,0.14); }
+.stat-val { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: var(--dark); }
+.stat-lbl { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); margin-top: 2px; }
+
+/* Enquiries */
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.panel-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; }
+.filter-row { display: flex; gap: 8px; }
+.filter-btn { padding: 6px 14px; border: 1px solid rgba(136,145,125,0.28); background: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); cursor: pointer; transition: all 0.2s; }
+.filter-btn.active, .filter-btn:hover { border-color: var(--dark); color: var(--dark); background: var(--white); }
+
+.enq-table { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid rgba(136,145,125,0.14); }
+.enq-table th { padding: 10px 14px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); text-align: left; border-bottom: 1px solid rgba(136,145,125,0.18); background: var(--light); font-weight: 400; }
+.enq-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid rgba(136,145,125,0.1); vertical-align: top; }
+.enq-table tr:last-child td { border-bottom: none; }
+.enq-table tr:hover td { background: #faf6f0; }
+.guest-name { font-weight: 400; }
+.guest-contact { font-size: 11px; color: var(--mid); margin-top: 2px; }
+.guest-wa { color: #25D366; text-decoration: none; font-size: 11px; }
+.price-cell { font-family: 'Cormorant Garamond', serif; font-size: 18px; }
+.room-badge { display: inline-block; padding: 3px 8px; background: rgba(134,162,166,0.12); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); }
+.dates-cell { font-size: 12px; color: var(--mid); line-height: 1.6; }
+.msg-cell { font-size: 12px; color: var(--mid); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-select { padding: 5px 10px; border: 1px solid rgba(136,145,125,0.28); background: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dark); cursor: pointer; outline: none; }
+.status-select.pending  { border-color: #d4a055; color: #d4a055; }
+.status-select.confirmed { border-color: #4caf7d; color: #4caf7d; }
+.status-select.cancelled { border-color: #b85c5c; color: #b85c5c; }
+.empty-state { text-align: center; padding: 48px; color: var(--mid); font-size: 14px; }
+
+/* Timeline */
+.timeline-wrap { overflow-x: auto; background: var(--white); border: 1px solid rgba(136,145,125,0.14); }
+.timeline-inner { min-width: 800px; }
+.tl-header { display: flex; }
+.tl-room-col { width: 160px; flex-shrink: 0; }
+.tl-days { flex: 1; display: flex; }
+.tl-day-head { flex: 1; text-align: center; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); padding: 8px 0; border-left: 1px solid rgba(136,145,125,0.1); border-bottom: 1px solid rgba(136,145,125,0.18); user-select: none; }
+.tl-day-head.today { color: var(--terra); font-weight: 400; }
+.tl-day-head.month-start { border-left-color: rgba(136,145,125,0.3); }
+.tl-month-bar { display: flex; margin-bottom: 0; }
+.tl-month-label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); padding: 6px 0 4px; text-align: center; border-left: 1px solid rgba(136,145,125,0.18); }
+
+.tl-row { display: flex; border-bottom: 1px solid rgba(136,145,125,0.1); }
+.tl-row:last-child { border-bottom: none; }
+.tl-room-label { width: 160px; flex-shrink: 0; padding: 10px 16px; font-size: 12px; color: var(--dark); border-right: 1px solid rgba(136,145,125,0.18); display: flex; align-items: center; }
+.tl-cells { flex: 1; position: relative; height: 48px; }
+.tl-cell { position: absolute; top: 0; bottom: 0; border-left: 1px solid rgba(136,145,125,0.07); }
+.tl-block { position: absolute; top: 6px; bottom: 6px; border-radius: 2px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 400; letter-spacing: 0.06em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; z-index: 1; }
+.tl-block.confirmed { background: rgba(76,175,125,0.2); border: 1px solid rgba(76,175,125,0.5); color: #2d7a56; }
+.tl-block.pending   { background: rgba(212,160,85,0.15); border: 1px solid rgba(212,160,85,0.4); color: #9a6f25; }
+.tl-block.retreat   { background: rgba(26,26,24,0.08); border: 1px solid rgba(26,26,24,0.2); color: var(--mid); }
+.tl-today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--terra); opacity: 0.5; z-index: 2; }
+
+/* Blocked dates manager */
+.block-form { background: var(--white); padding: 24px; border: 1px solid rgba(136,145,125,0.14); margin-bottom: 20px; }
+.block-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-lbl { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); }
+.form-ctrl { padding: 9px 12px; background: var(--light); border: 1px solid rgba(136,145,125,0.24); color: var(--dark); font-family: 'Jost', sans-serif; font-size: 13px; font-weight: 300; outline: none; }
+.form-ctrl:focus { border-color: var(--teal); }
+.btn-block { padding: 9px 20px; background: var(--dark); color: var(--cream); border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+.blocks-list { background: var(--white); border: 1px solid rgba(136,145,125,0.14); }
+.block-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid rgba(136,145,125,0.1); }
+.block-item:last-child { border-bottom: none; }
+.block-info { font-size: 13px; }
+.block-reason { font-weight: 400; margin-bottom: 3px; }
+.block-dates { font-size: 11px; color: var(--mid); }
+.block-room-badge { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-left: 8px; }
+.btn-remove { background: none; border: 1px solid rgba(136,145,125,0.28); color: var(--mid); font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; padding: 5px 12px; cursor: pointer; transition: all 0.2s; }
+.btn-remove:hover { border-color: var(--red); color: var(--red); }
+
+.loading { text-align: center; padding: 40px; color: var(--mid); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-brand serif">Ta.Garden</div>
+    <div class="login-sub">Admin Dashboard</div>
+    <label class="login-label">Admin Password</label>
+    <input type="password" class="login-input" id="loginInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')login()">
+    <button class="login-btn" onclick="login()">Sign In →</button>
+    <div class="login-err" id="loginErr"></div>
+    <p class="login-note">Set your admin password in Cloudflare: Workers &amp; Pages → ta-garden-landing → Settings → Variables &amp; Secrets → Add <strong>ADMIN_SECRET</strong></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <nav class="app-nav">
+    <div class="app-brand serif">Ta.Garden <span>Admin</span></div>
+    <button class="signout-btn" onclick="signOut()">Sign Out</button>
+  </nav>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('enquiries')">Enquiries</button>
+    <button class="tab" onclick="showTab('timeline')">Timeline</button>
+    <button class="tab" onclick="showTab('blocking')">Retreat Blocking</button>
+  </div>
+  <div class="content">
+
+    <!-- STATS -->
+    <div class="stats" id="statsBar">
+      <div class="stat-card"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">Total Enquiries</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-pending">—</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-confirmed">—</div><div class="stat-lbl">Confirmed</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-revenue">—</div><div class="stat-lbl">Est. Revenue</div></div>
+    </div>
+
+    <!-- ENQUIRIES TAB -->
+    <div id="tab-enquiries">
+      <div class="panel-header">
+        <div class="panel-title serif">Booking Enquiries</div>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+          <button class="filter-btn" onclick="setFilter('pending', this)">Pending</button>
+          <button class="filter-btn" onclick="setFilter('confirmed', this)">Confirmed</button>
+          <button class="filter-btn" onclick="setFilter('cancelled', this)">Cancelled</button>
+        </div>
+      </div>
+      <div id="enquiriesContainer"><div class="loading">Loading enquiries…</div></div>
+    </div>
+
+    <!-- TIMELINE TAB -->
+    <div id="tab-timeline" style="display:none;">
+      <div class="panel-header">
+        <div class="panel-title serif">Occupancy Timeline</div>
+        <div style="font-size:11px;color:var(--mid);">
+          <span style="display:inline-block;width:12px;height:12px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.5);vertical-align:middle;margin-right:4px;"></span>Confirmed &nbsp;
+          <span style="display:inline-block;width:12px;height:12px;background:rgba(212,160,85,0.15);border:1px solid rgba(212,160,85,0.4);vertical-align:middle;margin-right:4px;"></span>Pending &nbsp;
+          <span style="display:inline-block;width:12px;height:12px;background:rgba(26,26,24,0.08);border:1px solid rgba(26,26,24,0.2);vertical-align:middle;margin-right:4px;"></span>Retreat Block
+        </div>
+      </div>
+      <div id="timelineContainer"><div class="loading">Loading timeline…</div></div>
+    </div>
+
+    <!-- BLOCKING TAB -->
+    <div id="tab-blocking" style="display:none;">
+      <div class="panel-header">
+        <div class="panel-title serif">Retreat &amp; Maintenance Blocks</div>
+      </div>
+      <div class="block-form">
+        <div class="block-grid">
+          <div class="form-group">
+            <label class="form-lbl">Start Date</label>
+            <input type="date" class="form-ctrl" id="blk-start">
+          </div>
+          <div class="form-group">
+            <label class="form-lbl">End Date</label>
+            <input type="date" class="form-ctrl" id="blk-end">
+          </div>
+          <div class="form-group">
+            <label class="form-lbl">Reason</label>
+            <input type="text" class="form-ctrl" id="blk-reason" placeholder="e.g. Retreat, Maintenance">
+          </div>
+          <div class="form-group">
+            <label class="form-lbl">Which Room</label>
+            <select class="form-ctrl" id="blk-room">
+              <option value="all">All Rooms</option>
+              <option value="river-room">The River Room</option>
+              <option value="balcony-room">The Balcony Room</option>
+              <option value="sky-suite">The Sky Suite</option>
+            </select>
+          </div>
+          <button class="btn-block" onclick="addBlock()">Block Dates</button>
+        </div>
+        <div id="blk-status" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
+      </div>
+      <div id="blocksContainer"><div class="loading">Loading blocked dates…</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ROOMS = ['The River Room', 'The Balcony Room', 'The Sky Suite'];
+const ROOM_KEYS = { 'The River Room': 'river-room', 'The Balcony Room': 'balcony-room', 'The Sky Suite': 'sky-suite' };
+
+let secret = '';
+let allEnquiries = [];
+let allBlocked   = [];
+let currentFilter = 'all';
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+async function login() {
+  const pw = document.getElementById('loginInput').value.trim();
+  if (!pw) return;
+  const err = document.getElementById('loginErr');
+  err.textContent = 'Checking…';
+
+  try {
+    const res = await fetch('/api/admin/enquiries', { headers: { 'x-admin-secret': pw } });
+    if (res.status === 401) { err.textContent = 'Incorrect password.'; return; }
+    const data = await res.json();
+    secret = pw;
+    sessionStorage.setItem('tg_admin', pw);
+    allEnquiries = data.enquiries || [];
+    allBlocked   = data.blocked   || [];
+    showApp();
+  } catch {
+    err.textContent = 'Connection error. Try again.';
+  }
+}
+
+function signOut() {
+  sessionStorage.removeItem('tg_admin');
+  secret = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('loginInput').value = '';
+  document.getElementById('loginErr').textContent = '';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  renderStats();
+  renderEnquiries();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+function showTab(name) {
+  ['enquiries', 'timeline', 'blocking'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['enquiries','timeline','blocking'][i] === name);
+  });
+  if (name === 'timeline') renderTimeline();
+  if (name === 'blocking') renderBlocked();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+function renderStats() {
+  const pending   = allEnquiries.filter(e => e.status === 'pending').length;
+  const confirmed = allEnquiries.filter(e => e.status === 'confirmed').length;
+  const revenue   = allEnquiries.filter(e => e.status === 'confirmed' && e.price).reduce((s, e) => s + e.price, 0);
+  document.getElementById('s-total').textContent     = allEnquiries.length;
+  document.getElementById('s-pending').textContent   = pending;
+  document.getElementById('s-confirmed').textContent = confirmed;
+  document.getElementById('s-revenue').textContent   = revenue ? '$' + revenue.toLocaleString() : '—';
+}
+
+// ── Enquiries ─────────────────────────────────────────────────────────────────
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderEnquiries();
+}
+
+function renderEnquiries() {
+  const list = currentFilter === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === currentFilter);
+  const c = document.getElementById('enquiriesContainer');
+
+  if (!list.length) {
+    c.innerHTML = '<div class="empty-state">No enquiries yet.</div>';
+    return;
+  }
+
+  c.innerHTML = `
+  <table class="enq-table">
+    <thead>
+      <tr>
+        <th>Guest</th>
+        <th>Room</th>
+        <th>Dates</th>
+        <th>Est. Total</th>
+        <th>Message</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${list.map(e => `
+      <tr>
+        <td>
+          <div class="guest-name">${e.name}</div>
+          <div class="guest-contact">
+            <a href="mailto:${e.email}" style="color:var(--terra);text-decoration:none;">${e.email}</a>
+            ${e.phone ? `<br><a href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" class="guest-wa">WhatsApp: ${e.phone}</a>` : ''}
+          </div>
+          <div style="font-size:10px;color:var(--mid);margin-top:3px;">${fmtDate(e.createdAt)}</div>
+        </td>
+        <td><span class="room-badge">${e.room.replace('The ','')}</span><br><span style="font-size:10px;color:var(--mid);margin-top:4px;display:block;">${e.stayType === 'monthly' ? 'Monthly' : 'Short Stay'}</span></td>
+        <td class="dates-cell">
+          <div>In: ${e.checkIn ? fmt(e.checkIn) : '—'}</div>
+          <div>Out: ${e.checkOut ? fmt(e.checkOut) : '—'}</div>
+        </td>
+        <td class="price-cell">${e.price ? '$' + e.price.toLocaleString() : '—'}</td>
+        <td class="msg-cell" title="${(e.message||'').replace(/"/g,'&quot;')}">${e.message || '—'}</td>
+        <td>
+          <select class="status-select ${e.status}" onchange="updateStatus('${e.id}', this)">
+            <option value="pending"   ${e.status==='pending'   ? 'selected' : ''}>Pending</option>
+            <option value="confirmed" ${e.status==='confirmed' ? 'selected' : ''}>Confirmed</option>
+            <option value="cancelled" ${e.status==='cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function updateStatus(id, sel) {
+  const status = sel.value;
+  sel.className = 'status-select ' + status;
+  try {
+    await fetch('/api/admin/enquiry', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id, status }),
+    });
+    const e = allEnquiries.find(x => x.id === id);
+    if (e) e.status = status;
+    renderStats();
+  } catch {
+    alert('Failed to update status. Try again.');
+  }
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+
+function renderTimeline() {
+  const DAYS = 90;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Array.from({ length: DAYS }, (_, i) => {
+    const d = new Date(today); d.setDate(today.getDate() + i); return d;
+  });
+
+  const dayW = 20; // px per day
+  const totalW = DAYS * dayW;
+
+  // Month labels
+  let monthHtml = '<div style="display:flex;margin-left:160px;">';
+  let i = 0;
+  while (i < days.length) {
+    const d = days[i];
+    const m = d.getMonth();
+    let count = 0;
+    while (i + count < days.length && days[i + count].getMonth() === m) count++;
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    monthHtml += `<div class="tl-month-label" style="width:${count * dayW}px;">${MONTHS[m]}</div>`;
+    i += count;
+  }
+  monthHtml += '</div>';
+
+  // Day headers
+  let dayHeadHtml = '<div style="display:flex;margin-left:160px;">';
+  days.forEach((d, idx) => {
+    const isToday = idx === 0;
+    const isFirst = d.getDate() === 1;
+    dayHeadHtml += `<div class="tl-day-head${isToday ? ' today' : ''}${isFirst ? ' month-start' : ''}" style="width:${dayW}px;flex:none;">${d.getDate()}</div>`;
+  });
+  dayHeadHtml += '</div>';
+
+  // Rows per room
+  let rowsHtml = '';
+  ROOMS.forEach(room => {
+    const roomKey = ROOM_KEYS[room];
+
+    // Cell backgrounds
+    let cellsHtml = '';
+    days.forEach((d, idx) => {
+      cellsHtml += `<div class="tl-cell" style="left:${idx*dayW}px;width:${dayW}px;"></div>`;
+    });
+
+    // Today line
+    cellsHtml += `<div class="tl-today-line" style="left:0;"></div>`;
+
+    // Enquiry blocks
+    allEnquiries.forEach(e => {
+      if (!e.checkIn || !e.checkOut) return;
+      const start = new Date(e.checkIn + 'T00:00:00');
+      const end   = new Date(e.checkOut + 'T00:00:00');
+      if (e.room !== room) return;
+      const startOff = Math.max(0, Math.round((start - today) / 86400000));
+      const endOff   = Math.min(DAYS, Math.round((end - today) / 86400000));
+      if (endOff <= 0 || startOff >= DAYS) return;
+      const w = (endOff - startOff) * dayW;
+      const l = startOff * dayW;
+      const cls = e.status === 'confirmed' ? 'confirmed' : e.status === 'cancelled' ? '' : 'pending';
+      if (!cls) return;
+      cellsHtml += `<div class="tl-block ${cls}" style="left:${l}px;width:${w}px;" title="${e.name} · ${e.room}">${e.name.split(' ')[0]}</div>`;
+    });
+
+    // Blocked date blocks
+    allBlocked.forEach(b => {
+      if (b.roomId !== 'all' && b.roomId !== roomKey) return;
+      const start = new Date(b.start + 'T00:00:00');
+      const end   = new Date(b.end   + 'T00:00:00');
+      const startOff = Math.max(0, Math.round((start - today) / 86400000));
+      const endOff   = Math.min(DAYS, Math.round((end - today) / 86400000) + 1);
+      if (endOff <= 0 || startOff >= DAYS) return;
+      const w = (endOff - startOff) * dayW;
+      const l = startOff * dayW;
+      cellsHtml += `<div class="tl-block retreat" style="left:${l}px;width:${w}px;" title="${b.reason}">${b.reason}</div>`;
+    });
+
+    rowsHtml += `
+    <div class="tl-row">
+      <div class="tl-room-label">${room}</div>
+      <div class="tl-cells" style="width:${totalW}px;">${cellsHtml}</div>
+    </div>`;
+  });
+
+  document.getElementById('timelineContainer').innerHTML = `
+  <div class="timeline-wrap">
+    <div class="timeline-inner" style="width:${totalW + 160}px;">
+      ${monthHtml}
+      ${dayHeadHtml}
+      ${rowsHtml}
+    </div>
+  </div>`;
+}
+
+// ── Blocked dates ─────────────────────────────────────────────────────────────
+
+function renderBlocked() {
+  const c = document.getElementById('blocksContainer');
+  if (!allBlocked.length) {
+    c.innerHTML = '<div class="empty-state">No blocked dates. Add one above.</div>';
+    return;
+  }
+  const ROOM_LABELS = { all: 'All Rooms', 'river-room': 'River Room', 'balcony-room': 'Balcony Room', 'sky-suite': 'Sky Suite' };
+  c.innerHTML = `<div class="blocks-list">${allBlocked.map(b => `
+  <div class="block-item">
+    <div class="block-info">
+      <div class="block-reason">${b.reason} <span class="block-room-badge">${ROOM_LABELS[b.roomId] || b.roomId}</span></div>
+      <div class="block-dates">${fmt(b.start)} → ${fmt(b.end)}</div>
+    </div>
+    <button class="btn-remove" onclick="removeBlock('${b.id}')">Remove</button>
+  </div>`).join('')}</div>`;
+}
+
+async function addBlock() {
+  const start  = document.getElementById('blk-start').value;
+  const end    = document.getElementById('blk-end').value;
+  const reason = document.getElementById('blk-reason').value.trim() || 'Blocked';
+  const roomId = document.getElementById('blk-room').value;
+  const st     = document.getElementById('blk-status');
+
+  if (!start || !end) { st.style.color = 'var(--terra)'; st.textContent = 'Please select start and end dates.'; return; }
+  if (end < start)    { st.style.color = 'var(--terra)'; st.textContent = 'End date must be after start date.'; return; }
+
+  st.style.color = 'var(--mid)'; st.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/admin/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ start, end, reason, roomId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      allBlocked.push({ id: data.id, start, end, reason, roomId });
+      st.style.color = 'var(--teal)'; st.textContent = 'Dates blocked successfully.';
+      document.getElementById('blk-start').value = '';
+      document.getElementById('blk-end').value   = '';
+      document.getElementById('blk-reason').value = '';
+      renderBlocked();
+    } else throw new Error();
+  } catch {
+    st.style.color = 'var(--terra)'; st.textContent = 'Failed to save. Try again.';
+  }
+}
+
+async function removeBlock(id) {
+  if (!confirm('Remove this blocked period?')) return;
+  try {
+    await fetch('/api/admin/unblock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id }),
+    });
+    allBlocked = allBlocked.filter(b => b.id !== id);
+    renderBlocked();
+  } catch {
+    alert('Failed to remove block. Try again.');
+  }
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+
+function fmt(str) {
+  if (!str) return '—';
+  const [y, m, d] = str.split('-');
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return M[+m-1] + ' ' + +d + ', ' + y;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── Auto-login from session ───────────────────────────────────────────────────
+
+(async function () {
+  const saved = sessionStorage.getItem('tg_admin');
+  if (!saved) return;
+  try {
+    const res = await fetch('/api/admin/enquiries', { headers: { 'x-admin-secret': saved } });
+    if (res.ok) {
+      const data = await res.json();
+      secret       = saved;
+      allEnquiries = data.enquiries || [];
+      allBlocked   = data.blocked   || [];
+      showApp();
+    }
+  } catch {}
+})();
+</script>
+</body>
+</html>

@@ -50,7 +50,14 @@ export default {
     if (p === '/api/admin/unblock'          && m === 'POST')  return adminUnblock(request, env, cors);
     if (p === '/api/admin/ical-sync'        && m === 'POST')  return adminIcalSync(request, env, cors);
 
-    return env.ASSETS.fetch(request);
+    // Serve static assets with no-cache for HTML so updates always reach the browser
+    const assetRes = await env.ASSETS.fetch(request);
+    if (assetRes.headers.get('content-type')?.includes('text/html')) {
+      const res = new Response(assetRes.body, assetRes);
+      res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res;
+    }
+    return assetRes;
   },
 };
 

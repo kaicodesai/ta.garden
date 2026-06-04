@@ -1,6 +1,6 @@
 const RESEND_API_KEY = 're_Tu3YJdBj_KKyLdGr93ByYaE4FZ13J5Nku';
 const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
-const FROM = 'Ta.Garden Enquiries <onboarding@resend.dev>';
+const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
 
 const ROOM_RATES = {
   'The River Room':   { monthly: 350, nightly: 25 },
@@ -49,6 +49,12 @@ export default {
     if (p === '/api/admin/block'            && m === 'POST')  return safeCall(() => adminBlock(request, env, cors), cors);
     if (p === '/api/admin/unblock'          && m === 'POST')  return safeCall(() => adminUnblock(request, env, cors), cors);
     if (p === '/api/admin/ical-sync'        && m === 'POST')  return safeCall(() => adminIcalSync(request, env, cors), cors);
+    if (p === '/api/admin/onboarding'       && m === 'PATCH') return safeCall(() => adminUpdateOnboarding(request, env, cors), cors);
+    if (p === '/api/admin/guest-profile'    && m === 'GET')   return safeCall(() => adminGetGuestProfile(request, env, cors), cors);
+
+    // Guest portal (public — ID is the auth token)
+    if (p === '/api/guest'                  && m === 'GET')   return handleGuestGet(request, env, cors);
+    if (p === '/api/guest/submit'           && m === 'POST')  return handleGuestSubmit(request, env, cors, ctx);
 
     // Serve static assets with no-cache for HTML so updates always reach the browser
     const assetRes = await env.ASSETS.fetch(request);
@@ -66,7 +72,6 @@ export default {
 async function checkAuth(request, env) {
   const h = request.headers.get('x-admin-secret');
   if (!h || !env.BOOKINGS) return false;
-  // Password stored in KV so it can be set via the Cloudflare dashboard
   const stored = await env.BOOKINGS.get('admin_password');
   return stored && h.trim() === stored.trim();
 }
@@ -136,14 +141,18 @@ async function handleEnquiry(request, env, cors, ctx) {
       const key = enquiriesKey(propertyId);
       const existing = await env.BOOKINGS.get(key);
       const enquiries = existing ? JSON.parse(existing) : [];
+      const enqId = `enq_${Date.now()}`;
       enquiries.unshift({
-        id: `enq_${Date.now()}`,
+        id: enqId,
         propertyId, name, email, phone: phone || '', room,
         stayType, checkIn, checkOut: checkOut || null,
         message: message || '', price: price ? price.total : null,
         status: 'pending', createdAt: new Date().toISOString(),
+        onboarding: { paymentReceived: false, contractSigned: false, passportUploaded: false, visaUploaded: false },
       });
       await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
+      // Store property index so guest portal can look up by ID alone
+      await env.BOOKINGS.put(`enq_idx_${enqId}`, propertyId);
     }
 
     // Send emails in background — never block or fail the submission response
@@ -151,7 +160,7 @@ async function handleEnquiry(request, env, cors, ctx) {
     const guestHtml = buildGuestEmail({ name, room, stayLabel, dateInfo, message });
     const emailWork = Promise.all([
       ...TO_EMAILS.map(to => resend(FROM, to, `New Enquiry — ${room} (${name})`, adminHtml, email)),
-      resend('Ta.Garden <onboarding@resend.dev>', email, 'We received your enquiry — Ta.Garden', guestHtml),
+      resend(FROM, email, 'We received your enquiry — Ta.Garden', guestHtml),
     ]).catch(err => console.error('Email send error:', err));
     if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
@@ -296,12 +305,13 @@ async function adminNotify(request, env, cors) {
   enquiries[idx].status = newStatus;
   await env.BOOKINGS.put(key, JSON.stringify(enquiries));
 
-  const html    = action === 'confirm' ? buildConfirmEmail(enq, customMessage) : buildDeclineEmail(enq, customMessage);
+  const origin = new URL(request.url).origin;
+  const html    = action === 'confirm' ? buildConfirmEmail(enq, customMessage, origin, propertyId) : buildDeclineEmail(enq, customMessage);
   const subject = action === 'confirm'
     ? `Your booking at Ta.Garden is confirmed — ${enq.room}`
     : `Re: Your enquiry at Ta.Garden — ${enq.room}`;
 
-  await resend('Ta.Garden <onboarding@resend.dev>', enq.email, subject, html);
+  await resend(FROM, enq.email, subject, html);
   return Response.json({ success: true, status: newStatus }, { headers: cors });
 }
 
@@ -361,13 +371,11 @@ async function adminIcalSync(request, env, cors) {
   if (!icalUrl) return Response.json({ error: 'No iCal URL provided' }, { status: 400, headers: cors });
 
   try {
-    // Save the iCal URL to the property config
     const propVal = await env.BOOKINGS.get('properties');
     const props   = propVal ? JSON.parse(propVal) : [...DEFAULT_PROPERTIES];
     const pIdx    = props.findIndex(p => p.id === propertyId);
     if (pIdx >= 0) { props[pIdx].icalUrl = icalUrl; await env.BOOKINGS.put('properties', JSON.stringify(props)); }
 
-    // Fetch and parse the iCal feed
     const res  = await fetch(icalUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TaGardenAdmin/1.0)' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text   = await res.text();
@@ -402,6 +410,121 @@ function parseICal(text) {
     if (start && end && start !== end) events.push({ start, end, summary });
   });
   return events;
+}
+
+// ── Guest portal (public) ─────────────────────────────────────────────────────
+
+async function handleGuestGet(request, env, cors) {
+  const params = new URL(request.url).searchParams;
+  const id = params.get('id');
+  const propId = params.get('p') || 'ta-garden';
+  if (!id || !env.BOOKINGS) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+
+  const val = await env.BOOKINGS.get(enquiriesKey(propId));
+  const enquiries = val ? JSON.parse(val) : [];
+  const enq = enquiries.find(e => e.id === id);
+  if (!enq) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+
+  const profileRaw = await env.BOOKINGS.get(`guest__${id}`);
+  const profile = profileRaw ? JSON.parse(profileRaw) : null;
+
+  return Response.json({
+    id: enq.id,
+    name: enq.name,
+    room: enq.room,
+    stayType: enq.stayType,
+    checkIn: enq.checkIn,
+    checkOut: enq.checkOut,
+    status: enq.status,
+    onboarding: enq.onboarding || {},
+    profileSubmitted: !!profile,
+    profile: profile ? { fullName: profile.fullName, nationality: profile.nationality, submitted: true } : null,
+  }, { headers: cors });
+}
+
+async function handleGuestSubmit(request, env, cors, ctx) {
+  try {
+    const { id, propertyId = 'ta-garden', fullName, dateOfBirth, nationality, passportNumber, homeAddress, emergencyName, emergencyPhone, passport, visa } = await request.json();
+    if (!id || !fullName) return Response.json({ error: 'Missing required fields' }, { status: 400, headers: cors });
+    if (!env.BOOKINGS) return Response.json({ error: 'Storage unavailable' }, { status: 503, headers: cors });
+
+    const profile = { fullName, dateOfBirth, nationality, passportNumber, homeAddress, emergencyName, emergencyPhone, passport: passport || null, visa: visa || null, submittedAt: new Date().toISOString() };
+    await env.BOOKINGS.put(`guest__${id}`, JSON.stringify(profile));
+
+    // Update onboarding flags on the enquiry
+    const key = enquiriesKey(propertyId);
+    const val = await env.BOOKINGS.get(key);
+    const enquiries = val ? JSON.parse(val) : [];
+    const idx = enquiries.findIndex(e => e.id === id);
+    if (idx >= 0) {
+      enquiries[idx].onboarding = {
+        ...((enquiries[idx].onboarding) || {}),
+        passportUploaded: !!passport,
+        visaUploaded: !!visa,
+      };
+      await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+    }
+
+    // Notify admin
+    const enq = idx >= 0 ? enquiries[idx] : { name: fullName, room: 'Unknown' };
+    const adminHtml = `<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:24px;background:#f5f0eb;">
+      <h2 style="font-weight:300;margin-bottom:16px;">Guest Profile Submitted</h2>
+      <p><strong>${fullName}</strong> has submitted their guest profile for <strong>${enq.room || ''}</strong>.</p>
+      <ul style="font-size:14px;line-height:2;margin-top:12px;">
+        <li>Nationality: ${nationality || '—'}</li>
+        <li>Passport: ${passportNumber || '—'}</li>
+        <li>DOB: ${dateOfBirth || '—'}</li>
+        <li>Emergency contact: ${emergencyName || '—'} (${emergencyPhone || '—'})</li>
+        <li>Passport photo: ${passport ? 'Uploaded ✓' : 'Not uploaded'}</li>
+        <li>Visa document: ${visa ? 'Uploaded ✓' : 'Not uploaded'}</li>
+      </ul>
+      <p style="margin-top:16px;font-size:13px;color:#88917d;">Log in to the admin dashboard to view documents.</p>
+    </div>`;
+    const emailWork = Promise.all(
+      TO_EMAILS.map(to => resend(FROM, to, `Guest profile submitted — ${fullName}`, adminHtml))
+    ).catch(err => console.error('Email error:', err));
+    if (ctx?.waitUntil) ctx.waitUntil(emailWork);
+
+    return Response.json({ success: true }, { headers: cors });
+  } catch (err) {
+    console.error(err);
+    return Response.json({ error: 'Submission failed' }, { status: 500, headers: cors });
+  }
+}
+
+// ── Admin: update onboarding checklist ────────────────────────────────────────
+
+async function adminUpdateOnboarding(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { id, propertyId = 'ta-garden', field, value } = await request.json();
+  const ALLOWED = ['paymentReceived', 'contractSigned', 'passportUploaded', 'visaUploaded'];
+  if (!ALLOWED.includes(field)) return Response.json({ error: 'Invalid field' }, { status: 400, headers: cors });
+
+  const key = enquiriesKey(propertyId);
+  const val = await env.BOOKINGS.get(key);
+  const enquiries = val ? JSON.parse(val) : [];
+  const idx = enquiries.findIndex(e => e.id === id);
+  if (idx === -1) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+
+  enquiries[idx].onboarding = { ...(enquiries[idx].onboarding || {}), [field]: value };
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+  return Response.json({ success: true }, { headers: cors });
+}
+
+// ── Admin: get guest profile ──────────────────────────────────────────────────
+
+async function adminGetGuestProfile(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
+
+  const raw = await env.BOOKINGS.get(`guest__${id}`);
+  if (!raw) return Response.json({ profile: null }, { headers: cors });
+  return Response.json({ profile: JSON.parse(raw) }, { headers: cors });
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────
@@ -454,7 +577,8 @@ function buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateIn
 </div>`;
 }
 
-function buildConfirmEmail(enq, customMessage) {
+function buildConfirmEmail(enq, customMessage, origin, propertyId) {
+  const guestPortalUrl = origin ? `${origin}/guest.html?id=${enq.id}&p=${propertyId || 'ta-garden'}` : null;
   const price = calcPrice(enq.room, enq.stayType, enq.checkIn, enq.checkOut);
   return `
 <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
@@ -487,9 +611,11 @@ function buildConfirmEmail(enq, customMessage) {
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">01</span><span>Complete your first month's payment to secure your room</span></div>
         <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">02</span><span>Review and sign the Ta.Garden House Agreement (sent separately)</span></div>
-        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">03</span><span>We'll confirm check-in details closer to your arrival date</span></div>
+        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">03</span><span>Complete your guest profile — upload passport photo and visa details via your personal link below</span></div>
+        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">04</span><span>We'll confirm check-in details closer to your arrival date</span></div>
       </div>
     </div>
+    ${guestPortalUrl ? `<a href="${guestPortalUrl}" style="display:block;text-align:center;padding:15px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;">Complete Guest Profile →</a>` : ''}
     <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" style="display:block;text-align:center;padding:15px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;">Complete Payment via Stripe →</a>
   </div>
   <div style="padding:16px 32px;background:#1a1a18;text-align:center;">

@@ -422,10 +422,16 @@ async function loadCurrentProperty(id) {
   currentProp = allProps.find(p => p.id === id) || allProps[0] || { id: 'ta-garden', name: 'Ta.Garden', rooms: [] };
   try {
     const r = await fetch(`/api/admin/enquiries?property=${currentProp.id}`, { headers: { 'x-admin-secret': secret } });
+    if (!r.ok) { allEnquiries = []; allBlocked = []; icalEvents = []; return; }
     const d = await r.json();
     allEnquiries = d.enquiries  || [];
     allBlocked   = d.blocked    || [];
     icalEvents   = d.icalEvents || [];
+    // If nothing came back and we weren't already on ta-garden, try the default key
+    if (!allEnquiries.length && currentProp.id !== 'ta-garden') {
+      const r2 = await fetch('/api/admin/enquiries?property=ta-garden', { headers: { 'x-admin-secret': secret } });
+      if (r2.ok) { const d2 = await r2.json(); allEnquiries = d2.enquiries || []; allBlocked = d2.blocked || []; icalEvents = d2.icalEvents || []; }
+    }
   } catch {
     allEnquiries = []; allBlocked = []; icalEvents = [];
   }

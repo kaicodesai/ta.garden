@@ -65,15 +65,19 @@ async function checkAuth(request, env) {
 }
 
 async function adminDebug(request, env, cors) {
-  const stored = env.BOOKINGS ? await env.BOOKINGS.get('admin_password') : null;
-  const enqRaw = env.BOOKINGS ? await env.BOOKINGS.get('enquiries') : null;
-  const enquiries = enqRaw ? JSON.parse(enqRaw) : [];
+  const stored   = env.BOOKINGS ? await env.BOOKINGS.get('admin_password') : null;
+  const enqRaw   = env.BOOKINGS ? await env.BOOKINGS.get('enquiries') : null;
+  const propsRaw = env.BOOKINGS ? await env.BOOKINGS.get('properties') : null;
+  const enquiries = enqRaw  ? JSON.parse(enqRaw)  : [];
+  const props     = propsRaw ? JSON.parse(propsRaw) : null;
   return Response.json({
-    kvSet:            !!env.BOOKINGS,
-    passwordInKV:     !!stored,
-    passwordLength:   stored ? stored.length : 0,
-    enquiryCount:     enquiries.length,
-    latestEnquiry:    enquiries[0] ? { id: enquiries[0].id, name: enquiries[0].name, createdAt: enquiries[0].createdAt, status: enquiries[0].status } : null,
+    kvSet:           !!env.BOOKINGS,
+    passwordInKV:    !!stored,
+    passwordLength:  stored ? stored.length : 0,
+    enquiryCount:    enquiries.length,
+    latestEnquiry:   enquiries[0] ? { id: enquiries[0].id, name: enquiries[0].name, createdAt: enquiries[0].createdAt, status: enquiries[0].status } : null,
+    propertiesInKV:  !!propsRaw,
+    firstPropertyId: props ? props[0]?.id : 'using default (ta-garden)',
   }, { headers: cors });
 }
 

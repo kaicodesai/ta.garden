@@ -510,7 +510,7 @@ function buildGuestEmail({ name, room, stayLabel, dateInfo, message }) {
       <table style="width:100%;border-collapse:collapse;">
         <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;width:100px;border-bottom:1px solid rgba(136,145,125,0.12);">Room</td><td style="padding:7px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);">${room}</td></tr>
         <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.12);">Stay Type</td><td style="padding:7px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);">${stayLabel}</td></tr>
-        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;${message?'border-bottom:1px solid rgba(136,145,125,0.12);':''}">Dates</td><td style="padding:7px 0;font-size:14px;${message?'border-bottom:1px solid rgba(136,145,125,0.12);''}">${dateInfo}</td></tr>
+        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;${message?'border-bottom:1px solid rgba(136,145,125,0.12);':''}">Dates</td><td style="padding:7px 0;font-size:14px;${message?'border-bottom:1px solid rgba(136,145,125,0.12);':''}">${dateInfo}</td></tr>
         ${message ? `<tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;vertical-align:top;">Message</td><td style="padding:7px 0;font-size:14px;line-height:1.7;">${message}</td></tr>` : ''}
       </table>
     </div>

@@ -413,22 +413,12 @@ async function bootApp() {
   document.getElementById('loginWrap').style.display = 'none';
   document.getElementById('appShell').classList.add('on');
   buildPropSelector();
-  renderStats();
-  renderEnquiries();
   renderPropCards();
+  await doRefresh();
 }
 
-async function loadCurrentProperty(id) {
+function loadCurrentProperty(id) {
   currentProp = allProps.find(p => p.id === id) || allProps[0] || { id: 'ta-garden', name: 'Ta.Garden', rooms: [] };
-  try {
-    const r = await fetch(`/api/admin/enquiries?property=${currentProp.id}`, { headers: { 'x-admin-secret': secret } });
-    const d = await r.json();
-    allEnquiries = d.enquiries  || [];
-    allBlocked   = d.blocked    || [];
-    icalEvents   = d.icalEvents || [];
-  } catch {
-    allEnquiries = []; allBlocked = []; icalEvents = [];
-  }
 }
 
 // ── Property switcher ─────────────────────────────────────────────────────────
@@ -439,9 +429,8 @@ function buildPropSelector() {
 }
 
 async function switchProperty(id) {
-  await loadCurrentProperty(id);
-  renderStats();
-  renderEnquiries();
+  loadCurrentProperty(id);
+  await doRefresh();
   if (document.getElementById('pane-timeline').style.display !== 'none') renderTimeline();
   if (document.getElementById('pane-blocking').style.display !== 'none') { renderBlocked(); populateRoomSelect(); }
 }
@@ -462,23 +451,31 @@ function showTab(name) {
 }
 
 async function doRefresh() {
+  const propId = currentProp ? currentProp.id : 'ta-garden';
   const btn = document.getElementById('refreshBtn');
+  const c   = document.getElementById('enqContainer');
   if (btn) { btn.textContent = '↻ Loading…'; btn.disabled = true; }
+  if (c)   { c.innerHTML = '<div class="loading">Loading…</div>'; }
   try {
-    const r = await fetch(`/api/admin/enquiries?property=${currentProp?.id || 'ta-garden'}`, { headers: { 'x-admin-secret': secret } });
-    const d = await r.json();
+    const r = await fetch('/api/admin/enquiries?property=' + propId, { headers: { 'x-admin-secret': secret } });
     if (r.status === 401) {
-      document.getElementById('enqContainer').innerHTML = '<div class="empty" style="color:var(--red);">Auth error (401) — try signing out and back in.</div>';
+      if (c) c.innerHTML = '<div class="empty" style="color:var(--red);">Auth error — please Sign Out and sign back in.</div>';
       if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
       return;
     }
+    if (!r.ok) {
+      if (c) c.innerHTML = '<div class="empty" style="color:var(--red);">Server error ' + r.status + ' — please try again.</div>';
+      if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
+      return;
+    }
+    const d = await r.json();
     allEnquiries = d.enquiries  || [];
     allBlocked   = d.blocked    || [];
     icalEvents   = d.icalEvents || [];
     renderStats();
     renderEnquiries();
   } catch(e) {
-    document.getElementById('enqContainer').innerHTML = `<div class="empty" style="color:var(--red);">Fetch error: ${e.message}</div>`;
+    if (c) c.innerHTML = '<div class="empty" style="color:var(--red);">Connection error: ' + e.message + '</div>';
   }
   if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
 }

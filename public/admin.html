@@ -422,16 +422,10 @@ async function loadCurrentProperty(id) {
   currentProp = allProps.find(p => p.id === id) || allProps[0] || { id: 'ta-garden', name: 'Ta.Garden', rooms: [] };
   try {
     const r = await fetch(`/api/admin/enquiries?property=${currentProp.id}`, { headers: { 'x-admin-secret': secret } });
-    if (!r.ok) { allEnquiries = []; allBlocked = []; icalEvents = []; return; }
     const d = await r.json();
     allEnquiries = d.enquiries  || [];
     allBlocked   = d.blocked    || [];
     icalEvents   = d.icalEvents || [];
-    // If nothing came back and we weren't already on ta-garden, try the default key
-    if (!allEnquiries.length && currentProp.id !== 'ta-garden') {
-      const r2 = await fetch('/api/admin/enquiries?property=ta-garden', { headers: { 'x-admin-secret': secret } });
-      if (r2.ok) { const d2 = await r2.json(); allEnquiries = d2.enquiries || []; allBlocked = d2.blocked || []; icalEvents = d2.icalEvents || []; }
-    }
   } catch {
     allEnquiries = []; allBlocked = []; icalEvents = [];
   }
@@ -470,9 +464,22 @@ function showTab(name) {
 async function doRefresh() {
   const btn = document.getElementById('refreshBtn');
   if (btn) { btn.textContent = '↻ Loading…'; btn.disabled = true; }
-  await loadCurrentProperty(currentProp.id);
-  renderStats();
-  renderEnquiries();
+  try {
+    const r = await fetch(`/api/admin/enquiries?property=${currentProp?.id || 'ta-garden'}`, { headers: { 'x-admin-secret': secret } });
+    const d = await r.json();
+    if (r.status === 401) {
+      document.getElementById('enqContainer').innerHTML = '<div class="empty" style="color:var(--red);">Auth error (401) — try signing out and back in.</div>';
+      if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
+      return;
+    }
+    allEnquiries = d.enquiries  || [];
+    allBlocked   = d.blocked    || [];
+    icalEvents   = d.icalEvents || [];
+    renderStats();
+    renderEnquiries();
+  } catch(e) {
+    document.getElementById('enqContainer').innerHTML = `<div class="empty" style="color:var(--red);">Fetch error: ${e.message}</div>`;
+  }
   if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
 }
 

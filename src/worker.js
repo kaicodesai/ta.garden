@@ -208,10 +208,15 @@ async function adminListEnquiries(request, env, cors) {
     env.BOOKINGS.get(icalKey(propId)),
   ]);
 
+  const safeParse = (val) => {
+    if (!val) return [];
+    try { return JSON.parse(val); } catch { return []; }
+  };
+
   return Response.json({
-    enquiries:  eVal ? JSON.parse(eVal) : [],
-    blocked:    bVal ? JSON.parse(bVal) : [],
-    icalEvents: iVal ? JSON.parse(iVal) : [],
+    enquiries:  safeParse(eVal),
+    blocked:    safeParse(bVal),
+    icalEvents: safeParse(iVal),
   }, { headers: cors });
 }
 

@@ -565,7 +565,7 @@ function renderEnquiries() {
       const isConfirmed = e.status === 'confirmed';
       const waLink = e.phone ? `<a href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" target="_blank" class="act-btn act-wa">WhatsApp</a>` : '';
       const confirmBtn = !isConfirmed ? `<button class="act-btn act-confirm" onclick="openConfirmModal('${e.id}')">Confirm</button>` : '';
-      const declineBtn = e.status !== 'cancelled' ? `<button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">Decline</button>` : '';
+      const declineBtn = e.status !== 'cancelled' ? `<button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">${isConfirmed ? 'Cancel Booking' : 'Decline'}</button>` : '';
       const noteBtn = `<button class="act-btn act-note" onclick="openNoteModal('${e.id}')">Note</button>`;
       const noteBubble = e.note ? `<div class="note-bubble">${e.note.replace(/</g,'&lt;')}</div>` : '';
       return `<tr>
@@ -625,13 +625,18 @@ function openDeclineModal(id) {
   modalEnquiryId = id;
   const e = allEnquiries.find(x => x.id === id);
   if (!e) return;
-  document.getElementById('modalTitle').textContent = 'Decline Enquiry';
+  const isConfirmed = e.status === 'confirmed';
+  document.getElementById('modalTitle').textContent = isConfirmed ? 'Cancel Booking' : 'Decline Enquiry';
   document.getElementById('modalGuestName').textContent = e.name;
   document.getElementById('modalGuestSub').innerHTML = `${e.room} &nbsp;·&nbsp; ${fmt(e.checkIn)} → ${fmt(e.checkOut)}`;
   document.getElementById('modalLbl').textContent = 'Message to guest';
-  document.getElementById('modalMsg').value = `Unfortunately we're unable to accommodate your requested dates at this time. We hope to welcome you to Ta.Garden in the future.`;
-  document.getElementById('modalHint').textContent = 'A polite decline email will be sent. The enquiry will be marked as cancelled.';
-  document.getElementById('modalSendBtn').textContent = 'Send Decline →';
+  document.getElementById('modalMsg').value = isConfirmed
+    ? `Hi ${e.name.split(' ')[0]}, we're sorry to inform you that we need to cancel your upcoming booking. We sincerely apologise for any inconvenience caused.`
+    : `Unfortunately we're unable to accommodate your requested dates at this time. We hope to welcome you to Ta.Garden in the future.`;
+  document.getElementById('modalHint').textContent = isConfirmed
+    ? 'A cancellation email will be sent to the guest and those dates will reopen on the calendar.'
+    : 'A polite decline email will be sent. The enquiry will be marked as cancelled.';
+  document.getElementById('modalSendBtn').textContent = isConfirmed ? 'Cancel Booking →' : 'Send Decline →';
   document.getElementById('modalSendBtn').className = 'btn-decline-send';
   document.getElementById('modalSendBtn').onclick = () => doNotify('decline');
   document.getElementById('modalOverlay').classList.add('open');

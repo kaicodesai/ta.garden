@@ -39,16 +39,16 @@ export default {
 
     // Admin routes
     if (p === '/api/admin/debug'            && m === 'GET')   return adminDebug(request, env, cors);
-    if (p === '/api/admin/enquiries'        && m === 'GET')   return adminListEnquiries(request, env, cors);
-    if (p === '/api/admin/enquiry'          && m === 'PATCH') return adminUpdateEnquiry(request, env, cors);
+    if (p === '/api/admin/enquiries'        && m === 'GET')   return safeCall(() => adminListEnquiries(request, env, cors), cors);
+    if (p === '/api/admin/enquiry'          && m === 'PATCH') return safeCall(() => adminUpdateEnquiry(request, env, cors), cors);
     if (p === '/api/admin/properties'       && m === 'GET')   return adminListProperties(request, env, cors);
-    if (p === '/api/admin/property'         && m === 'POST')  return adminSaveProperty(request, env, cors);
-    if (p === '/api/admin/property'         && m === 'DELETE')return adminDeleteProperty(request, env, cors);
-    if (p === '/api/admin/notify'          && m === 'POST')  return adminNotify(request, env, cors);
-    if (p === '/api/admin/note'            && m === 'POST')  return adminSaveNote(request, env, cors);
-    if (p === '/api/admin/block'            && m === 'POST')  return adminBlock(request, env, cors);
-    if (p === '/api/admin/unblock'          && m === 'POST')  return adminUnblock(request, env, cors);
-    if (p === '/api/admin/ical-sync'        && m === 'POST')  return adminIcalSync(request, env, cors);
+    if (p === '/api/admin/property'         && m === 'POST')  return safeCall(() => adminSaveProperty(request, env, cors), cors);
+    if (p === '/api/admin/property'         && m === 'DELETE')return safeCall(() => adminDeleteProperty(request, env, cors), cors);
+    if (p === '/api/admin/notify'           && m === 'POST')  return safeCall(() => adminNotify(request, env, cors), cors);
+    if (p === '/api/admin/note'             && m === 'POST')  return safeCall(() => adminSaveNote(request, env, cors), cors);
+    if (p === '/api/admin/block'            && m === 'POST')  return safeCall(() => adminBlock(request, env, cors), cors);
+    if (p === '/api/admin/unblock'          && m === 'POST')  return safeCall(() => adminUnblock(request, env, cors), cors);
+    if (p === '/api/admin/ical-sync'        && m === 'POST')  return safeCall(() => adminIcalSync(request, env, cors), cors);
 
     // Serve static assets with no-cache for HTML so updates always reach the browser
     const assetRes = await env.ASSETS.fetch(request);
@@ -90,6 +90,15 @@ async function adminDebug(request, env, cors) {
 
 function unauthorized(cors) {
   return Response.json({ error: 'Unauthorized' }, { status: 401, headers: cors });
+}
+
+async function safeCall(fn, cors) {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error('Admin route error:', err);
+    return Response.json({ error: String(err), stack: err?.stack }, { status: 500, headers: cors });
+  }
 }
 
 // ── KV key helpers ────────────────────────────────────────────────────────────

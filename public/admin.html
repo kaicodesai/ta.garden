@@ -464,7 +464,9 @@ async function doRefresh() {
       return;
     }
     if (!r.ok) {
-      if (c) c.innerHTML = '<div class="empty" style="color:var(--red);">Server error ' + r.status + ' — please try again.</div>';
+      let errMsg = 'Server error ' + r.status;
+      try { const ed = await r.json(); errMsg += ': ' + (ed.error || JSON.stringify(ed)); } catch {}
+      if (c) c.innerHTML = '<div class="empty" style="color:var(--red);">' + errMsg + '</div>';
       if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
       return;
     }

@@ -203,6 +203,36 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .loading { text-align: center; padding: 40px; color: var(--mid); font-size: 13px; }
 .color-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.5); cursor: pointer; flex-shrink: 0; }
 .color-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+
+/* ── Guest profile modal ── */
+.profile-modal-box { background: var(--white); width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; }
+.checklist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.checklist-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--light); border: 1px solid rgba(136,145,125,0.16); }
+.checklist-label { font-size: 13px; display: flex; align-items: center; gap: 10px; }
+.checklist-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(136,145,125,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.2s; }
+.checklist-check.done { background: var(--green); border-color: var(--green); color: #fff; font-size: 11px; }
+.checklist-toggle { appearance: none; width: 36px; height: 20px; background: rgba(136,145,125,0.25); border-radius: 10px; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+.checklist-toggle:checked { background: var(--green); }
+.checklist-toggle::after { content:''; position:absolute; width:16px; height:16px; background:#fff; border-radius:50%; top:2px; left:2px; transition: left 0.2s; }
+.checklist-toggle:checked::after { left:18px; }
+.profile-section { margin-bottom: 20px; }
+.profile-section-title { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); margin-bottom: 10px; border-bottom: 1px solid rgba(136,145,125,0.15); padding-bottom: 6px; }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.profile-field { display: flex; flex-direction: column; gap: 3px; }
+.profile-key { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--mid); }
+.profile-val { font-size: 13px; color: var(--dark); }
+.doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.doc-card { border: 1px solid rgba(136,145,125,0.18); background: var(--light); padding: 12px; }
+.doc-title { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); margin-bottom: 8px; }
+.doc-img { width: 100%; border-radius: 2px; display: block; }
+.doc-empty { font-size: 12px; color: var(--mid); font-style: italic; }
+.act-profile { border-color: rgba(134,162,166,0.45); color: var(--teal); }
+.act-profile:hover { background: rgba(134,162,166,0.1); }
+.onboarding-mini { display: flex; gap: 4px; margin-top: 5px; }
+.ob-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(136,145,125,0.25); }
+.ob-dot.done { background: var(--green); }
+.portal-link-row { background: rgba(134,162,166,0.08); border: 1px solid rgba(134,162,166,0.2); padding: 10px 14px; font-size: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.portal-link-copy { padding: 4px 10px; background: var(--teal); color: #fff; border: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -343,6 +373,19 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- GUEST PROFILE MODAL -->
+<div class="modal-overlay" id="profileOverlay" onclick="if(event.target===this)closeProfileModal()">
+  <div class="profile-modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="profileModalTitle">Guest Profile</div>
+      <button class="modal-close" onclick="closeProfileModal()">×</button>
+    </div>
+    <div class="modal-body" id="profileModalBody">
+      <div class="loading">Loading…</div>
+    </div>
   </div>
 </div>
 
@@ -542,6 +585,9 @@ function renderEnquiries() {
       const confirmBtn = !isConfirmed ? `<button class="act-btn act-confirm" onclick="openConfirmModal('${e.id}')">Confirm</button>` : '';
       const declineBtn = e.status !== 'cancelled' ? `<button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">Decline</button>` : '';
       const noteBtn = `<button class="act-btn act-note" onclick="openNoteModal('${e.id}')">Note</button>`;
+      const profileBtn = `<button class="act-btn act-profile" onclick="openProfileModal('${e.id}')">Profile</button>`;
+      const ob = e.onboarding || {};
+      const obDots = ['paymentReceived','contractSigned','passportUploaded','visaUploaded'].map(k => `<div class="ob-dot${ob[k]?' done':''}" title="${k}"></div>`).join('');
       const noteBubble = e.note ? `<div class="note-bubble">${e.note.replace(/</g,'&lt;')}</div>` : '';
       return `<tr>
       <td>
@@ -567,8 +613,9 @@ function renderEnquiries() {
       </td>
       <td>
         <span class="status-badge ${e.status}">${e.status}</span>
+        <div class="onboarding-mini" title="Payment · Contract · Passport · Visa">${obDots}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">
-          ${confirmBtn}${declineBtn}${noteBtn}${waLink}
+          ${confirmBtn}${declineBtn}${noteBtn}${profileBtn}${waLink}
         </div>
       </td>
     </tr>`;
@@ -677,6 +724,111 @@ async function doSaveNote() {
   } catch {
     btn.disabled = false; btn.textContent = 'Error — try again';
   }
+}
+
+// ── Guest profile modal ───────────────────────────────────────────────────────
+
+async function openProfileModal(id) {
+  const enq = allEnquiries.find(x => x.id === id);
+  if (!enq) return;
+  document.getElementById('profileModalTitle').textContent = `${enq.name} — Guest Profile`;
+  document.getElementById('profileModalBody').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('profileOverlay').classList.add('open');
+
+  let profile = null;
+  try {
+    const r = await fetch(`/api/admin/guest-profile?id=${id}`, { headers: { 'x-admin-secret': secret } });
+    const d = await r.json();
+    profile = d.profile;
+  } catch {}
+
+  const ob = enq.onboarding || {};
+  const guestPortalUrl = `${location.origin}/guest.html?id=${enq.id}&p=${currentProp?.id || 'ta-garden'}`;
+
+  const checklistItems = [
+    { key: 'paymentReceived',  label: 'Payment Received' },
+    { key: 'contractSigned',   label: 'Contract Signed' },
+    { key: 'passportUploaded', label: 'Passport Uploaded' },
+    { key: 'visaUploaded',     label: 'Visa Document Uploaded' },
+  ];
+
+  const checklistHtml = `<div class="profile-section">
+    <div class="profile-section-title">Onboarding Checklist</div>
+    <div class="checklist">${checklistItems.map(item => `
+      <div class="checklist-item">
+        <div class="checklist-label">
+          <div class="checklist-check ${ob[item.key] ? 'done' : ''}">${ob[item.key] ? '✓' : ''}</div>
+          <span>${item.label}</span>
+        </div>
+        <input type="checkbox" class="checklist-toggle" ${ob[item.key] ? 'checked' : ''}
+          onchange="toggleOnboarding('${id}','${item.key}',this.checked)">
+      </div>`).join('')}
+    </div>
+  </div>`;
+
+  const portalHtml = `<div class="portal-link-row">
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${guestPortalUrl}</span>
+    <button class="portal-link-copy" onclick="copyPortalLink('${guestPortalUrl}')">Copy Link</button>
+    <a href="${guestPortalUrl}" target="_blank" style="padding:4px 10px;background:var(--dark);color:var(--cream);text-decoration:none;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;">Open →</a>
+  </div>`;
+
+  let profileHtml = '';
+  if (profile) {
+    profileHtml = `<div class="profile-section">
+      <div class="profile-section-title">Personal Details</div>
+      <div class="profile-grid">
+        <div class="profile-field"><div class="profile-key">Full Name</div><div class="profile-val">${profile.fullName || '—'}</div></div>
+        <div class="profile-field"><div class="profile-key">Date of Birth</div><div class="profile-val">${profile.dateOfBirth || '—'}</div></div>
+        <div class="profile-field"><div class="profile-key">Nationality</div><div class="profile-val">${profile.nationality || '—'}</div></div>
+        <div class="profile-field"><div class="profile-key">Passport Number</div><div class="profile-val">${profile.passportNumber || '—'}</div></div>
+        <div class="profile-field" style="grid-column:1/-1;"><div class="profile-key">Home Address</div><div class="profile-val">${profile.homeAddress || '—'}</div></div>
+        <div class="profile-field"><div class="profile-key">Emergency Contact</div><div class="profile-val">${profile.emergencyName || '—'}</div></div>
+        <div class="profile-field"><div class="profile-key">Emergency Phone</div><div class="profile-val">${profile.emergencyPhone || '—'}</div></div>
+      </div>
+    </div>
+    <div class="profile-section">
+      <div class="profile-section-title">Documents</div>
+      <div class="doc-grid">
+        <div class="doc-card">
+          <div class="doc-title">Passport Photo</div>
+          ${profile.passport ? `<img class="doc-img" src="${profile.passport}" alt="Passport">` : '<div class="doc-empty">Not uploaded</div>'}
+        </div>
+        <div class="doc-card">
+          <div class="doc-title">Visa Document</div>
+          ${profile.visa ? `<img class="doc-img" src="${profile.visa}" alt="Visa">` : '<div class="doc-empty">Not uploaded</div>'}
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--mid);margin-top:8px;">Submitted ${profile.submittedAt ? new Date(profile.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div>
+    </div>`;
+  } else {
+    profileHtml = `<div style="padding:20px 0;color:var(--mid);font-size:13px;">No profile submitted yet. Share the guest portal link below.</div>`;
+  }
+
+  document.getElementById('profileModalBody').innerHTML = checklistHtml + portalHtml + profileHtml;
+}
+
+function closeProfileModal() {
+  document.getElementById('profileOverlay').classList.remove('open');
+}
+
+async function toggleOnboarding(id, field, value) {
+  try {
+    await fetch('/api/admin/onboarding', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id, propertyId: currentProp?.id || 'ta-garden', field, value }),
+    });
+    const enq = allEnquiries.find(e => e.id === id);
+    if (enq) {
+      enq.onboarding = enq.onboarding || {};
+      enq.onboarding[field] = value;
+      renderEnquiries();
+    }
+  } catch {}
+}
+
+function copyPortalLink(url) {
+  navigator.clipboard.writeText(url).then(() => alert('Guest portal link copied!')).catch(() => prompt('Copy this link:', url));
 }
 
 // ── Timeline ──────────────────────────────────────────────────────────────────

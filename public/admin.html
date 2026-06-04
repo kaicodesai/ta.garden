@@ -728,6 +728,15 @@ async function doSaveNote() {
 
 // ── Guest profile modal ───────────────────────────────────────────────────────
 
+function renderDoc(dataUrl, label) {
+  const isPdf = dataUrl.startsWith('data:application/pdf');
+  if (isPdf) {
+    return `<embed src="${dataUrl}" type="application/pdf" style="width:100%;height:220px;border:none;display:block;" title="${label}">
+      <a href="${dataUrl}" download="${label.toLowerCase()}.pdf" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--teal);text-decoration:none;letter-spacing:0.08em;">↓ Download PDF</a>`;
+  }
+  return `<img class="doc-img" src="${dataUrl}" alt="${label}">`;
+}
+
 async function openProfileModal(id) {
   const enq = allEnquiries.find(x => x.id === id);
   if (!enq) return;
@@ -791,11 +800,11 @@ async function openProfileModal(id) {
       <div class="doc-grid">
         <div class="doc-card">
           <div class="doc-title">Passport Photo</div>
-          ${profile.passport ? `<img class="doc-img" src="${profile.passport}" alt="Passport">` : '<div class="doc-empty">Not uploaded</div>'}
+          ${profile.passport ? renderDoc(profile.passport, 'Passport') : '<div class="doc-empty">Not uploaded</div>'}
         </div>
         <div class="doc-card">
           <div class="doc-title">Visa Document</div>
-          ${profile.visa ? `<img class="doc-img" src="${profile.visa}" alt="Visa">` : '<div class="doc-empty">Not uploaded</div>'}
+          ${profile.visa ? renderDoc(profile.visa, 'Visa') : '<div class="doc-empty">Not uploaded</div>'}
         </div>
       </div>
       <div style="font-size:11px;color:var(--mid);margin-top:8px;">Submitted ${profile.submittedAt ? new Date(profile.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div>

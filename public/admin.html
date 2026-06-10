@@ -234,6 +234,67 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .portal-link-row { background: rgba(134,162,166,0.08); border: 1px solid rgba(134,162,166,0.2); padding: 10px 14px; font-size: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
 .portal-link-copy { padding: 4px 10px; background: var(--teal); color: #fff; border: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
 
+/* ── Sanctuary detail view ── */
+.s-back { display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--mid);cursor:pointer;margin-bottom:20px;background:none;border:none;padding:0;font-family:'Jost',sans-serif; }
+.s-back:hover { color:var(--dark); }
+.s-header { background:var(--dark);color:var(--cream);padding:26px 30px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px; }
+.s-name { font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:300;margin-bottom:5px; }
+.s-loc { font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal); }
+.s-type-tag { font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(237,224,209,0.35);margin-top:5px; }
+.s-header-actions { display:flex;gap:8px;flex-shrink:0;align-items:flex-start;margin-top:4px; }
+.s-stats { display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px; }
+.s-stat { background:var(--white);border:1px solid rgba(136,145,125,0.12);padding:16px 18px; }
+.s-stat-n { font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300; }
+.s-stat-l { font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-top:2px; }
+.s-section { margin-bottom:24px; }
+.s-section-hd { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; }
+.s-section-title { font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--mid); }
+
+/* Room management cards */
+.room-mgmt-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px; }
+.room-mgmt-card { background:var(--white);border:1px solid rgba(136,145,125,0.14);padding:20px 22px;display:flex;flex-direction:column;gap:14px; }
+.room-mgmt-name { font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300; }
+.room-mgmt-sub { font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);margin-top:2px; }
+.room-status-row { display:flex;align-items:center;gap:8px; }
+.room-status-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+.room-status-dot.occupied { background:var(--green); }
+.room-status-dot.available { background:rgba(136,145,125,0.35); }
+.room-status-dot.blocked { background:var(--amber); }
+.room-status-label { font-size:9px;letter-spacing:0.18em;text-transform:uppercase;font-weight:400; }
+.room-status-label.occupied { color:var(--green); }
+.room-status-label.available { color:var(--mid); }
+.room-status-label.blocked { color:var(--amber); }
+.room-guest-name { font-size:14px;font-weight:400;margin-bottom:2px; }
+.room-guest-dates { font-size:11px;color:var(--mid); }
+.room-next { font-size:12px;color:var(--mid);line-height:1.65; }
+
+/* Mini calendar */
+.mini-cal { display:flex;gap:2px;flex-wrap:wrap; }
+.mc { width:14px;height:14px;border-radius:2px; }
+.mc.occ  { background:rgba(76,175,125,0.5); }
+.mc.pend { background:rgba(200,146,42,0.45); }
+.mc.blk  { background:rgba(184,92,92,0.35); }
+.mc.airb { background:rgba(255,90,95,0.4); }
+.mc.free { background:rgba(136,145,125,0.1); }
+.mini-cal-legend { display:flex;gap:10px;margin-top:5px;flex-wrap:wrap; }
+.mc-leg { display:flex;align-items:center;gap:4px;font-size:9px;color:var(--mid); }
+.mc-dot { width:8px;height:8px;border-radius:1px; }
+.mini-cal-pct { font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);margin-bottom:6px; }
+
+/* Room bottom stats */
+.room-stats-row { display:flex;gap:20px;padding-top:12px;border-top:1px solid rgba(136,145,125,0.1); }
+.rstat-n { font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300; }
+.rstat-l { font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid); }
+
+/* Guest / enquiry tables in detail */
+.dtbl { width:100%;border-collapse:collapse;background:var(--white);border:1px solid rgba(136,145,125,0.12);font-size:13px; }
+.dtbl th { padding:9px 14px;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--mid);text-align:left;border-bottom:1px solid rgba(136,145,125,0.15);background:var(--light);font-weight:400; }
+.dtbl td { padding:11px 14px;border-bottom:1px solid rgba(136,145,125,0.08);vertical-align:middle; }
+.dtbl tr:last-child td { border-bottom:none; }
+.dtbl tr:hover td { background:#faf6f0; }
+.guest-name-cell { font-weight:400;margin-bottom:2px; }
+.guest-email-cell { font-size:11px;color:var(--mid); }
+
 /* ── Payments in profile modal ── */
 .pay-list { display: flex; flex-direction: column; gap: 0; }
 .pay-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(136,145,125,0.09); }
@@ -391,6 +452,9 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <!-- Image grid -->
       <div id="galleryGrid" class="gallery-mgmt-grid"></div>
     </div>
+
+    <!-- SANCTUARY DETAIL (populated by JS) -->
+    <div id="pane-sanctuary" style="display:none"></div>
 
     <!-- PROPERTIES -->
     <div id="pane-properties" style="display:none">
@@ -552,7 +616,7 @@ async function switchProperty(id) {
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 function showTab(name) {
-  ['enquiries','timeline','blocking','properties','gallery'].forEach(t => {
+  ['enquiries','timeline','blocking','properties','gallery','sanctuary'].forEach(t => {
     document.getElementById('pane-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el,i) => {
@@ -1114,15 +1178,17 @@ async function doRemoveBlock(id) {
 
 function renderPropCards() {
   document.getElementById('propCards').innerHTML = allProps.map(p => `
-  <div class="prop-card">
+  <div class="prop-card" style="cursor:pointer;" onclick="showSanctuaryDetail('${p.id}')">
     <div style="margin-bottom:8px;">
       <span class="prop-card-dot" style="background:${p.color||'#86a2a6'};"></span>
       <span class="prop-type">${p.type||'rental'}</span>
     </div>
     <div class="prop-name serif">${p.name}</div>
     <div class="prop-loc">${p.location||''}</div>
-    ${p.icalUrl ? `<div class="prop-ical">🔗 Airbnb calendar linked</div>` : '<div style="font-size:10px;color:var(--mid);margin-top:4px;">No Airbnb calendar linked</div>'}
-    <div class="prop-actions">
+    ${p.icalUrl ? `<div class="prop-ical" style="font-size:10px;color:var(--airbnb);margin-top:4px;">Airbnb calendar linked</div>` : '<div style="font-size:10px;color:var(--mid);margin-top:4px;">No Airbnb calendar linked</div>'}
+    <div style="font-size:10px;color:var(--mid);margin-top:4px;">${(p.rooms||[]).length} room${(p.rooms||[]).length!==1?'s':''}</div>
+    <div class="prop-actions" onclick="event.stopPropagation()">
+      <button class="btn-sm" style="background:var(--dark);color:var(--cream);border-color:var(--dark);" onclick="showSanctuaryDetail('${p.id}')">View →</button>
       <button class="btn-sm" onclick="editProp('${p.id}')">Edit</button>
       ${p.id !== 'ta-garden' ? `<button class="btn-sm" style="border-color:var(--red);color:var(--red);" onclick="deleteProp('${p.id}')">Delete</button>` : ''}
     </div>
@@ -1236,6 +1302,299 @@ function roomKey(n='') {
 }
 function set(id, v) { document.getElementById(id).textContent = v; }
 function setMsg(id, color, msg) { const el=document.getElementById(id); el.style.color=color; el.textContent=msg; }
+
+// ── Sanctuary detail view ─────────────────────────────────────────────────────
+
+async function showSanctuaryDetail(propId) {
+  if (currentProp?.id !== propId) {
+    await loadCurrentProperty(propId);
+    buildPropSelector();
+    renderStats();
+  }
+  const prop = allProps.find(p => p.id === propId);
+  if (!prop) return;
+  document.getElementById('pane-sanctuary').innerHTML = renderSanctuaryDetail(prop);
+  showTab('sanctuary');
+}
+
+function renderSanctuaryDetail(prop) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  const confirmed  = allEnquiries.filter(e => e.status === 'confirmed');
+  const pending    = allEnquiries.filter(e => e.status === 'pending');
+  const revenue    = confirmed.filter(e => e.price).reduce((s,e) => s + e.price, 0);
+  const rooms      = prop.rooms || [];
+  const occupied   = rooms.filter(r => getRoomInfo(r, todayStr).status === 'occupied').length;
+
+  const activeGuests = allEnquiries
+    .filter(e => e.status === 'confirmed' && (!e.checkOut || e.checkOut >= todayStr))
+    .sort((a,b) => a.checkIn.localeCompare(b.checkIn));
+
+  const pendingEnqs = allEnquiries.filter(e => e.status === 'pending')
+    .sort((a,b) => b.createdAt?.localeCompare(a.createdAt||'')||0);
+
+  return `
+    <button class="s-back" onclick="showTab('properties')">← All Sanctuaries</button>
+
+    <div class="s-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:${prop.color||'#86a2a6'};border:2px solid rgba(255,255,255,0.25);flex-shrink:0;"></div>
+          <div class="s-name">${prop.name}</div>
+        </div>
+        <div class="s-loc">${prop.location || ''}</div>
+        <div class="s-type-tag">${(prop.type||'rental').replace(/-/g,' ')} &nbsp;·&nbsp; ${rooms.length} room${rooms.length!==1?'s':''}</div>
+      </div>
+      <div class="s-header-actions">
+        <button class="btn-sm" style="color:var(--cream);border-color:rgba(237,224,209,0.25);" onclick="editProp('${prop.id}');showTab('properties')">Edit</button>
+        ${prop.icalUrl ? `<button class="btn-sm airbnb" onclick="doIcalSync()">Sync Airbnb</button>` : ''}
+      </div>
+    </div>
+
+    <div class="s-stats">
+      <div class="s-stat"><div class="s-stat-n">${rooms.length}</div><div class="s-stat-l">Rooms</div></div>
+      <div class="s-stat"><div class="s-stat-n" style="color:var(--green);">${occupied}</div><div class="s-stat-l">Occupied Now</div></div>
+      <div class="s-stat"><div class="s-stat-n">${confirmed.length}</div><div class="s-stat-l">Confirmed</div></div>
+      <div class="s-stat"><div class="s-stat-n" style="color:var(--amber);">${pending.length}</div><div class="s-stat-l">Pending</div></div>
+      <div class="s-stat"><div class="s-stat-n">${revenue ? '$' + revenue.toLocaleString() : '—'}</div><div class="s-stat-l">Est. Revenue</div></div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-hd">
+        <div class="s-section-title">Rooms</div>
+        <button class="btn-sm" onclick="showTab('blocking')">+ Block Dates</button>
+      </div>
+      <div class="room-mgmt-grid">
+        ${rooms.length
+          ? rooms.map(r => renderRoomCard(r, todayStr)).join('')
+          : `<div style="color:var(--mid);font-size:13px;padding:20px 0;">No rooms configured. <button class="btn-sm" onclick="editProp('${prop.id}');showTab('properties')">Edit sanctuary</button> to add rooms.</div>`
+        }
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-hd">
+        <div class="s-section-title">Active &amp; Upcoming Guests${activeGuests.length ? ` (${activeGuests.length})` : ''}</div>
+      </div>
+      ${activeGuests.length ? renderGuestsTable(activeGuests, todayStr) : `<div style="color:var(--mid);font-size:13px;padding:12px 0;">No confirmed bookings yet.</div>`}
+    </div>
+
+    ${pendingEnqs.length ? `
+    <div class="s-section">
+      <div class="s-section-hd">
+        <div class="s-section-title">Pending Enquiries (${pendingEnqs.length})</div>
+        <button class="btn-sm" onclick="showTab('enquiries')">View All →</button>
+      </div>
+      ${renderPendingTable(pendingEnqs)}
+    </div>` : ''}
+
+    ${icalEvents.length ? `
+    <div class="s-section">
+      <div class="s-section-hd">
+        <div class="s-section-title">Airbnb Bookings (${icalEvents.length})</div>
+        ${prop.icalUrl ? `<button class="btn-sm airbnb" onclick="doIcalSync()">Sync Now</button>` : ''}
+      </div>
+      ${renderIcalTable(icalEvents)}
+    </div>` : ''}`;
+}
+
+function renderRoomCard(roomName, todayStr) {
+  const info    = getRoomInfo(roomName, todayStr);
+  const occ     = getOccupancyDays(roomName, todayStr, 30);
+  const calHtml = getMiniCal(roomName, todayStr, 30);
+  const stays   = allEnquiries.filter(e => e.room === roomName && e.status === 'confirmed');
+  const revenue = stays.filter(e => e.price).reduce((s,e) => s + e.price, 0);
+
+  let statusHtml = '', guestHtml = '', actionHtml = '';
+
+  if (info.status === 'occupied') {
+    const e = info.guest;
+    const ob = e.onboarding || {};
+    const dots = ['paymentReceived','contractSigned','passportUploaded','visaUploaded']
+      .map(k => `<div style="width:8px;height:8px;border-radius:50%;background:${ob[k]?'var(--green)':'rgba(136,145,125,0.22)'};" title="${k}"></div>`).join('');
+    statusHtml = `<div class="room-status-row"><div class="room-status-dot occupied"></div><span class="room-status-label occupied">Occupied</span></div>`;
+    guestHtml  = `<div>
+      <div class="room-guest-name">${e.name}</div>
+      <div class="room-guest-dates">${fmt(e.checkIn)} → ${fmt(e.checkOut) || 'Open-ended'}</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:6px;">${dots}<span style="font-size:10px;color:var(--mid);margin-left:4px;">Onboarding ${Object.values(ob).filter(Boolean).length}/4</span></div>
+    </div>`;
+    actionHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="act-btn act-profile" onclick="openProfileModal('${e.id}')">Profile</button>
+      ${e.phone ? `<a class="act-btn act-wa" href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" target="_blank" style="text-decoration:none;">WhatsApp</a>` : ''}
+      <button class="act-btn act-note" onclick="openProfileModal('${e.id}')">Record Payment</button>
+    </div>`;
+
+  } else if (info.status === 'blocked') {
+    const b = info.block;
+    statusHtml = `<div class="room-status-row"><div class="room-status-dot blocked"></div><span class="room-status-label blocked">Blocked</span></div>`;
+    guestHtml  = `<div class="room-next"><strong>${b.reason}</strong><br>${fmt(b.start)} → ${fmt(b.end)}</div>`;
+    actionHtml = `<div><button class="act-btn act-decline" onclick="doRemoveBlock('${b.id}')">Remove Block</button></div>`;
+
+  } else {
+    statusHtml = `<div class="room-status-row"><div class="room-status-dot available"></div><span class="room-status-label available">Available</span></div>`;
+    if (info.next) {
+      const n = info.next;
+      const daysUntil = Math.round((new Date(n.checkIn+'T00:00:00') - new Date(todayStr+'T00:00:00')) / 86400000);
+      guestHtml = `<div class="room-next">
+        <div style="color:var(--mid);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;">Next booking — ${daysUntil} day${daysUntil!==1?'s':''}</div>
+        <div style="font-size:14px;font-weight:400;">${n.name}</div>
+        <div style="font-size:11px;color:var(--mid);">Arrives ${fmt(n.checkIn)}</div>
+      </div>`;
+    } else {
+      guestHtml = `<div class="room-next" style="color:var(--mid);">No upcoming bookings</div>`;
+    }
+    actionHtml = `<div style="display:flex;gap:6px;">
+      <button class="act-btn act-note" onclick="showTab('blocking')">Block Dates</button>
+    </div>`;
+  }
+
+  return `<div class="room-mgmt-card">
+    <div>
+      <div class="room-mgmt-name">${roomName}</div>
+      <div class="room-mgmt-sub">${stays.length} confirmed stay${stays.length!==1?'s':''}</div>
+    </div>
+    ${statusHtml}
+    ${guestHtml}
+    <div>
+      <div class="mini-cal-pct">Next 30 days — ${occ.pct}% booked</div>
+      <div class="mini-cal">${calHtml}</div>
+      <div class="mini-cal-legend">
+        <div class="mc-leg"><div class="mc-dot" style="background:rgba(76,175,125,0.5);"></div>Confirmed</div>
+        <div class="mc-leg"><div class="mc-dot" style="background:rgba(200,146,42,0.45);"></div>Pending</div>
+        <div class="mc-leg"><div class="mc-dot" style="background:rgba(184,92,92,0.35);"></div>Blocked</div>
+        <div class="mc-leg"><div class="mc-dot" style="background:rgba(136,145,125,0.12);"></div>Free</div>
+      </div>
+    </div>
+    <div class="room-stats-row">
+      <div><div class="rstat-n">${stays.length}</div><div class="rstat-l">Total Stays</div></div>
+      ${revenue ? `<div><div class="rstat-n">$${revenue.toLocaleString()}</div><div class="rstat-l">Revenue</div></div>` : ''}
+      <div><div class="rstat-n">${occ.pct}%</div><div class="rstat-l">30-day Occ.</div></div>
+    </div>
+    ${actionHtml}
+  </div>`;
+}
+
+function getRoomInfo(roomName, todayStr) {
+  const current = allEnquiries.find(e =>
+    e.room === roomName && e.status === 'confirmed' &&
+    e.checkIn <= todayStr && (!e.checkOut || e.checkOut >= todayStr)
+  );
+  if (current) return { status: 'occupied', guest: current };
+
+  const blk = allBlocked.find(b =>
+    (b.roomId === 'all' || b.roomId === roomKey(roomName)) &&
+    b.start <= todayStr && b.end >= todayStr
+  );
+  if (blk) return { status: 'blocked', block: blk };
+
+  const next = [...allEnquiries]
+    .filter(e => e.room === roomName && e.status === 'confirmed' && e.checkIn > todayStr)
+    .sort((a,b) => a.checkIn.localeCompare(b.checkIn))[0];
+
+  return { status: 'available', next };
+}
+
+function getOccupancyDays(roomName, todayStr, days) {
+  const today = new Date(todayStr);
+  let occupied = 0;
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const ds = d.toISOString().split('T')[0];
+    const isOcc = allEnquiries.some(e =>
+      e.room === roomName && e.status === 'confirmed' &&
+      e.checkIn <= ds && (!e.checkOut || e.checkOut >= ds)
+    );
+    const isBlk = allBlocked.some(b =>
+      (b.roomId === 'all' || b.roomId === roomKey(roomName)) && b.start <= ds && b.end >= ds
+    );
+    if (isOcc || isBlk) occupied++;
+  }
+  return { occupied, pct: Math.round(occupied / days * 100) };
+}
+
+function getMiniCal(roomName, todayStr, days) {
+  const today = new Date(todayStr);
+  let html = '';
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const ds = d.toISOString().split('T')[0];
+    const isConf = allEnquiries.some(e => e.room === roomName && e.status === 'confirmed' && e.checkIn <= ds && (!e.checkOut || e.checkOut >= ds));
+    const isPend = !isConf && allEnquiries.some(e => e.room === roomName && e.status === 'pending' && e.checkIn && e.checkIn <= ds && (!e.checkOut || e.checkOut >= ds));
+    const isBlk  = allBlocked.some(b => (b.roomId === 'all' || b.roomId === roomKey(roomName)) && b.start <= ds && b.end >= ds);
+    const isAirb = !isConf && icalEvents.some(ev => ev.start <= ds && ev.end >= ds);
+    const cls = isConf ? 'occ' : isPend ? 'pend' : isBlk ? 'blk' : isAirb ? 'airb' : 'free';
+    const day = d.getDate();
+    html += `<div class="mc ${cls}" title="${ds} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${day})"></div>`;
+  }
+  return html;
+}
+
+function renderGuestsTable(guests, todayStr) {
+  return `<table class="dtbl">
+    <thead><tr>
+      <th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Onboarding</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${guests.map(e => {
+      const ob = e.onboarding || {};
+      const dots = ['paymentReceived','contractSigned','passportUploaded','visaUploaded']
+        .map(k => `<div style="width:9px;height:9px;border-radius:50%;background:${ob[k]?'var(--green)':'rgba(136,145,125,0.22)'};" title="${k}"></div>`).join('');
+      const isActive = e.checkIn <= todayStr && (!e.checkOut || e.checkOut >= todayStr);
+      return `<tr>
+        <td>
+          <div class="guest-name-cell">${e.name} ${isActive ? '<span style="font-size:9px;background:rgba(76,175,125,0.15);color:var(--green);padding:2px 6px;letter-spacing:0.08em;">IN HOUSE</span>' : ''}</div>
+          <div class="guest-email-cell">${e.email}${e.phone ? ' · ' + e.phone : ''}</div>
+        </td>
+        <td><span class="badge badge-room">${e.room}</span></td>
+        <td style="font-size:12px;white-space:nowrap;">${fmt(e.checkIn)}</td>
+        <td style="font-size:12px;white-space:nowrap;">${fmt(e.checkOut)}</td>
+        <td><div style="display:flex;gap:3px;align-items:center;">${dots}</div></td>
+        <td>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <button class="act-btn act-profile" onclick="openProfileModal('${e.id}')">Profile</button>
+            ${e.phone ? `<a class="act-btn act-wa" style="text-decoration:none;" href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" target="_blank">WA</a>` : ''}
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderPendingTable(enquiries) {
+  return `<table class="dtbl">
+    <thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Type</th><th>Actions</th></tr></thead>
+    <tbody>${enquiries.map(e => `<tr>
+      <td>
+        <div class="guest-name-cell">${e.name}</div>
+        <div class="guest-email-cell">${e.email}</div>
+      </td>
+      <td><span class="badge badge-room">${e.room}</span></td>
+      <td style="font-size:12px;white-space:nowrap;">${fmt(e.checkIn)}${e.checkOut?' → '+fmt(e.checkOut):''}</td>
+      <td><span class="status-badge pending">${e.stayType||'stay'}</span></td>
+      <td>
+        <div style="display:flex;gap:5px;">
+          <button class="act-btn act-confirm" onclick="openConfirmModal('${e.id}')">Confirm</button>
+          <button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">Decline</button>
+        </div>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderIcalTable(events) {
+  return `<table class="dtbl">
+    <thead><tr><th>Booking</th><th>Check-in</th><th>Check-out</th><th>Nights</th></tr></thead>
+    <tbody>${events.map(ev => {
+      const nights = ev.start && ev.end ? Math.round((new Date(ev.end+'T00:00:00') - new Date(ev.start+'T00:00:00'))/86400000) : '—';
+      return `<tr>
+        <td style="color:var(--airbnb);">${ev.summary || 'Airbnb Booking'}</td>
+        <td style="font-size:12px;white-space:nowrap;">${fmt(ev.start)}</td>
+        <td style="font-size:12px;white-space:nowrap;">${fmt(ev.end)}</td>
+        <td style="font-size:12px;">${nights}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
 
 // ── Gallery management ────────────────────────────────────────────────────────
 

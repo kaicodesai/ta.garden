@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guest Profile — Ta.Garden</title>
+<title>Guest Portal — Ta.Garden</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,250 +20,464 @@
 }
 body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; color: var(--dark); min-height: 100vh; }
 
-.topbar { background: var(--dark); padding: 20px 32px; display: flex; align-items: center; gap: 16px; }
+.topbar { background: var(--dark); padding: 0 28px; height: 56px; display: flex; align-items: center; gap: 12px; }
 .brand { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; color: var(--cream); letter-spacing: 0.08em; }
-.brand-sub { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--teal); margin-left: 4px; }
+.brand-sub { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.topbar-name { font-size: 12px; color: rgba(237,224,209,0.5); }
+.signout-btn { padding: 6px 14px; background: none; border: 1px solid rgba(237,224,209,0.15); color: rgba(237,224,209,0.45); font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.signout-btn:hover { border-color: rgba(237,224,209,0.4); color: var(--cream); }
 
-.wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+.screen { display: none; }
+.screen.on { display: block; }
 
-.booking-card { background: var(--dark); color: var(--cream); padding: 24px 28px; margin-bottom: 32px; }
-.booking-room { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; margin-bottom: 4px; }
-.booking-meta { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
-.booking-dates { display: flex; gap: 32px; font-size: 13px; }
-.booking-date-lbl { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(237,224,209,0.45); margin-bottom: 3px; }
-
-.section { background: var(--white); border: 1px solid rgba(136,145,125,0.14); padding: 28px; margin-bottom: 16px; }
-.section-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 20px; border-bottom: 1px solid rgba(136,145,125,0.15); padding-bottom: 10px; }
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
-.full { grid-column: 1 / -1; }
+/* ── Centred screens (login / check email / loading / error) ── */
+.center-wrap { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 56px); padding: 32px 20px; }
+.center-box { background: var(--white); padding: 44px 40px; width: 100%; max-width: 440px; border: 1px solid rgba(136,145,125,0.14); }
+@media (max-width: 480px) { .center-box { padding: 32px 24px; } }
+.screen-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; margin-bottom: 10px; }
+.screen-sub { font-size: 13px; color: var(--mid); line-height: 1.8; margin-bottom: 0; }
 
 .fg { display: flex; flex-direction: column; gap: 6px; }
 .fl { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mid); }
-.fc { padding: 11px 13px; background: var(--light); border: 1px solid rgba(136,145,125,0.22); color: var(--dark); font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; width: 100%; transition: border-color 0.2s; }
+.fc { padding: 12px 14px; background: var(--light); border: 1px solid rgba(136,145,125,0.22); color: var(--dark); font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; width: 100%; transition: border-color 0.2s; }
 .fc:focus { border-color: var(--teal); }
+.primary-btn { padding: 14px 24px; background: var(--dark); color: var(--cream); border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s; width: 100%; margin-top: 16px; }
+.primary-btn:hover:not(:disabled) { opacity: 0.85; }
+.primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.secondary-btn { padding: 10px 20px; background: none; border: 1px solid rgba(136,145,125,0.3); color: var(--mid); font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.secondary-btn:hover { border-color: var(--dark); color: var(--dark); }
+.status-line { font-size: 12px; margin-top: 10px; min-height: 16px; }
+.status-line.err { color: var(--red); }
+.status-line.ok  { color: var(--teal); }
 
-.upload-area { border: 2px dashed rgba(136,145,125,0.3); padding: 28px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; }
+/* ── Portal layout ── */
+.portal-wrap { max-width: 760px; margin: 0 auto; padding: 36px 20px 80px; }
+
+/* Booking card */
+.booking-card { background: var(--dark); color: var(--cream); padding: 24px 28px; margin-bottom: 28px; }
+.booking-room { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; margin-bottom: 4px; }
+.booking-meta { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
+.booking-dates { display: flex; gap: 32px; font-size: 13px; }
+.booking-date-lbl { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(237,224,209,0.4); margin-bottom: 3px; }
+.status-pill { display: inline-block; padding: 3px 10px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid; border-radius: 1px; }
+.status-pill.confirmed { border-color: var(--green); color: var(--green); }
+.status-pill.pending   { border-color: rgba(200,146,42,0.6); color: #c8922a; }
+
+/* Sections */
+.section { background: var(--white); border: 1px solid rgba(136,145,125,0.14); padding: 26px 28px; margin-bottom: 14px; }
+.section-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 18px; border-bottom: 1px solid rgba(136,145,125,0.12); padding-bottom: 10px; }
+
+/* Onboarding checklist */
+.ob-list { display: flex; flex-direction: column; gap: 8px; }
+.ob-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--light); border: 1px solid rgba(136,145,125,0.12); }
+.ob-icon { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(136,145,125,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; }
+.ob-icon.done { background: var(--green); border-color: var(--green); color: #fff; }
+.ob-label { font-size: 13px; }
+.ob-label.done { color: var(--dark); }
+.ob-label.pending { color: var(--mid); }
+
+/* Profile section */
+.profile-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 500px) { .profile-summary { grid-template-columns: 1fr; } }
+.profile-field { display: flex; flex-direction: column; gap: 3px; }
+.profile-key { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--mid); }
+.profile-val { font-size: 13px; color: var(--dark); }
+.profile-cta { background: rgba(134,162,166,0.07); border: 1px dashed rgba(134,162,166,0.35); padding: 20px; text-align: center; }
+.profile-cta-text { font-size: 13px; color: var(--mid); margin-bottom: 12px; line-height: 1.7; }
+
+/* Profile form */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+.full { grid-column: 1 / -1; }
+.upload-area { border: 2px dashed rgba(136,145,125,0.3); padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; }
 .upload-area:hover, .upload-area.drag { border-color: var(--teal); background: rgba(134,162,166,0.05); }
-.upload-icon { font-size: 28px; margin-bottom: 8px; }
-.upload-label { font-size: 12px; color: var(--mid); line-height: 1.7; }
+.upload-icon { font-size: 24px; margin-bottom: 6px; }
+.upload-label { font-size: 12px; color: var(--mid); line-height: 1.6; }
 .upload-label strong { color: var(--dark); font-weight: 400; }
 .upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-.upload-preview { width: 100%; max-height: 220px; object-fit: contain; border-radius: 2px; display: block; margin-top: 12px; }
-.upload-name { font-size: 11px; color: var(--teal); margin-top: 8px; }
-.upload-clear { font-size: 10px; color: var(--red); cursor: pointer; margin-top: 4px; display: inline-block; }
-
+.upload-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 2px; display: none; margin-top: 10px; }
+.upload-name { font-size: 11px; color: var(--teal); margin-top: 6px; }
+.upload-clear { font-size: 10px; color: var(--red); cursor: pointer; margin-top: 4px; display: none; }
 .submit-btn { width: 100%; padding: 16px; background: var(--dark); color: var(--cream); border: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; }
 .submit-btn:hover:not(:disabled) { opacity: 0.85; }
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 .err-msg { font-size: 12px; color: var(--red); margin-top: 8px; min-height: 16px; }
+.form-note { font-size: 11px; color: var(--mid); line-height: 1.7; margin-bottom: 18px; }
 
-.success-wrap { text-align: center; padding: 60px 24px; }
-.success-icon { font-size: 48px; margin-bottom: 20px; }
-.success-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; margin-bottom: 12px; }
-.success-sub { font-size: 14px; color: var(--mid); line-height: 1.8; max-width: 420px; margin: 0 auto; }
-
-.not-found { text-align: center; padding: 80px 24px; }
-.not-found-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; margin-bottom: 10px; }
-.not-found-sub { font-size: 13px; color: var(--mid); }
-
-.required-note { font-size: 11px; color: var(--mid); margin-bottom: 20px; }
+/* Payments */
+.payment-cta { display: block; width: 100%; padding: 15px; background: var(--teal); color: #fff; text-align: center; text-decoration: none; font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 18px; transition: opacity 0.2s; }
+.payment-cta:hover { opacity: 0.88; }
+.payment-list { display: flex; flex-direction: column; gap: 0; }
+.payment-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(136,145,125,0.1); }
+.payment-row:last-child { border-bottom: none; }
+.payment-date { font-size: 11px; color: var(--mid); min-width: 80px; }
+.payment-amount { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; }
+.payment-note { font-size: 12px; color: var(--mid); flex: 1; padding: 0 12px; }
+.payment-check { color: var(--green); font-size: 14px; }
+.payment-empty { font-size: 13px; color: var(--mid); padding: 8px 0; }
+.payment-total { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; margin-top: 6px; border-top: 1px solid rgba(136,145,125,0.18); }
+.payment-total-lbl { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); }
+.payment-total-val { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="brand">Ta.Garden</div>
-  <div class="brand-sub">Cam Nam Island · Hội An</div>
+  <div class="brand-sub">Guest Portal</div>
+  <div class="topbar-right" id="topbarRight"></div>
 </div>
 
-<div class="wrap" id="mainWrap">
-  <div class="loading" style="text-align:center;padding:60px;color:var(--mid);">Loading your booking…</div>
+<!-- Login -->
+<div id="screen-login" class="screen">
+  <div class="center-wrap">
+    <div class="center-box">
+      <div class="screen-title">Welcome back.</div>
+      <div class="screen-sub" style="margin-bottom:28px;">Enter your booking email to receive a secure login link.</div>
+      <div class="fg">
+        <label class="fl">Email Address</label>
+        <input type="email" class="fc" id="loginEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doRequestLogin()">
+      </div>
+      <button class="primary-btn" id="loginBtn" onclick="doRequestLogin()">Send Login Link →</button>
+      <div class="status-line" id="loginStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Check Email -->
+<div id="screen-check-email" class="screen">
+  <div class="center-wrap">
+    <div class="center-box" style="text-align:center;">
+      <div style="font-size:40px;margin-bottom:18px;">✉</div>
+      <div class="screen-title">Check your inbox.</div>
+      <div class="screen-sub">We sent a login link to <strong id="checkEmailAddr"></strong>.<br>Click it to access your portal — it expires in 1 hour.</div>
+      <button class="secondary-btn" onclick="showScreen('login')" style="margin-top:28px;">Use a different email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="screen-loading" class="screen">
+  <div class="center-wrap">
+    <div style="text-align:center;color:var(--mid);font-size:13px;">Loading your portal…</div>
+  </div>
+</div>
+
+<!-- Error -->
+<div id="screen-error" class="screen">
+  <div class="center-wrap">
+    <div class="center-box" style="text-align:center;">
+      <div class="screen-title" style="color:var(--red);">Something went wrong.</div>
+      <div class="screen-sub" id="errScreenMsg" style="margin-top:10px;margin-bottom:24px;">Please try again or contact us at hi@soulandlunawellness.com</div>
+      <button class="secondary-btn" onclick="showScreen('login')">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- Portal -->
+<div id="screen-portal" class="screen">
+  <div class="portal-wrap" id="portalContent"></div>
 </div>
 
 <script>
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const STRIPE_LINK = 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+
+let session = null; // { enquiryId, propId, name, email, room, stayType, checkIn, checkOut, status, onboarding, profile, payments }
+let passportData = null, visaData = null;
+
 function fmt(s) {
   if (!s) return '—';
   const [y,m,d] = s.split('-');
-  return MONTHS[+m-1]+' '+ +d+', '+y;
+  return MONTHS[+m-1] + ' ' + (+d) + ', ' + y;
 }
 
-const params = new URLSearchParams(location.search);
-const enqId  = params.get('id');
-const propId = params.get('p') || 'ta-garden';
+function fmtAmt(amount, currency) {
+  if (!amount) return '—';
+  if (currency === 'VND') return Number(amount).toLocaleString() + ' ₫';
+  if (currency === 'USD') return '$' + Number(amount).toLocaleString();
+  return Number(amount).toLocaleString() + ' ' + currency;
+}
 
-let passportData = null;
-let visaData = null;
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById('screen-' + name).classList.add('on');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const wrap = document.getElementById('mainWrap');
-  if (!enqId) {
-    wrap.innerHTML = `<div class="not-found"><div class="not-found-title">Invalid Link</div><div class="not-found-sub">This guest portal link is not valid.<br>Please check your confirmation email for the correct link.</div></div>`;
+  const params = new URLSearchParams(location.search);
+  const token  = params.get('token');
+  const id     = params.get('id');
+  const p      = params.get('p') || 'ta-garden';
+
+  // Restore session from sessionStorage
+  const saved = sessionStorage.getItem('tg_guest');
+  if (saved && !token && !id) {
+    session = JSON.parse(saved);
+    renderPortal();
+    showScreen('portal');
     return;
   }
 
-  try {
-    const r = await fetch(`/api/guest?id=${enqId}&p=${propId}`);
-    if (!r.ok) throw new Error('Not found');
-    const enq = await r.json();
-
-    if (enq.profileSubmitted) {
-      wrap.innerHTML = `<div class="success-wrap">
-        <div class="success-icon">✓</div>
-        <div class="success-title">Profile Already Submitted</div>
-        <div class="success-sub">Thank you, ${enq.name ? enq.name.split(' ')[0] : 'there'}. We've received your details and documents. Our team will be in touch if anything else is needed.</div>
-      </div>`;
-      return;
+  if (token) {
+    showScreen('loading');
+    try {
+      const r = await fetch(`/api/guest/verify-token?token=${token}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Token invalid');
+      session = d;
+      sessionStorage.setItem('tg_guest', JSON.stringify(session));
+      // Clean URL
+      history.replaceState(null, '', '/guest.html');
+      renderPortal();
+      showScreen('portal');
+    } catch (e) {
+      document.getElementById('errScreenMsg').textContent = e.message === 'Token expired or invalid'
+        ? 'This login link has expired or already been used. Please request a new one.'
+        : 'Could not verify your login link. Please try again.';
+      showScreen('error');
     }
-
-    if (enq.status === 'cancelled') {
-      wrap.innerHTML = `<div class="not-found"><div class="not-found-title">Booking Cancelled</div><div class="not-found-sub">This booking has been cancelled. Please contact us if you have any questions.</div></div>`;
-      return;
-    }
-
-    renderForm(enq);
-  } catch (e) {
-    wrap.innerHTML = `<div class="not-found"><div class="not-found-title">Not Found</div><div class="not-found-sub">We couldn't find your booking. Please check your confirmation email for the correct link or contact us at <a href="mailto:hi@soulandlunawellness.com" style="color:var(--terra);">hi@soulandlunawellness.com</a>.</div></div>`;
+    return;
   }
+
+  if (id) {
+    showScreen('loading');
+    try {
+      const r = await fetch(`/api/guest?id=${id}&p=${p}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Not found');
+      session = d;
+      sessionStorage.setItem('tg_guest', JSON.stringify(session));
+      history.replaceState(null, '', '/guest.html');
+      renderPortal();
+      showScreen('portal');
+    } catch {
+      showScreen('login');
+    }
+    return;
+  }
+
+  showScreen('login');
 }
 
-function renderForm(enq) {
-  const wrap = document.getElementById('mainWrap');
-  wrap.innerHTML = `
+// ── Login ─────────────────────────────────────────────────────────────────────
+
+async function doRequestLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const status = document.getElementById('loginStatus');
+  const btn = document.getElementById('loginBtn');
+  if (!email) { status.className = 'status-line err'; status.textContent = 'Please enter your email address.'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…';
+  status.className = 'status-line'; status.textContent = '';
+  try {
+    await fetch('/api/guest/request-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    document.getElementById('checkEmailAddr').textContent = email;
+    showScreen('check-email');
+  } catch {
+    status.className = 'status-line err'; status.textContent = 'Could not send email. Please try again.';
+  }
+  btn.disabled = false; btn.textContent = 'Send Login Link →';
+}
+
+function doSignOut() {
+  sessionStorage.removeItem('tg_guest');
+  session = null;
+  document.getElementById('topbarRight').innerHTML = '';
+  document.getElementById('loginEmail').value = '';
+  showScreen('login');
+}
+
+// ── Portal render ─────────────────────────────────────────────────────────────
+
+function renderPortal() {
+  // Topbar
+  document.getElementById('topbarRight').innerHTML = `
+    <span class="topbar-name">${session.name || ''}</span>
+    <button class="signout-btn" onclick="doSignOut()">Sign Out</button>`;
+
+  const ob = session.onboarding || {};
+  const obItems = [
+    { key: 'paymentReceived', label: 'First payment received' },
+    { key: 'contractSigned',  label: 'House agreement signed' },
+    { key: 'passportUploaded', label: 'Passport photo uploaded' },
+    { key: 'visaUploaded',    label: 'Visa document uploaded' },
+  ];
+  const obDone = Object.values(ob).filter(Boolean).length;
+
+  const payments = session.payments || [];
+  const sameVND  = payments.every(p => p.currency === 'VND' || !p.currency);
+  const total    = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const showTotal = payments.length > 1;
+
+  document.getElementById('portalContent').innerHTML = `
+    <!-- Booking -->
     <div class="booking-card">
-      <div class="booking-room">${enq.room}</div>
-      <div class="booking-meta">${enq.stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay'} · Ta.Garden</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div class="booking-room">${session.room || 'Ta.Garden'}</div>
+          <div class="booking-meta">${session.stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay'} · Ta.Garden, Hội An</div>
+        </div>
+        <span class="status-pill ${session.status}">${session.status || 'pending'}</span>
+      </div>
       <div class="booking-dates">
-        <div>
-          <div class="booking-date-lbl">Check-in</div>
-          <div>${fmt(enq.checkIn)}</div>
-        </div>
-        <div>
-          <div class="booking-date-lbl">Check-out</div>
-          <div>${fmt(enq.checkOut)}</div>
-        </div>
+        <div><div class="booking-date-lbl">Check-in</div><div>${fmt(session.checkIn)}</div></div>
+        <div><div class="booking-date-lbl">Check-out</div><div>${fmt(session.checkOut)}</div></div>
       </div>
     </div>
 
-    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;margin-bottom:8px;">Welcome, ${enq.name ? enq.name.split(' ')[0] : 'Guest'}.</div>
-    <div style="font-size:14px;color:var(--mid);line-height:1.8;margin-bottom:28px;">Please complete your guest profile below. This information helps us prepare for your arrival and is required for Vietnamese visa compliance. Your documents are stored securely and used only for registration purposes.</div>
-
-    <form id="guestForm" onsubmit="submitForm(event)">
-
-      <div class="section">
-        <div class="section-title">Personal Information</div>
-        <p class="required-note">All fields are required unless marked optional.</p>
-        <div class="form-grid">
-          <div class="fg full">
-            <label class="fl">Full Name (as on passport)</label>
-            <input type="text" class="fc" id="fullName" value="${enq.name || ''}" required>
-          </div>
-          <div class="fg">
-            <label class="fl">Date of Birth</label>
-            <input type="date" class="fc" id="dateOfBirth" required>
-          </div>
-          <div class="fg">
-            <label class="fl">Nationality</label>
-            <input type="text" class="fc" id="nationality" placeholder="e.g. Australian" required>
-          </div>
-          <div class="fg">
-            <label class="fl">Passport Number</label>
-            <input type="text" class="fc" id="passportNumber" placeholder="e.g. PA123456" required>
-          </div>
-          <div class="fg">
-            <label class="fl">Passport Expiry Date</label>
-            <input type="date" class="fc" id="passportExpiry">
-          </div>
-          <div class="fg full">
-            <label class="fl">Home Address</label>
-            <input type="text" class="fc" id="homeAddress" placeholder="Street, City, Country" required>
-          </div>
-        </div>
+    <!-- Onboarding progress -->
+    <div class="section">
+      <div class="section-title">Arrival Checklist — ${obDone}/4 Complete</div>
+      <div class="ob-list">
+        ${obItems.map(item => `
+          <div class="ob-item">
+            <div class="ob-icon${ob[item.key] ? ' done' : ''}">
+              ${ob[item.key] ? '✓' : ''}
+            </div>
+            <span class="ob-label${ob[item.key] ? ' done' : ' pending'}">${item.label}</span>
+          </div>`).join('')}
       </div>
+    </div>
 
-      <div class="section">
-        <div class="section-title">Emergency Contact</div>
-        <div class="form-grid">
-          <div class="fg">
-            <label class="fl">Contact Name</label>
-            <input type="text" class="fc" id="emergencyName" placeholder="Full name" required>
-          </div>
-          <div class="fg">
-            <label class="fl">Contact Phone (with country code)</label>
-            <input type="tel" class="fc" id="emergencyPhone" placeholder="+1 555 000 0000" required>
-          </div>
-          <div class="fg full">
-            <label class="fl">Relationship</label>
-            <input type="text" class="fc" id="emergencyRelation" placeholder="e.g. Partner, Parent">
-          </div>
+    <!-- Profile -->
+    <div class="section" id="profileSection">
+      <div class="section-title">Guest Profile</div>
+      ${renderProfileSection()}
+    </div>
+
+    <!-- Payments -->
+    <div class="section">
+      <div class="section-title">Monthly Payments</div>
+      <a class="payment-cta" href="${STRIPE_LINK}" target="_blank" rel="noopener">Pay This Month →</a>
+      ${payments.length ? `
+        <div class="payment-list">
+          ${payments.map(p => `
+            <div class="payment-row">
+              <span class="payment-date">${fmt(p.date)}</span>
+              <span class="payment-amount">${fmtAmt(p.amount, p.currency)}</span>
+              <span class="payment-note">${p.note || ''}</span>
+              <span class="payment-check">✓</span>
+            </div>`).join('')}
         </div>
-      </div>
+        ${showTotal ? `<div class="payment-total">
+          <span class="payment-total-lbl">Total Paid</span>
+          <span class="payment-total-val">${fmtAmt(total, sameVND ? 'VND' : '')}</span>
+        </div>` : ''}
+      ` : `<div class="payment-empty">No payments recorded yet. Your first payment will appear here once confirmed.</div>`}
+    </div>`;
 
-      <div class="section">
-        <div class="section-title">Documents</div>
-        <div style="font-size:13px;color:var(--mid);line-height:1.8;margin-bottom:20px;">Please upload a clear photo of your passport photo page and your visa stamp or e-visa document. JPG, PNG or PDF accepted. Max 10MB each.</div>
+  // Attach form handlers if form was rendered
+  setupProfileForm();
+}
+
+function renderProfileSection() {
+  if (session.profileSubmitted && session.profile) {
+    const p = session.profile;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="color:var(--green);font-size:16px;">✓</span>
+        <span style="font-size:13px;color:var(--mid);">Submitted ${p.submittedAt ? new Date(p.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''}</span>
+      </div>
+      <div class="profile-summary">
+        <div class="profile-field"><span class="profile-key">Full Name</span><span class="profile-val">${p.fullName || '—'}</span></div>
+        <div class="profile-field"><span class="profile-key">Nationality</span><span class="profile-val">${p.nationality || '—'}</span></div>
+        <div class="profile-field"><span class="profile-key">Date of Birth</span><span class="profile-val">${fmt(p.dateOfBirth)}</span></div>
+        <div class="profile-field"><span class="profile-key">Passport No.</span><span class="profile-val">${p.passportNumber || '—'}</span></div>
+        <div class="profile-field"><span class="profile-key">Home Address</span><span class="profile-val">${p.homeAddress || '—'}</span></div>
+        <div class="profile-field"><span class="profile-key">Emergency Contact</span><span class="profile-val">${p.emergencyName || '—'}${p.emergencyPhone ? ' · ' + p.emergencyPhone : ''}</span></div>
+        <div class="profile-field"><span class="profile-key">Passport Photo</span><span class="profile-val" style="color:${p.passportUploaded?'var(--green)':'var(--mid)'};">${p.passportUploaded ? 'Uploaded ✓' : 'Not uploaded'}</span></div>
+        <div class="profile-field"><span class="profile-key">Visa Document</span><span class="profile-val" style="color:${p.visaUploaded?'var(--green)':'var(--mid)'};">${p.visaUploaded ? 'Uploaded ✓' : 'Not uploaded'}</span></div>
+      </div>`;
+  }
+
+  return `
+    <div class="profile-cta" id="profileCta">
+      <div class="profile-cta-text">Please complete your guest profile to finalise your stay.<br>We need your passport details and documents for visa compliance.</div>
+      <button class="primary-btn" onclick="showProfileForm()" style="width:auto;margin:0;padding:12px 28px;">Complete Profile →</button>
+    </div>
+    <div id="profileForm" style="display:none;">
+      <p class="form-note">All fields required unless marked optional.</p>
+      <div class="form-grid">
+        <div class="fg full"><label class="fl">Full Name (as on passport)</label><input type="text" class="fc" id="pf-fullName" value="${session.name || ''}" required></div>
+        <div class="fg"><label class="fl">Date of Birth</label><input type="date" class="fc" id="pf-dob" required></div>
+        <div class="fg"><label class="fl">Nationality</label><input type="text" class="fc" id="pf-nationality" placeholder="e.g. Australian" required></div>
+        <div class="fg"><label class="fl">Passport Number</label><input type="text" class="fc" id="pf-passport" placeholder="e.g. PA123456" required></div>
+        <div class="fg"><label class="fl">Passport Expiry</label><input type="date" class="fc" id="pf-expiry"></div>
+        <div class="fg full"><label class="fl">Home Address</label><input type="text" class="fc" id="pf-address" placeholder="Street, City, Country" required></div>
+        <div class="fg"><label class="fl">Emergency Contact Name</label><input type="text" class="fc" id="pf-emName" placeholder="Full name" required></div>
+        <div class="fg"><label class="fl">Emergency Phone</label><input type="tel" class="fc" id="pf-emPhone" placeholder="+1 555 000 0000" required></div>
+        <div class="fg full"><label class="fl">Relationship</label><input type="text" class="fc" id="pf-emRel" placeholder="e.g. Partner, Parent"></div>
+      </div>
+      <div style="margin-top:20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--mid);margin-bottom:12px;">Documents</div>
         <div class="form-grid">
           <div class="fg">
             <label class="fl">Passport Photo Page</label>
             <div class="upload-area" id="passportArea">
               <div class="upload-icon">🪪</div>
-              <div class="upload-label"><strong>Click to upload</strong> or drag &amp; drop<br>Passport photo page</div>
+              <div class="upload-label"><strong>Click to upload</strong> or drag & drop</div>
               <input type="file" class="upload-input" id="passportFile" accept="image/*,.pdf" onchange="handleFile('passport',this)">
-              <img id="passportPreview" class="upload-preview" style="display:none">
+              <img id="passportPreview" class="upload-preview">
               <div id="passportName" class="upload-name"></div>
-              <span id="passportClear" class="upload-clear" style="display:none" onclick="clearFile('passport')">✕ Remove</span>
+              <span id="passportClear" class="upload-clear" onclick="clearFile('passport')">✕ Remove</span>
             </div>
           </div>
           <div class="fg">
-            <label class="fl">Visa Stamp / E-Visa Document</label>
+            <label class="fl">Visa Stamp / E-Visa</label>
             <div class="upload-area" id="visaArea">
               <div class="upload-icon">📄</div>
-              <div class="upload-label"><strong>Click to upload</strong> or drag &amp; drop<br>Visa stamp or e-visa</div>
+              <div class="upload-label"><strong>Click to upload</strong> or drag & drop</div>
               <input type="file" class="upload-input" id="visaFile" accept="image/*,.pdf" onchange="handleFile('visa',this)">
-              <img id="visaPreview" class="upload-preview" style="display:none">
+              <img id="visaPreview" class="upload-preview">
               <div id="visaName" class="upload-name"></div>
-              <span id="visaClear" class="upload-clear" style="display:none" onclick="clearFile('visa')">✕ Remove</span>
+              <span id="visaClear" class="upload-clear" onclick="clearFile('visa')">✕ Remove</span>
             </div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--mid);margin-top:12px;">Don't have your visa yet? You can submit the form now and we'll follow up. Upload what you have — you can share the rest directly with us via email.</div>
+        <div style="font-size:11px;color:var(--mid);margin-top:10px;line-height:1.7;">Don't have your visa yet? Submit the form now — you can email it to us separately.</div>
       </div>
+      <button class="submit-btn" id="profileSubmitBtn" onclick="submitProfile()">Submit Guest Profile →</button>
+      <div class="err-msg" id="profileErrMsg"></div>
+    </div>`;
+}
 
-      <button type="submit" class="submit-btn" id="submitBtn">Submit Guest Profile →</button>
-      <div class="err-msg" id="errMsg"></div>
-    </form>`;
+function showProfileForm() {
+  document.getElementById('profileCta').style.display = 'none';
+  document.getElementById('profileForm').style.display = '';
+  setupProfileForm();
+}
 
+function setupProfileForm() {
   setupDragDrop('passportArea', 'passport');
   setupDragDrop('visaArea', 'visa');
 }
+
+// ── Profile form submission ───────────────────────────────────────────────────
 
 function handleFile(type, input) {
   const file = input.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) {
-    document.getElementById('errMsg').textContent = `${type === 'passport' ? 'Passport' : 'Visa'} file exceeds 10MB. Please compress the image and try again.`;
-    input.value = '';
-    return;
+    document.getElementById('profileErrMsg').textContent = `File exceeds 10 MB. Please compress and try again.`;
+    input.value = ''; return;
   }
-  document.getElementById('errMsg').textContent = '';
+  document.getElementById('profileErrMsg').textContent = '';
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = e => {
     const data = e.target.result;
     if (type === 'passport') passportData = data;
     else visaData = data;
-
     const preview = document.getElementById(type + 'Preview');
     const nameEl  = document.getElementById(type + 'Name');
     const clearEl = document.getElementById(type + 'Clear');
-    if (file.type.startsWith('image/')) {
-      preview.src = data;
-      preview.style.display = 'block';
-    } else {
-      preview.style.display = 'none';
-    }
+    if (file.type.startsWith('image/')) { preview.src = data; preview.style.display = 'block'; }
+    else preview.style.display = 'none';
     nameEl.textContent = file.name;
     clearEl.style.display = 'inline';
   };
@@ -271,19 +485,12 @@ function handleFile(type, input) {
 }
 
 function clearFile(type) {
-  if (type === 'passport') {
-    passportData = null;
-    document.getElementById('passportFile').value = '';
-    document.getElementById('passportPreview').style.display = 'none';
-    document.getElementById('passportName').textContent = '';
-    document.getElementById('passportClear').style.display = 'none';
-  } else {
-    visaData = null;
-    document.getElementById('visaFile').value = '';
-    document.getElementById('visaPreview').style.display = 'none';
-    document.getElementById('visaName').textContent = '';
-    document.getElementById('visaClear').style.display = 'none';
-  }
+  if (type === 'passport') passportData = null;
+  else visaData = null;
+  document.getElementById(type + 'File').value = '';
+  document.getElementById(type + 'Preview').style.display = 'none';
+  document.getElementById(type + 'Name').textContent = '';
+  document.getElementById(type + 'Clear').style.display = 'none';
 }
 
 function setupDragDrop(areaId, type) {
@@ -292,62 +499,65 @@ function setupDragDrop(areaId, type) {
   area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag'); });
   area.addEventListener('dragleave', () => area.classList.remove('drag'));
   area.addEventListener('drop', e => {
-    e.preventDefault();
-    area.classList.remove('drag');
+    e.preventDefault(); area.classList.remove('drag');
     const file = e.dataTransfer.files[0];
     if (!file) return;
     const input = document.getElementById(type + 'File');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    handleFile(type, input);
+    const dt = new DataTransfer(); dt.items.add(file);
+    input.files = dt.files; handleFile(type, input);
   });
 }
 
-async function submitForm(e) {
-  e.preventDefault();
-  const btn = document.getElementById('submitBtn');
-  const err = document.getElementById('errMsg');
-  btn.disabled = true;
-  btn.textContent = 'Submitting…';
-  err.textContent = '';
+async function submitProfile() {
+  const btn = document.getElementById('profileSubmitBtn');
+  const err = document.getElementById('profileErrMsg');
+  btn.disabled = true; btn.textContent = 'Submitting…'; err.textContent = '';
 
   const body = {
-    id: enqId,
-    propertyId: propId,
-    fullName:        document.getElementById('fullName').value.trim(),
-    dateOfBirth:     document.getElementById('dateOfBirth').value,
-    nationality:     document.getElementById('nationality').value.trim(),
-    passportNumber:  document.getElementById('passportNumber').value.trim(),
-    passportExpiry:  document.getElementById('passportExpiry').value,
-    homeAddress:     document.getElementById('homeAddress').value.trim(),
-    emergencyName:   document.getElementById('emergencyName').value.trim(),
-    emergencyPhone:  document.getElementById('emergencyPhone').value.trim(),
-    emergencyRelation: document.getElementById('emergencyRelation').value.trim(),
+    id: session.enquiryId,
+    propertyId: session.propId || 'ta-garden',
+    fullName:          document.getElementById('pf-fullName').value.trim(),
+    dateOfBirth:       document.getElementById('pf-dob').value,
+    nationality:       document.getElementById('pf-nationality').value.trim(),
+    passportNumber:    document.getElementById('pf-passport').value.trim(),
+    passportExpiry:    document.getElementById('pf-expiry').value,
+    homeAddress:       document.getElementById('pf-address').value.trim(),
+    emergencyName:     document.getElementById('pf-emName').value.trim(),
+    emergencyPhone:    document.getElementById('pf-emPhone').value.trim(),
+    emergencyRelation: document.getElementById('pf-emRel').value.trim(),
     passport: passportData,
     visa:     visaData,
   };
 
+  if (!body.fullName || !body.dateOfBirth || !body.nationality || !body.passportNumber || !body.homeAddress || !body.emergencyName || !body.emergencyPhone) {
+    err.textContent = 'Please fill in all required fields.';
+    btn.disabled = false; btn.textContent = 'Submit Guest Profile →'; return;
+  }
+
   try {
     const r = await fetch('/api/guest/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
     const d = await r.json();
     if (d.success) {
-      document.getElementById('mainWrap').innerHTML = `<div class="success-wrap">
-        <div class="success-icon">✓</div>
-        <div class="success-title">Profile Submitted</div>
-        <div class="success-sub">Thank you, ${body.fullName.split(' ')[0]}. We've received your details and documents. We'll be in touch closer to your arrival with check-in information.<br><br>Questions? Email us at <a href="mailto:hi@soulandlunawellness.com" style="color:var(--terra);">hi@soulandlunawellness.com</a></div>
-      </div>`;
-    } else {
-      throw new Error(d.error || 'Submission failed');
-    }
+      // Update local session
+      session.profileSubmitted = true;
+      session.profile = {
+        fullName: body.fullName, nationality: body.nationality, dateOfBirth: body.dateOfBirth,
+        passportNumber: body.passportNumber, homeAddress: body.homeAddress,
+        emergencyName: body.emergencyName, emergencyPhone: body.emergencyPhone,
+        emergencyRelation: body.emergencyRelation,
+        passportUploaded: !!passportData, visaUploaded: !!visaData,
+        submittedAt: new Date().toISOString(),
+      };
+      sessionStorage.setItem('tg_guest', JSON.stringify(session));
+      // Re-render just the profile section
+      document.getElementById('profileSection').innerHTML =
+        '<div class="section-title">Guest Profile</div>' + renderProfileSection();
+    } else throw new Error(d.error || 'Submission failed');
   } catch (ex) {
-    err.textContent = 'Something went wrong: ' + ex.message + '. Please try again or email us directly.';
-    btn.disabled = false;
-    btn.textContent = 'Submit Guest Profile →';
+    err.textContent = 'Something went wrong: ' + ex.message + '. Please try again or email hi@soulandlunawellness.com';
+    btn.disabled = false; btn.textContent = 'Submit Guest Profile →';
   }
 }
 

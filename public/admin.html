@@ -234,6 +234,22 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .portal-link-row { background: rgba(134,162,166,0.08); border: 1px solid rgba(134,162,166,0.2); padding: 10px 14px; font-size: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
 .portal-link-copy { padding: 4px 10px; background: var(--teal); color: #fff; border: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
 
+/* ── Payments in profile modal ── */
+.pay-list { display: flex; flex-direction: column; gap: 0; }
+.pay-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(136,145,125,0.09); }
+.pay-row:last-child { border-bottom: none; }
+.pay-date { font-size: 11px; color: var(--mid); min-width: 88px; }
+.pay-amount { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 300; }
+.pay-note { font-size: 12px; color: var(--mid); flex: 1; }
+.pay-del { padding: 2px 8px; background: none; border: 1px solid rgba(184,92,92,0.3); color: var(--red); font-family: 'Jost',sans-serif; font-size: 9px; text-transform: uppercase; cursor: pointer; flex-shrink: 0; }
+.pay-del:hover { background: rgba(184,92,92,0.07); }
+.pay-add-form { background: var(--light); border: 1px solid rgba(136,145,125,0.16); padding: 14px; margin-top: 12px; display: none; }
+.pay-form-row { display: grid; grid-template-columns: 1fr 80px 150px 1fr; gap: 8px; align-items: end; }
+@media (max-width: 560px) { .pay-form-row { grid-template-columns: 1fr 1fr; } }
+.pay-total { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; margin-top: 4px; border-top: 1px solid rgba(136,145,125,0.14); }
+.pay-total-lbl { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--mid); }
+.pay-total-val { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; }
+
 /* ── Gallery management ── */
 .gallery-drop { border: 2px dashed rgba(134,162,166,0.35); background: rgba(134,162,166,0.05); padding: 36px 24px; text-align: center; cursor: pointer; transition: all 0.2s; border-radius: 2px; }
 .gallery-drop:hover, .gallery-drop.drag-over { border-color: var(--teal); background: rgba(134,162,166,0.1); }
@@ -785,18 +801,26 @@ function renderDoc(dataUrl, label) {
   return `<img class="doc-img" src="${dataUrl}" alt="${label}">`;
 }
 
+let profileModalEnqId = null;
+let profilePayments = [];
+
 async function openProfileModal(id) {
   const enq = allEnquiries.find(x => x.id === id);
   if (!enq) return;
+  profileModalEnqId = id;
+  profilePayments = [];
   document.getElementById('profileModalTitle').textContent = `${enq.name} — Guest Profile`;
   document.getElementById('profileModalBody').innerHTML = '<div class="loading">Loading…</div>';
   document.getElementById('profileOverlay').classList.add('open');
 
   let profile = null;
   try {
-    const r = await fetch(`/api/admin/guest-profile?id=${id}`, { headers: { 'x-admin-secret': secret } });
-    const d = await r.json();
-    profile = d.profile;
+    const [pr, payr] = await Promise.all([
+      fetch(`/api/admin/guest-profile?id=${id}`, { headers: { 'x-admin-secret': secret } }),
+      fetch(`/api/admin/payments?id=${id}`, { headers: { 'x-admin-secret': secret } }),
+    ]);
+    profile = (await pr.json()).profile;
+    profilePayments = (await payr.json()).payments || [];
   } catch {}
 
   const ob = enq.onboarding || {};
@@ -858,10 +882,89 @@ async function openProfileModal(id) {
       <div style="font-size:11px;color:var(--mid);margin-top:8px;">Submitted ${profile.submittedAt ? new Date(profile.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div>
     </div>`;
   } else {
-    profileHtml = `<div style="padding:20px 0;color:var(--mid);font-size:13px;">No profile submitted yet. Share the guest portal link below.</div>`;
+    profileHtml = `<div style="padding:16px 0 0;color:var(--mid);font-size:13px;">No profile submitted yet.</div>`;
   }
 
-  document.getElementById('profileModalBody').innerHTML = checklistHtml + portalHtml + profileHtml;
+  const paymentsHtml = `<div class="profile-section" id="paymentsSection">
+    <div class="profile-section-title">Payments</div>
+    <div id="payListWrap">${renderPayList()}</div>
+    <button class="btn-sm" style="margin-top:10px;" onclick="togglePayForm()">+ Record Payment</button>
+    <div class="pay-add-form" id="payAddForm">
+      <div class="pay-form-row">
+        <div class="fg"><label class="fl">Amount</label><input type="number" class="fc" id="payAmount" placeholder="8500000"></div>
+        <div class="fg"><label class="fl">Currency</label><select class="fc" id="payCurrency"><option value="VND">VND</option><option value="USD">USD</option></select></div>
+        <div class="fg"><label class="fl">Date</label><input type="date" class="fc" id="payDate" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="fg"><label class="fl">Note (optional)</label><input type="text" class="fc" id="payNote" placeholder="Month 1 rent"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+        <button class="btn-dark" onclick="doRecordPayment()">Save →</button>
+        <button class="btn-sm" onclick="togglePayForm()">Cancel</button>
+        <span class="status-msg" id="payStatus" style="margin:0;"></span>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('profileModalBody').innerHTML = checklistHtml + portalHtml + profileHtml + paymentsHtml;
+}
+
+function renderPayList() {
+  if (!profilePayments.length) return '<div style="font-size:13px;color:var(--mid);padding:4px 0;">No payments recorded yet.</div>';
+  const sameVND = profilePayments.every(p => p.currency === 'VND' || !p.currency);
+  const total = profilePayments.reduce((s, p) => s + Number(p.amount), 0);
+  return `<div class="pay-list">
+    ${profilePayments.map(p => `<div class="pay-row">
+      <span class="pay-date">${fmtDt(p.date + 'T12:00:00')}</span>
+      <span class="pay-amount">${Number(p.amount).toLocaleString()} ${p.currency || 'VND'}</span>
+      <span class="pay-note">${p.note || ''}</span>
+      <button class="pay-del" onclick="doDeletePayment('${p.id}')">✕</button>
+    </div>`).join('')}
+  </div>
+  ${profilePayments.length > 1 ? `<div class="pay-total">
+    <span class="pay-total-lbl">Total</span>
+    <span class="pay-total-val">${total.toLocaleString()}${sameVND ? ' VND' : ''}</span>
+  </div>` : ''}`;
+}
+
+function togglePayForm() {
+  const f = document.getElementById('payAddForm');
+  f.style.display = f.style.display === 'none' || !f.style.display ? 'block' : 'none';
+}
+
+async function doRecordPayment() {
+  const amount = document.getElementById('payAmount').value;
+  const currency = document.getElementById('payCurrency').value;
+  const date = document.getElementById('payDate').value;
+  const note = document.getElementById('payNote').value.trim();
+  const st = document.getElementById('payStatus');
+  if (!amount) { st.style.color='var(--terra)'; st.textContent='Enter an amount.'; return; }
+  st.style.color='var(--mid)'; st.textContent='Saving…';
+  try {
+    const r = await fetch('/api/admin/record-payment', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ enquiryId: profileModalEnqId, amount, currency, date, note }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      profilePayments.unshift({ id: d.id, amount: Number(amount), currency, date, note, recordedAt: new Date().toISOString() });
+      document.getElementById('payListWrap').innerHTML = renderPayList();
+      document.getElementById('payAddForm').style.display = 'none';
+      document.getElementById('payAmount').value = '';
+      document.getElementById('payNote').value = '';
+      st.textContent = '';
+    } else throw new Error();
+  } catch { st.style.color='var(--terra)'; st.textContent='Failed. Try again.'; }
+}
+
+async function doDeletePayment(payId) {
+  if (!confirm('Remove this payment record?')) return;
+  try {
+    await fetch('/api/admin/record-payment', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ enquiryId: profileModalEnqId, id: payId }),
+    });
+    profilePayments = profilePayments.filter(p => p.id !== payId);
+    document.getElementById('payListWrap').innerHTML = renderPayList();
+  } catch { alert('Delete failed. Try again.'); }
 }
 
 function closeProfileModal() {

@@ -60,6 +60,13 @@ export default {
     // Guest portal (public — ID is the auth token)
     if (p === '/api/guest'                  && m === 'GET')   return handleGuestGet(request, env, cors);
     if (p === '/api/guest/submit'           && m === 'POST')  return handleGuestSubmit(request, env, cors, ctx);
+    if (p === '/api/guest/request-login'    && m === 'POST')  return safeCall(() => handleGuestRequestLogin(request, env, cors, ctx), cors);
+    if (p === '/api/guest/verify-token'     && m === 'GET')   return handleGuestVerifyToken(request, env, cors);
+
+    // Payments
+    if (p === '/api/admin/record-payment'   && m === 'POST')  return safeCall(() => adminRecordPayment(request, env, cors), cors);
+    if (p === '/api/admin/record-payment'   && m === 'DELETE') return safeCall(() => adminDeletePayment(request, env, cors), cors);
+    if (p === '/api/admin/payments'         && m === 'GET')   return safeCall(() => adminGetPayments(request, env, cors), cors);
 
     // Serve static assets with no-cache for HTML so updates always reach the browser
     const assetRes = await env.ASSETS.fetch(request);
@@ -424,18 +431,27 @@ async function handleGuestGet(request, env, cors) {
   const id = params.get('id');
   const propId = params.get('p') || 'ta-garden';
   if (!id || !env.BOOKINGS) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+  return guestPortalData(id, propId, env, cors);
+}
 
+async function guestPortalData(enquiryId, propId, env, cors) {
   const val = await env.BOOKINGS.get(enquiriesKey(propId));
-  const enquiries = val ? JSON.parse(val) : [];
-  const enq = enquiries.find(e => e.id === id);
+  const list = val ? JSON.parse(val) : [];
+  const enq = list.find(e => e.id === enquiryId);
   if (!enq) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
 
-  const profileRaw = await env.BOOKINGS.get(`guest__${id}`);
-  const profile = profileRaw ? JSON.parse(profileRaw) : null;
+  const [profileRaw, paymentsRaw] = await Promise.all([
+    env.BOOKINGS.get(`guest__${enquiryId}`),
+    env.BOOKINGS.get(`payments__${enquiryId}`),
+  ]);
+  const profile  = profileRaw  ? JSON.parse(profileRaw)  : null;
+  const payments = paymentsRaw ? JSON.parse(paymentsRaw) : [];
 
   return Response.json({
-    id: enq.id,
+    enquiryId: enq.id,
+    propId,
     name: enq.name,
+    email: enq.email,
     room: enq.room,
     stayType: enq.stayType,
     checkIn: enq.checkIn,
@@ -443,7 +459,15 @@ async function handleGuestGet(request, env, cors) {
     status: enq.status,
     onboarding: enq.onboarding || {},
     profileSubmitted: !!profile,
-    profile: profile ? { fullName: profile.fullName, nationality: profile.nationality, submitted: true } : null,
+    profile: profile ? {
+      fullName: profile.fullName, nationality: profile.nationality,
+      dateOfBirth: profile.dateOfBirth, passportNumber: profile.passportNumber,
+      homeAddress: profile.homeAddress, emergencyName: profile.emergencyName,
+      emergencyPhone: profile.emergencyPhone, emergencyRelation: profile.emergencyRelation,
+      passportUploaded: !!profile.passport, visaUploaded: !!profile.visa,
+      submittedAt: profile.submittedAt,
+    } : null,
+    payments,
   }, { headers: cors });
 }
 
@@ -530,6 +554,89 @@ async function adminGetGuestProfile(request, env, cors) {
   const raw = await env.BOOKINGS.get(`guest__${id}`);
   if (!raw) return Response.json({ profile: null }, { headers: cors });
   return Response.json({ profile: JSON.parse(raw) }, { headers: cors });
+}
+
+// ── Guest: magic link login ───────────────────────────────────────────────────
+
+async function handleGuestRequestLogin(request, env, cors, ctx) {
+  const { email } = await request.json().catch(() => ({}));
+  if (!email) return Response.json({ error: 'Email required' }, { status: 400, headers: cors });
+  if (!env.BOOKINGS) return Response.json({ error: 'Storage unavailable' }, { status: 503, headers: cors });
+
+  const propsRaw = await env.BOOKINGS.get('properties');
+  const props = propsRaw ? JSON.parse(propsRaw) : DEFAULT_PROPERTIES;
+
+  let foundEnq = null, foundPropId = null;
+  for (const prop of props) {
+    const val = await env.BOOKINGS.get(enquiriesKey(prop.id));
+    const enquiries = val ? JSON.parse(val) : [];
+    const match = enquiries.find(e => e.email?.toLowerCase() === email.toLowerCase() && e.status !== 'cancelled');
+    if (match) { foundEnq = match; foundPropId = prop.id; break; }
+  }
+
+  if (foundEnq) {
+    const token = crypto.randomUUID().replace(/-/g, '');
+    await env.BOOKINGS.put(`magic__${token}`, JSON.stringify({ enquiryId: foundEnq.id, propId: foundPropId }), { expirationTtl: 3600 });
+    const origin = new URL(request.url).origin;
+    const loginUrl = `${origin}/guest.html?token=${token}`;
+    const emailWork = resend(FROM, email, 'Your Ta.Garden portal link', buildMagicLinkEmail(foundEnq.name, loginUrl))
+      .catch(err => console.error('Magic link email error:', err));
+    if (ctx?.waitUntil) ctx.waitUntil(emailWork);
+  }
+
+  return Response.json({ success: true }, { headers: cors });
+}
+
+async function handleGuestVerifyToken(request, env, cors) {
+  const token = new URL(request.url).searchParams.get('token');
+  if (!token || !env.BOOKINGS) return Response.json({ error: 'Invalid token' }, { status: 401, headers: cors });
+
+  const raw = await env.BOOKINGS.get(`magic__${token}`);
+  if (!raw) return Response.json({ error: 'Token expired or invalid' }, { status: 401, headers: cors });
+
+  const { enquiryId, propId } = JSON.parse(raw);
+  await env.BOOKINGS.delete(`magic__${token}`);
+  return guestPortalData(enquiryId, propId, env, cors);
+}
+
+// ── Admin: payments ───────────────────────────────────────────────────────────
+
+async function adminGetPayments(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
+  const raw = await env.BOOKINGS.get(`payments__${id}`);
+  return Response.json({ payments: raw ? JSON.parse(raw) : [] }, { headers: cors });
+}
+
+async function adminRecordPayment(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { enquiryId, amount, currency = 'VND', date, note } = await request.json();
+  if (!enquiryId || !amount) return Response.json({ error: 'enquiryId and amount required' }, { status: 400, headers: cors });
+
+  const key = `payments__${enquiryId}`;
+  const raw = await env.BOOKINGS.get(key);
+  const payments = raw ? JSON.parse(raw) : [];
+  const id = `pay_${Date.now()}`;
+  payments.unshift({ id, amount: Number(amount), currency, date: date || new Date().toISOString().split('T')[0], note: note || '', recordedAt: new Date().toISOString() });
+  await env.BOOKINGS.put(key, JSON.stringify(payments));
+  return Response.json({ success: true, id }, { headers: cors });
+}
+
+async function adminDeletePayment(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { enquiryId, id } = await request.json();
+  if (!enquiryId || !id) return Response.json({ error: 'enquiryId and id required' }, { status: 400, headers: cors });
+
+  const key = `payments__${enquiryId}`;
+  const raw = await env.BOOKINGS.get(key);
+  const payments = raw ? JSON.parse(raw) : [];
+  await env.BOOKINGS.put(key, JSON.stringify(payments.filter(p => p.id !== id)));
+  return Response.json({ success: true }, { headers: cors });
 }
 
 // ── Public: gallery ───────────────────────────────────────────────────────────
@@ -664,6 +771,27 @@ function buildConfirmEmail(enq, customMessage, origin, propertyId) {
     </div>
     ${guestPortalUrl ? `<a href="${guestPortalUrl}" style="display:block;text-align:center;padding:15px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;">Complete Guest Profile →</a>` : ''}
     <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" style="display:block;text-align:center;padding:15px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;">Complete Payment via Stripe →</a>
+  </div>
+  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
+    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Questions? hi@soulandlunawellness.com</div>
+  </div>
+</div>`;
+}
+
+function buildMagicLinkEmail(name, loginUrl) {
+  const first = name ? name.split(' ')[0] : 'there';
+  return `
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
+  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Cam Nam Island · Hội An, Vietnam</div>
+  </div>
+  <div style="padding:32px;background:#f5f0eb;">
+    <p style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Hello, ${first}.</p>
+    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;">Here is your secure login link for your Ta.Garden guest portal. This link is valid for 1 hour.</p>
+    <a href="${loginUrl}" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:20px;">Access My Portal →</a>
+    <p style="font-size:12px;color:#88917d;line-height:1.7;border-top:1px solid rgba(136,145,125,0.2);padding-top:16px;">If the button doesn't work, copy this link:<br><span style="color:#86a2a6;word-break:break-all;">${loginUrl}</span></p>
+    <p style="font-size:12px;color:#88917d;margin-top:12px;">Didn't request this? You can safely ignore this email.</p>
   </div>
   <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
     <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Questions? hi@soulandlunawellness.com</div>

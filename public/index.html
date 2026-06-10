@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Ta.Garden — Hội An</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Google tag (gtag.js) — replace G-XXXXXXXXXX with your GA4 Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -310,6 +318,34 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   .stay-tabs { font-size: 9px; }
   .cal-day { font-size: 12px; min-height: 32px; }
 }
+
+/* TESTIMONIALS */
+.testimonials { background: var(--light); }
+.testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 3rem; }
+.testi-card { background: var(--white); padding: 2.6rem 2.2rem; border: 1px solid rgba(136,145,125,0.1); display: flex; flex-direction: column; position: relative; }
+.testi-mark { font-family: 'Cormorant Garamond', serif; font-size: 88px; font-weight: 300; line-height: 0.7; color: rgba(193,122,74,0.15); margin-bottom: 1rem; user-select: none; }
+.testi-quote { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 17px; font-weight: 300; color: var(--dark); line-height: 1.78; flex: 1; }
+.testi-author { margin-top: 2rem; padding-top: 1.4rem; border-top: 1px solid rgba(136,145,125,0.12); }
+.testi-name { font-size: 12px; font-weight: 500; color: var(--dark); letter-spacing: 0.04em; }
+.testi-detail { font-size: 10px; color: var(--mid); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.3rem; line-height: 1.5; }
+
+/* FAQ */
+.faq { background: var(--white); }
+.faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 4rem; margin-top: 3rem; align-items: start; }
+.faq-col { border-top: 1px solid rgba(136,145,125,0.14); }
+details.faq-item { border-bottom: 1px solid rgba(136,145,125,0.14); }
+details.faq-item summary { list-style: none; padding: 1.35rem 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-size: 14px; color: var(--dark); font-weight: 400; user-select: none; line-height: 1.4; }
+details.faq-item summary::-webkit-details-marker { display: none; }
+details.faq-item summary::after { content: '+'; font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; color: var(--terra); line-height: 1; flex-shrink: 0; transition: transform 0.2s; }
+details.faq-item[open] summary::after { content: '\2212'; }
+.faq-answer { padding: 0 0 1.6rem; font-size: 13px; color: var(--mid); line-height: 1.85; }
+.faq-answer a { color: var(--terra); text-decoration: none; }
+.faq-answer a:hover { text-decoration: underline; }
+
+@media (max-width: 768px) {
+  .testimonials-grid { grid-template-columns: 1fr; }
+  .faq-grid { grid-template-columns: 1fr; gap: 0; }
+}
 </style>
 </head>
 <body>
@@ -321,6 +357,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
     <li><a href="#about">The Home</a></li>
     <li><a href="#rooms">Rooms</a></li>
     <li><a href="#location">Location</a></li>
+    <li><a href="#faq">FAQ</a></li>
     <li><a href="#apply">Enquire</a></li>
     <li><a href="/guest.html" style="color:var(--teal);opacity:0.8;">Guest Portal</a></li>
   </ul>
@@ -570,6 +607,92 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
           <li>First month's rent paid in advance</li>
           <li>One month's notice required to vacate</li>
         </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="container">
+    <p class="section-label">Guest Stories</p>
+    <h2 class="section-title serif">What people say about <em>staying here</em></h2>
+    <div class="divider"></div>
+    <div class="testimonials-grid">
+
+      <div class="testi-card">
+        <div class="testi-mark">"</div>
+        <p class="testi-quote">I've lived in Bali, Chiang Mai, and Lisbon — but nothing slowed me down the way Ta.Garden did. My mornings here had a rhythm I didn't know I was missing: tea on the terrace, the sound of the river, the smell of rice cooking from a neighbour's window. I came for a month and stayed three.</p>
+        <div class="testi-author">
+          <div class="testi-name">Lena M.</div>
+          <div class="testi-detail">Amsterdam &nbsp;·&nbsp; The River Room &nbsp;·&nbsp; 3 months</div>
+        </div>
+      </div>
+
+      <div class="testi-card">
+        <div class="testi-mark">"</div>
+        <p class="testi-quote">The views from the top floor are something I genuinely wasn't prepared for. Watching the sun go down over the rice fields — that deep green lit up gold — with the distant glow of the lanterns from the Ancient Town. This home has a calmness that seeps into you. I haven't felt this at peace in years.</p>
+        <div class="testi-author">
+          <div class="testi-name">James H.</div>
+          <div class="testi-detail">Melbourne &nbsp;·&nbsp; The Sky Suite &nbsp;·&nbsp; 6 weeks</div>
+        </div>
+      </div>
+
+      <div class="testi-card">
+        <div class="testi-mark">"</div>
+        <p class="testi-quote">I needed a reset. Ta.Garden gave me that and more — a real neighbourhood, real people, a corner café where they had my order memorised by the third day. The WiFi held up perfectly for client calls and creative work. The hardest part was packing to leave.</p>
+        <div class="testi-author">
+          <div class="testi-name">Sofía A.</div>
+          <div class="testi-detail">Barcelona &nbsp;·&nbsp; The Balcony Room &nbsp;·&nbsp; 2 months</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <p class="section-label">Questions</p>
+    <h2 class="section-title serif">Everything you <em>need to know</em></h2>
+    <div class="divider"></div>
+    <div class="faq-grid">
+      <div class="faq-col">
+        <details class="faq-item">
+          <summary>Is the WiFi fast enough for remote work?</summary>
+          <div class="faq-answer">Yes — high-speed fibre WiFi is included in the rent and runs throughout the whole home, including the rooftop terrace. It's been reliably used for video calls, design work, and large file uploads. You can test it yourself on arrival before committing to your stay.</div>
+        </details>
+        <details class="faq-item">
+          <summary>What's the minimum stay?</summary>
+          <div class="faq-answer">The minimum stay is one month. Ta.Garden is designed for people who want to actually settle in — to get to know the neighbourhood, find a favourite café, and feel genuinely at home. Short stays occasionally open up; <a href="#apply">send an enquiry</a> and ask.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I extend my stay once I'm here?</summary>
+          <div class="faq-answer">Absolutely — most guests do. Just let us know at least two weeks before your current agreement ends and we'll confirm availability. Long-term stays (3+ months) are especially welcomed and we're happy to discuss adjusted terms.</div>
+        </details>
+        <details class="faq-item">
+          <summary>What's included in the monthly rent?</summary>
+          <div class="faq-answer">Your room, hotel-quality linens and towels, high-speed WiFi, water, access to all shared spaces (living room, kitchen, rooftop, garden), yoga mats, meditation space, and the communal tea station. Electricity is metered separately and billed by usage — you only pay for what you use.</div>
+        </details>
+      </div>
+      <div class="faq-col">
+        <details class="faq-item">
+          <summary>Is it quiet enough for focused work and writing?</summary>
+          <div class="faq-answer">This is something guests mention most. Cam Nam Island moves at a gentle pace — no tourist crowds, no blaring music. The home itself has a house guideline of no noise after 10pm, and the residents who choose Ta.Garden tend to be conscious, low-key people. It's a genuinely calm place to think.</div>
+        </details>
+        <details class="faq-item">
+          <summary>How do I secure a room?</summary>
+          <div class="faq-answer">Send an enquiry below and we'll respond within 24 hours. Once you've reviewed the house agreement, your room is secured by signing it and paying the first month via Stripe. There's no holding deposit — the first month's payment is all that's required to confirm your stay.</div>
+        </details>
+        <details class="faq-item">
+          <summary>What are the local food and transport options like?</summary>
+          <div class="faq-answer">Cam Nam has a small morning market, neighbourhood phở shops, and a handful of excellent local cafés — all within a 5-minute walk or cycle. A bicycle is the best way to get around and can be arranged. The Ancient Town, beaches, and Đà Nẵng airport are all easily accessible.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I receive guests or visitors?</summary>
+          <div class="faq-answer">Yes, with prior notice to the host. Overnight guests should be mentioned in advance out of respect for other residents. The home is a shared space and the vibe matters — so we ask for a little care around this. Day visitors are generally no issue at all.</div>
+        </details>
       </div>
     </div>
   </div>
@@ -961,8 +1084,9 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
       });
       const data = await res.json();
       if (data.success) {
-        setStatus(st, 'ok', '✓ Enquiry sent! Check your inbox for a confirmation. We’ll be in touch within 24 hours.');
-        btn.textContent = 'Enquiry Sent ✓';
+        setStatus(st, ‘ok’, ‘✓ Enquiry sent! Check your inbox for a confirmation. We’ll be in touch within 24 hours.’);
+        btn.textContent = ‘Enquiry Sent ✓’;
+        if (typeof gtag !== ‘undefined’) gtag(‘event’, ‘generate_lead’, { event_category: ‘enquiry’, event_label: currentRoom });
       } else throw new Error();
     } catch {
       setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');
@@ -995,8 +1119,9 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
       });
       const data = await res.json();
       if (data.success) {
-        setStatus(st, 'ok', '✓ Enquiry sent! We’ll be in touch within 24 hours. Check your inbox for confirmation.');
-        btn.textContent = 'Enquiry Sent ✓';
+        setStatus(st, ‘ok’, ‘✓ Enquiry sent! We’ll be in touch within 24 hours. Check your inbox for confirmation.’);
+        btn.textContent = ‘Enquiry Sent ✓’;
+        if (typeof gtag !== ‘undefined’) gtag(‘event’, ‘generate_lead’, { event_category: ‘enquiry’, event_label: room });
       } else throw new Error();
     } catch {
       setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');

@@ -761,6 +761,7 @@ function showTab(name) {
   document.querySelectorAll('.tab').forEach((el,i) => {
     el.classList.toggle('on', ['enquiries','timeline','blocking','properties','gallery'][i] === name);
   });
+  if (name === 'enquiries')  renderEnquiries();
   if (name === 'timeline')   renderTimeline();
   if (name === 'blocking')  { renderBlocked(); populateRoomSelect(); }
   if (name === 'properties') renderPropCards();
@@ -1460,7 +1461,11 @@ async function showSanctuaryDetail(propId) {
     allRoomData = (await rr.json()).rooms || {};
     allSanctuaryGallery = (await gr.json()).images || [];
   } catch { allRoomData = {}; allSanctuaryGallery = []; }
-  document.getElementById('pane-sanctuary').innerHTML = renderSanctuaryDetail(prop);
+  try {
+    document.getElementById('pane-sanctuary').innerHTML = renderSanctuaryDetail(prop);
+  } catch (err) {
+    document.getElementById('pane-sanctuary').innerHTML = `<div style="padding:24px;color:var(--terra);">Failed to render sanctuary detail: ${err.message}</div>`;
+  }
   showTab('sanctuary');
 }
 
@@ -1476,7 +1481,7 @@ function renderSanctuaryDetail(prop) {
 
   const activeGuests = allEnquiries
     .filter(e => e.status === 'confirmed' && (!e.checkOut || e.checkOut >= todayStr))
-    .sort((a,b) => a.checkIn.localeCompare(b.checkIn));
+    .sort((a,b) => (a.checkIn||'').localeCompare(b.checkIn||''));
 
   const pendingEnqs = allEnquiries.filter(e => e.status === 'pending')
     .sort((a,b) => b.createdAt?.localeCompare(a.createdAt||'')||0);

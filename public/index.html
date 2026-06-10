@@ -416,7 +416,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
     <p style="color:var(--mid);max-width:540px;font-size:14px;line-height:1.85;margin-bottom:0">All rooms include WiFi, water, hotel-quality linens, and shared access to the living room, kitchen, and rooftop terrace. Electricity is metered separately by usage.</p>
     <div class="rooms-grid">
 
-      <div class="room-card">
+      <div class="room-card" data-room="river-room">
         <div class="room-floor">Floor 2</div>
         <h3 class="room-name serif">The River Room</h3>
         <p class="room-desc">Second-floor bedroom with a botanical feature wall, rattan pendant lights, and warm wooden ceiling. Peaceful, private, and beautifully finished.</p>
@@ -440,7 +440,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
         <button class="btn-book-room" onclick="openBooking('The River Room')">Enquire / Book This Room &rarr;</button>
       </div>
 
-      <div class="room-card wide">
+      <div class="room-card wide" data-room="balcony-room">
         <div>
           <div class="room-floor">Floor 2</div>
           <h3 class="room-name serif">The Balcony Room</h3>
@@ -461,7 +461,7 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
         </div>
       </div>
 
-      <div class="room-card featured">
+      <div class="room-card featured" data-room="sky-suite">
         <div>
           <div class="room-floor">Floor 3 &mdash; The Crown</div>
           <h3 class="room-name serif">The Sky Suite</h3>
@@ -1059,6 +1059,46 @@ function lightboxStep(dir) {
   lightboxIndex = (lightboxIndex + dir + riverRoomPhotos.length) % riverRoomPhotos.length;
   document.getElementById('lightboxImg').src = riverRoomPhotos[lightboxIndex];
 }
+</script>
+
+<script>
+// Load room listing data from admin and apply to cards
+fetch('/api/rooms?prop=ta-garden')
+  .then(r => r.json())
+  .then(d => {
+    (d.rooms || []).forEach(room => {
+      const slug = room.name.toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const card = document.querySelector(`[data-room="${slug}"]`);
+      if (!card) return;
+
+      if (room.description) {
+        const el = card.querySelector('.room-desc');
+        if (el) el.textContent = room.description;
+      }
+
+      if (room.amenities && room.amenities.length) {
+        const el = card.querySelector('.room-features');
+        if (el) el.innerHTML = room.amenities.map(a => `<span class="tag">${a}</span>`).join('');
+      }
+
+      const priceNum = card.querySelector('.price-num');
+      const pricePeriod = card.querySelector('.price-period');
+      const priceSecondary = card.querySelector('.price-vnd');
+
+      if (priceNum && pricePeriod) {
+        if (room.displayCurrency === 'vnd' && room.priceVND) {
+          priceNum.textContent = Number(room.priceVND).toLocaleString('en-US');
+          pricePeriod.textContent = ' VND / month';
+          if (priceSecondary && room.priceUSD) priceSecondary.textContent = `≈ $${room.priceUSD} USD · billed monthly`;
+        } else if (room.priceUSD) {
+          priceNum.textContent = `$${room.priceUSD}`;
+          pricePeriod.textContent = '/ month';
+          if (priceSecondary && room.priceVND) priceSecondary.textContent = `${Number(room.priceVND).toLocaleString('en-US')} VND`;
+        }
+      }
+    });
+  })
+  .catch(() => {});
 </script>
 
 </body>

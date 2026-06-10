@@ -326,6 +326,19 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .gallery-delete-btn:hover { background: rgba(184,92,92,0.08); }
 .gallery-empty { grid-column: 1/-1; text-align: center; padding: 40px; color: var(--mid); font-size: 13px; }
 .gallery-uploading { background: rgba(134,162,166,0.08); border: 1px solid rgba(134,162,166,0.2); padding: 12px; text-align: center; font-size: 12px; color: var(--teal); }
+
+/* ── Room listing editor modal ── */
+.room-edit-modal-box { background: var(--white); width: 100%; max-width: 720px; max-height: 92vh; overflow-y: auto; }
+.re-section { margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid rgba(136,145,125,0.1); }
+.re-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.re-section-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 12px; }
+.re-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.re-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.listing-status-badge { display: inline-block; padding: 2px 8px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 2px; }
+.listing-status-badge.active { background: rgba(76,175,125,0.12); color: var(--green); }
+.listing-status-badge.maintenance { background: rgba(200,146,42,0.12); color: var(--amber); }
+.listing-status-badge.inactive { background: rgba(136,145,125,0.12); color: var(--mid); }
+@media (max-width: 580px) { .re-grid-3 { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -503,6 +516,101 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
   </div>
 </div>
 
+<!-- ROOM LISTING EDITOR MODAL -->
+<div class="modal-overlay" id="roomEditOverlay" onclick="if(event.target===this)closeRoomModal()">
+  <div class="room-edit-modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="roomEditTitle">Edit Room Listing</div>
+      <button class="modal-close" onclick="closeRoomModal()">×</button>
+    </div>
+    <div class="modal-body" id="roomEditBody">
+      <div class="re-section">
+        <div class="re-section-title">Listing Details</div>
+        <div class="fg" style="margin-bottom:10px;">
+          <label class="modal-lbl">Room Name</label>
+          <input class="fc" id="re-name" disabled style="background:rgba(136,145,125,0.08);color:var(--mid);">
+        </div>
+        <div class="fg" style="margin-bottom:10px;">
+          <label class="modal-lbl">Tagline <span style="color:var(--mid);font-size:9px;">— short line shown on listing cards</span></label>
+          <input class="fc" id="re-tagline" placeholder="Peaceful sanctuary with river views">
+        </div>
+        <div class="fg">
+          <label class="modal-lbl">Full Description</label>
+          <textarea class="modal-ta" id="re-desc" rows="4" placeholder="Describe the room in detail — what makes it special, the vibe, the views…"></textarea>
+        </div>
+      </div>
+
+      <div class="re-section">
+        <div class="re-section-title">Pricing</div>
+        <div class="re-grid-3">
+          <div class="fg">
+            <label class="modal-lbl">Monthly (VND)</label>
+            <input class="fc" id="re-price-vnd" type="number" placeholder="8500000">
+          </div>
+          <div class="fg">
+            <label class="modal-lbl">Monthly (USD)</label>
+            <input class="fc" id="re-price-usd" type="number" placeholder="340">
+          </div>
+          <div class="fg">
+            <label class="modal-lbl">Nightly (USD)</label>
+            <input class="fc" id="re-price-nightly" type="number" placeholder="25">
+          </div>
+        </div>
+        <div style="margin-top:10px;" class="fg">
+          <label class="modal-lbl">Primary Display Currency</label>
+          <select class="fc" id="re-display-currency">
+            <option value="usd">USD (show dollar price prominently)</option>
+            <option value="vnd">VND (show dong price prominently)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="re-section">
+        <div class="re-section-title">Room Information</div>
+        <div class="re-grid-3">
+          <div class="fg">
+            <label class="modal-lbl">Floor / Location</label>
+            <input class="fc" id="re-floor" placeholder="Floor 2">
+          </div>
+          <div class="fg">
+            <label class="modal-lbl">Size</label>
+            <input class="fc" id="re-size" placeholder="25m²">
+          </div>
+          <div class="fg">
+            <label class="modal-lbl">Max Guests</label>
+            <input class="fc" id="re-max-guests" type="number" placeholder="1" min="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="re-section">
+        <div class="re-section-title">Amenities &amp; Features <span style="font-weight:300;letter-spacing:0;text-transform:none;font-size:10px;">(comma-separated)</span></div>
+        <textarea class="modal-ta" id="re-amenities" rows="3" placeholder="Private en-suite, Queen bed, Air conditioning, Botanical wallpaper, Natural light"></textarea>
+        <div class="modal-hint">These appear as tags on the public listing page.</div>
+      </div>
+
+      <div class="re-section">
+        <div class="re-section-title">Listing Status</div>
+        <select class="fc" id="re-status">
+          <option value="active">Active — visible and bookable</option>
+          <option value="maintenance">Maintenance — temporarily unavailable</option>
+          <option value="inactive">Inactive — hidden from public listings</option>
+        </select>
+      </div>
+
+      <div class="re-section">
+        <div class="re-section-title">Internal Notes <span style="font-weight:300;letter-spacing:0;text-transform:none;font-size:10px;">(admin only — not public)</span></div>
+        <textarea class="modal-ta" id="re-notes" rows="3" placeholder="Maintenance schedule, guest feedback, pricing rationale…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel-modal" onclick="closeRoomModal()">Cancel</button>
+      <span id="roomEditStatus" style="flex:1;font-size:12px;color:var(--mid);align-self:center;padding:0 12px;"></span>
+      <button class="btn-confirm-send" onclick="saveRoomListing()">Save Listing →</button>
+    </div>
+  </div>
+</div>
+
 <!-- GUEST PROFILE MODAL -->
 <div class="modal-overlay" id="profileOverlay" onclick="if(event.target===this)closeProfileModal()">
   <div class="profile-modal-box">
@@ -542,6 +650,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 <script>
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 let secret = '', currentProp = null, allProps = [], allEnquiries = [], allBlocked = [], icalEvents = [], filterStatus = 'all', pickedColorVal = '#86a2a6';
+let allRoomData = {}, currentRoomEdit = null;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -1313,6 +1422,10 @@ async function showSanctuaryDetail(propId) {
   }
   const prop = allProps.find(p => p.id === propId);
   if (!prop) return;
+  try {
+    const r = await fetch(`/api/admin/rooms?prop=${propId}`, { headers: { 'x-admin-secret': secret } });
+    allRoomData = (await r.json()).rooms || {};
+  } catch { allRoomData = {}; }
   document.getElementById('pane-sanctuary').innerHTML = renderSanctuaryDetail(prop);
   showTab('sanctuary');
 }
@@ -1405,6 +1518,8 @@ function renderRoomCard(roomName, todayStr) {
   const calHtml = getMiniCal(roomName, todayStr, 30);
   const stays   = allEnquiries.filter(e => e.room === roomName && e.status === 'confirmed');
   const revenue = stays.filter(e => e.price).reduce((s,e) => s + e.price, 0);
+  const rd      = allRoomData[roomName] || null;
+  const listingStatus = rd?.status || 'active';
 
   let statusHtml = '', guestHtml = '', actionHtml = '';
 
@@ -1449,10 +1564,25 @@ function renderRoomCard(roomName, todayStr) {
     </div>`;
   }
 
+  // Listing info summary from saved room data
+  const priceSummary = rd ? (() => {
+    if (rd.displayCurrency === 'vnd' && rd.priceVND) return `${Number(rd.priceVND).toLocaleString()} VND / mo`;
+    if (rd.priceUSD) return `$${rd.priceUSD} / mo`;
+    return null;
+  })() : null;
+
   return `<div class="room-mgmt-card">
-    <div>
-      <div class="room-mgmt-name">${roomName}</div>
-      <div class="room-mgmt-sub">${stays.length} confirmed stay${stays.length!==1?'s':''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <div style="min-width:0;">
+        <div class="room-mgmt-name">${roomName}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;">
+          <span class="room-mgmt-sub">${stays.length} stay${stays.length!==1?'s':''}</span>
+          ${priceSummary ? `<span style="font-size:10px;color:var(--terra);">${priceSummary}</span>` : ''}
+          ${rd ? `<span class="listing-status-badge ${listingStatus}">${listingStatus}</span>` : ''}
+        </div>
+        ${rd?.tagline ? `<div style="font-size:11px;color:var(--mid);font-style:italic;margin-top:4px;line-height:1.4;">"${rd.tagline}"</div>` : ''}
+      </div>
+      <button class="btn-sm" style="flex-shrink:0;" onclick="openRoomModal('${roomName.replace(/'/g,"\\'")}')">Edit Listing</button>
     </div>
     ${statusHtml}
     ${guestHtml}
@@ -1708,6 +1838,89 @@ async function deleteGalleryImage(room, id) {
       renderGalleryGrid();
     }
   } catch { alert('Delete failed. Try again.'); }
+}
+
+// ── Room listing editor ───────────────────────────────────────────────────────
+
+function openRoomModal(roomName) {
+  currentRoomEdit = roomName;
+  const rd = allRoomData[roomName] || {};
+  document.getElementById('roomEditTitle').textContent = `Edit: ${roomName}`;
+  document.getElementById('re-name').value           = roomName;
+  document.getElementById('re-tagline').value        = rd.tagline || '';
+  document.getElementById('re-desc').value           = rd.description || '';
+  document.getElementById('re-price-vnd').value      = rd.priceVND || '';
+  document.getElementById('re-price-usd').value      = rd.priceUSD || '';
+  document.getElementById('re-price-nightly').value  = rd.priceNightlyUSD || '';
+  document.getElementById('re-display-currency').value = rd.displayCurrency || 'usd';
+  document.getElementById('re-floor').value          = rd.floor || '';
+  document.getElementById('re-size').value           = rd.size || '';
+  document.getElementById('re-max-guests').value     = rd.maxGuests || '';
+  document.getElementById('re-amenities').value      = (rd.amenities || []).join(', ');
+  document.getElementById('re-status').value         = rd.status || 'active';
+  document.getElementById('re-notes').value          = rd.notes || '';
+  document.getElementById('roomEditStatus').textContent = '';
+  document.getElementById('roomEditOverlay').classList.add('open');
+}
+
+function closeRoomModal() {
+  document.getElementById('roomEditOverlay').classList.remove('open');
+  currentRoomEdit = null;
+}
+
+async function saveRoomListing() {
+  const name = currentRoomEdit;
+  if (!name) return;
+  const st = document.getElementById('roomEditStatus');
+  const btn = document.querySelector('#roomEditOverlay .btn-confirm-send');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  st.style.color = 'var(--mid)'; st.textContent = '';
+
+  const amenitiesRaw = document.getElementById('re-amenities').value.trim();
+  const amenities = amenitiesRaw ? amenitiesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const priceVND = Number(document.getElementById('re-price-vnd').value) || null;
+  const priceUSD = Number(document.getElementById('re-price-usd').value) || null;
+  const priceNightlyUSD = Number(document.getElementById('re-price-nightly').value) || null;
+  const maxGuests = Number(document.getElementById('re-max-guests').value) || null;
+
+  const payload = {
+    propId: currentProp?.id || 'ta-garden',
+    name,
+    tagline:         document.getElementById('re-tagline').value.trim(),
+    description:     document.getElementById('re-desc').value.trim(),
+    priceVND,
+    priceUSD,
+    priceNightlyUSD,
+    displayCurrency: document.getElementById('re-display-currency').value,
+    floor:           document.getElementById('re-floor').value.trim(),
+    size:            document.getElementById('re-size').value.trim(),
+    maxGuests,
+    amenities,
+    status:          document.getElementById('re-status').value,
+    notes:           document.getElementById('re-notes').value.trim(),
+  };
+
+  try {
+    const r = await fetch('/api/admin/room', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (d.success) {
+      allRoomData[name] = payload;
+      st.style.color = 'var(--teal)'; st.textContent = 'Saved. Landing page updated.';
+      btn.disabled = false; btn.textContent = 'Save Listing →';
+      // Re-render the sanctuary detail to reflect updated card
+      const prop = allProps.find(p => p.id === (currentProp?.id || 'ta-garden'));
+      if (prop && document.getElementById('pane-sanctuary').style.display !== 'none') {
+        document.getElementById('pane-sanctuary').innerHTML = renderSanctuaryDetail(prop);
+      }
+    } else throw new Error(d.error || 'Unknown error');
+  } catch (err) {
+    st.style.color = 'var(--red)'; st.textContent = `Save failed: ${err.message}`;
+    btn.disabled = false; btn.textContent = 'Save Listing →';
+  }
 }
 
 // ── Auto-login ────────────────────────────────────────────────────────────────

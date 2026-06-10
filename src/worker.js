@@ -68,6 +68,11 @@ export default {
     if (p === '/api/admin/record-payment'   && m === 'DELETE') return safeCall(() => adminDeletePayment(request, env, cors), cors);
     if (p === '/api/admin/payments'         && m === 'GET')   return safeCall(() => adminGetPayments(request, env, cors), cors);
 
+    // Room listings (public read, admin write)
+    if (p === '/api/rooms'                 && m === 'GET')    return handleRoomsGet(request, env, cors);
+    if (p === '/api/admin/rooms'           && m === 'GET')    return safeCall(() => adminGetRooms(request, env, cors), cors);
+    if (p === '/api/admin/room'            && m === 'POST')   return safeCall(() => adminSaveRoom(request, env, cors), cors);
+
     // Serve static assets with no-cache for HTML so updates always reach the browser
     const assetRes = await env.ASSETS.fetch(request);
     if (assetRes.headers.get('content-type')?.includes('text/html')) {
@@ -679,6 +684,67 @@ async function adminGalleryDelete(request, env, cors) {
   const images = raw ? JSON.parse(raw) : [];
   await env.BOOKINGS.put(key, JSON.stringify(images.filter(img => img.id !== id)));
   return Response.json({ success: true }, { headers: cors });
+}
+
+// ── Room listings ─────────────────────────────────────────────────────────────
+
+function toRoomSlug(name) {
+  return name.toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+async function handleRoomsGet(request, env, cors) {
+  const propId = new URL(request.url).searchParams.get('prop') || 'ta-garden';
+  if (!env.BOOKINGS) return Response.json({ rooms: [] }, { headers: cors });
+
+  const propsRaw = await env.BOOKINGS.get('properties');
+  const props = propsRaw ? JSON.parse(propsRaw) : DEFAULT_PROPERTIES;
+  const prop = props.find(p => p.id === propId);
+  if (!prop) return Response.json({ rooms: [] }, { headers: cors });
+
+  const rooms = (await Promise.all(
+    (prop.rooms || []).map(async (roomName) => {
+      const raw = await env.BOOKINGS.get(`room__${propId}__${toRoomSlug(roomName)}`);
+      if (!raw) return null;
+      const { notes, ...pub } = JSON.parse(raw);
+      return pub;
+    })
+  )).filter(Boolean);
+
+  return Response.json({ rooms }, { headers: cors });
+}
+
+async function adminGetRooms(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const propId = new URL(request.url).searchParams.get('prop') || 'ta-garden';
+  if (!env.BOOKINGS) return Response.json({ rooms: {} }, { headers: cors });
+
+  const propsRaw = await env.BOOKINGS.get('properties');
+  const props = propsRaw ? JSON.parse(propsRaw) : DEFAULT_PROPERTIES;
+  const prop = props.find(p => p.id === propId);
+  if (!prop) return Response.json({ rooms: {} }, { headers: cors });
+
+  const rooms = {};
+  await Promise.all(
+    (prop.rooms || []).map(async (roomName) => {
+      const raw = await env.BOOKINGS.get(`room__${propId}__${toRoomSlug(roomName)}`);
+      if (raw) rooms[roomName] = JSON.parse(raw);
+    })
+  );
+  return Response.json({ rooms }, { headers: cors });
+}
+
+async function adminSaveRoom(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { propId = 'ta-garden', name, ...rest } = await request.json();
+  if (!name) return Response.json({ error: 'name required' }, { status: 400, headers: cors });
+
+  const slug = toRoomSlug(name);
+  const raw = await env.BOOKINGS.get(`room__${propId}__${slug}`);
+  const existing = raw ? JSON.parse(raw) : {};
+  await env.BOOKINGS.put(`room__${propId}__${slug}`, JSON.stringify({ ...existing, name, ...rest, updatedAt: new Date().toISOString() }));
+  return Response.json({ success: true, slug }, { headers: cors });
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────

@@ -1084,9 +1084,9 @@ details.faq-item[open] summary::after { content: '\2212'; }
       });
       const data = await res.json();
       if (data.success) {
-        setStatus(st, ‘ok’, ‘✓ Enquiry sent! Check your inbox for a confirmation. We’ll be in touch within 24 hours.’);
-        btn.textContent = ‘Enquiry Sent ✓’;
-        if (typeof gtag !== ‘undefined’) gtag(‘event’, ‘generate_lead’, { event_category: ‘enquiry’, event_label: currentRoom });
+        setStatus(st, 'ok', "\u2713 Enquiry sent! Check your inbox for a confirmation. We'll be in touch within 24 hours.");
+        btn.textContent = 'Enquiry Sent \u2713';
+        if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'enquiry', event_label: currentRoom });
       } else throw new Error();
     } catch {
       setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');
@@ -1119,9 +1119,9 @@ details.faq-item[open] summary::after { content: '\2212'; }
       });
       const data = await res.json();
       if (data.success) {
-        setStatus(st, ‘ok’, ‘✓ Enquiry sent! We’ll be in touch within 24 hours. Check your inbox for confirmation.’);
-        btn.textContent = ‘Enquiry Sent ✓’;
-        if (typeof gtag !== ‘undefined’) gtag(‘event’, ‘generate_lead’, { event_category: ‘enquiry’, event_label: room });
+        setStatus(st, 'ok', "\u2713 Enquiry sent! We'll be in touch within 24 hours. Check your inbox for confirmation.");
+        btn.textContent = 'Enquiry Sent \u2713';
+        if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'enquiry', event_label: room });
       } else throw new Error();
     } catch {
       setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');

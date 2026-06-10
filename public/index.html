@@ -312,6 +312,22 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
 .bm-status { margin-top: 12px; font-size: 13px; text-align: center; min-height: 20px; }
 .bm-status.ok { color: var(--teal); }
 .bm-status.err { color: var(--terra); }
+.bm-confirm { padding: 48px 28px; text-align: center; }
+.bm-confirm-icon { font-size: 48px; margin-bottom: 20px; color: var(--teal); }
+.bm-confirm-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; color: var(--dark); margin-bottom: 12px; }
+.bm-confirm-room { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--terra); margin-bottom: 20px; }
+.bm-confirm-body { font-size: 14px; color: var(--mid); line-height: 1.75; max-width: 420px; margin: 0 auto 28px; }
+.bm-confirm-body strong { color: var(--dark); font-weight: 400; }
+.bm-confirm-steps { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin: 0 auto 32px; text-align: left; }
+.bm-confirm-step { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: var(--mid); }
+.bm-confirm-step-num { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--teal); flex-shrink: 0; line-height: 1.2; }
+.bm-confirm-close { display: inline-block; padding: 11px 32px; border: 1px solid rgba(136,145,125,0.35); color: var(--mid); font-family: 'Jost', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; background: transparent; transition: all 0.22s; }
+.bm-confirm-close:hover { border-color: var(--terra); color: var(--terra); }
+.sf-confirm { padding: 2.8rem 2.4rem; text-align: center; background: var(--light); border: 1px solid rgba(136,145,125,0.18); }
+.sf-confirm-icon { font-size: 42px; color: var(--teal); margin-bottom: 16px; }
+.sf-confirm-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: var(--dark); margin-bottom: 10px; }
+.sf-confirm-body { font-size: 14px; color: var(--mid); line-height: 1.75; margin-bottom: 20px; }
+.sf-confirm-body strong { color: var(--dark); font-weight: 400; }
 
 @media (max-width: 600px) {
   .bm-body { padding: 20px; }
@@ -1084,9 +1100,20 @@ details.faq-item[open] summary::after { content: '\2212'; }
       });
       const data = await res.json();
       if (data.success) {
-        setStatus(st, 'ok', "\u2713 Enquiry sent! Check your inbox for a confirmation. We'll be in touch within 24 hours.");
-        btn.textContent = 'Enquiry Sent \u2713';
         if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'enquiry', event_label: currentRoom });
+        document.querySelector('.bm-body').innerHTML =
+          '<div class="bm-confirm">' +
+          '<div class="bm-confirm-icon">&#10003;</div>' +
+          '<div class="bm-confirm-title">Enquiry Received</div>' +
+          '<div class="bm-confirm-room">' + currentRoom + '</div>' +
+          '<p class="bm-confirm-body">Thank you, <strong>' + name + '</strong>. We\'ve received your enquiry and will be in touch within <strong>24 hours</strong>. A confirmation email is on its way to <strong>' + email + '</strong>.</p>' +
+          '<div class="bm-confirm-steps">' +
+          '<div class="bm-confirm-step"><span class="bm-confirm-step-num">01</span><span>Check your inbox &mdash; a confirmation from Ta.Garden is on its way.</span></div>' +
+          '<div class="bm-confirm-step"><span class="bm-confirm-step-num">02</span><span>We\'ll review your dates and reply with everything you need to know.</span></div>' +
+          '<div class="bm-confirm-step"><span class="bm-confirm-step-num">03</span><span>Once you\'re happy, we\'ll send the house agreement and secure your room.</span></div>' +
+          '</div>' +
+          '<button class="bm-confirm-close" onclick="closeBooking()">← Back to site</button>' +
+          '</div>';
       } else throw new Error();
     } catch {
       setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');
@@ -1119,9 +1146,14 @@ details.faq-item[open] summary::after { content: '\2212'; }
       });
       const data = await res.json();
       if (data.success) {
-        setStatus(st, 'ok', "\u2713 Enquiry sent! We'll be in touch within 24 hours. Check your inbox for confirmation.");
-        btn.textContent = 'Enquiry Sent \u2713';
         if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'enquiry', event_label: room });
+        document.querySelector('.apply-form').innerHTML =
+          '<div class="sf-confirm">' +
+          '<div class="sf-confirm-icon">&#10003;</div>' +
+          '<div class="sf-confirm-title">Enquiry Received</div>' +
+          '<p class="sf-confirm-body">Thank you, <strong>' + name + '</strong>. We\'ve received your enquiry for <strong>' + room + '</strong> and will be in touch within 24 hours.<br>A confirmation email is heading to <strong>' + email + '</strong> now.</p>' +
+          '<p style="font-size:12px;color:var(--teal);letter-spacing:0.12em;text-transform:uppercase;">We\'ll reach out via email and WhatsApp.</p>' +
+          '</div>';
       } else throw new Error();
     } catch {
       setStatus(st, 'err', 'Something went wrong. Email us at hi@soulandlunawellness.com');

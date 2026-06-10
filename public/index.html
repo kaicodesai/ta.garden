@@ -425,15 +425,9 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
           <span class="tag">Botanical wallpaper</span>
         </div>
 
-        <!-- Photo gallery -->
-        <div class="room-gallery">
-          <div class="room-gallery-strip">
-            <img class="room-gallery-thumb" src="/images/river-room/1.jpg" alt="River Room — overview" onclick="openLightbox('/images/river-room/1.jpg')">
-            <img class="room-gallery-thumb" src="/images/river-room/2.jpg" alt="River Room — headboard wall" onclick="openLightbox('/images/river-room/2.jpg')">
-            <img class="room-gallery-thumb" src="/images/river-room/3.jpg" alt="River Room — workspace" onclick="openLightbox('/images/river-room/3.jpg')">
-            <img class="room-gallery-thumb" src="/images/river-room/4.jpg" alt="River Room — en-suite bathroom" onclick="openLightbox('/images/river-room/4.jpg')">
-            <img class="room-gallery-thumb" src="/images/river-room/5.jpg" alt="River Room — balcony view" onclick="openLightbox('/images/river-room/5.jpg')">
-          </div>
+        <!-- Photo gallery (loaded dynamically from admin gallery) -->
+        <div class="room-gallery" id="riverRoomGallery" style="display:none">
+          <div class="room-gallery-strip" id="riverRoomStrip"></div>
           <div class="room-gallery-hint">↔ Scroll to view all photos · Click to enlarge</div>
         </div>
 
@@ -1030,19 +1024,27 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
 </div>
 
 <script>
-const riverRoomPhotos = [
-  '/images/river-room/1.jpg',
-  '/images/river-room/2.jpg',
-  '/images/river-room/3.jpg',
-  '/images/river-room/4.jpg',
-  '/images/river-room/5.jpg',
-];
+let riverRoomPhotos = [];
 let lightboxIndex = 0;
 
-function openLightbox(src) {
-  lightboxIndex = riverRoomPhotos.indexOf(src);
-  if (lightboxIndex < 0) lightboxIndex = 0;
-  document.getElementById('lightboxImg').src = src;
+// Load River Room gallery from API
+fetch('/api/gallery?room=river-room')
+  .then(r => r.json())
+  .then(d => {
+    const images = d.images || [];
+    if (!images.length) return;
+    riverRoomPhotos = images.map(img => img.data);
+    const strip = document.getElementById('riverRoomStrip');
+    strip.innerHTML = images.map((img, i) =>
+      `<img class="room-gallery-thumb" src="${img.data}" alt="${img.alt || 'River Room'}" onclick="openLightbox(${i})">`
+    ).join('');
+    document.getElementById('riverRoomGallery').style.display = '';
+  })
+  .catch(() => {});
+
+function openLightbox(idx) {
+  lightboxIndex = idx;
+  document.getElementById('lightboxImg').src = riverRoomPhotos[lightboxIndex];
   document.getElementById('lightbox').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -1051,7 +1053,7 @@ function closeLightbox() {
   document.body.style.overflow = '';
 }
 function lightboxStep(dir) {
-  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (!document.getElementById('lightbox').classList.contains('open') || !riverRoomPhotos.length) return;
   lightboxIndex = (lightboxIndex + dir + riverRoomPhotos.length) % riverRoomPhotos.length;
   document.getElementById('lightboxImg').src = riverRoomPhotos[lightboxIndex];
 }

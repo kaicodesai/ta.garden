@@ -233,6 +233,22 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .ob-dot.done { background: var(--green); }
 .portal-link-row { background: rgba(134,162,166,0.08); border: 1px solid rgba(134,162,166,0.2); padding: 10px 14px; font-size: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
 .portal-link-copy { padding: 4px 10px; background: var(--teal); color: #fff; border: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+
+/* ── Gallery management ── */
+.gallery-drop { border: 2px dashed rgba(134,162,166,0.35); background: rgba(134,162,166,0.05); padding: 36px 24px; text-align: center; cursor: pointer; transition: all 0.2s; border-radius: 2px; }
+.gallery-drop:hover, .gallery-drop.drag-over { border-color: var(--teal); background: rgba(134,162,166,0.1); }
+.gallery-drop-icon { font-size: 32px; color: var(--teal); line-height: 1; margin-bottom: 8px; }
+.gallery-drop-text { font-size: 13px; color: var(--dark); margin-bottom: 4px; }
+.gallery-drop-hint { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); }
+.gallery-mgmt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.gallery-mgmt-card { background: var(--white); border: 1px solid rgba(136,145,125,0.12); position: relative; overflow: hidden; }
+.gallery-mgmt-img { width: 100%; height: 140px; object-fit: cover; display: block; }
+.gallery-mgmt-footer { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.gallery-mgmt-alt { font-size: 11px; color: var(--mid); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gallery-delete-btn { padding: 3px 10px; background: none; border: 1px solid rgba(184,92,92,0.35); color: var(--red); font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+.gallery-delete-btn:hover { background: rgba(184,92,92,0.08); }
+.gallery-empty { grid-column: 1/-1; text-align: center; padding: 40px; color: var(--mid); font-size: 13px; }
+.gallery-uploading { background: rgba(134,162,166,0.08); border: 1px solid rgba(134,162,166,0.2); padding: 12px; text-align: center; font-size: 12px; color: var(--teal); }
 </style>
 </head>
 <body>
@@ -267,6 +283,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <button class="tab"     onclick="showTab('timeline')">Timeline</button>
     <button class="tab"     onclick="showTab('blocking')">Blocking</button>
     <button class="tab"     onclick="showTab('properties')">Properties</button>
+    <button class="tab"     onclick="showTab('gallery')">Gallery</button>
   </div>
   <div class="body">
 
@@ -327,6 +344,36 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
         <div class="status-msg" id="blkStatus"></div>
       </div>
       <div id="blkContainer"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- GALLERY -->
+    <div id="pane-gallery" style="display:none">
+      <div class="ph">
+        <div class="ph-title serif">Room Gallery</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--mid);">Room</span>
+          <select class="fc" id="galleryRoomSel" onchange="loadGallery()" style="width:auto;padding:6px 12px;">
+            <option value="river-room">The River Room</option>
+            <option value="balcony-room">The Balcony Room</option>
+            <option value="sky-suite">The Sky Suite</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Upload zone -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Upload Photos</div>
+        <div id="galleryDrop" class="gallery-drop" onclick="document.getElementById('galleryFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleGalleryDrop(event)">
+          <div class="gallery-drop-icon">+</div>
+          <div class="gallery-drop-text">Drop photos here or click to browse</div>
+          <div class="gallery-drop-hint">JPEG / PNG · Max 10 MB per file · Auto-compressed to ~1200px</div>
+        </div>
+        <input type="file" id="galleryFileInput" accept="image/*" multiple style="display:none" onchange="handleGalleryFiles(this.files)">
+        <div class="status-msg" id="galleryStatus"></div>
+      </div>
+
+      <!-- Image grid -->
+      <div id="galleryGrid" class="gallery-mgmt-grid"></div>
     </div>
 
     <!-- PROPERTIES -->
@@ -489,15 +536,16 @@ async function switchProperty(id) {
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 function showTab(name) {
-  ['enquiries','timeline','blocking','properties'].forEach(t => {
+  ['enquiries','timeline','blocking','properties','gallery'].forEach(t => {
     document.getElementById('pane-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el,i) => {
-    el.classList.toggle('on', ['enquiries','timeline','blocking','properties'][i] === name);
+    el.classList.toggle('on', ['enquiries','timeline','blocking','properties','gallery'][i] === name);
   });
   if (name === 'timeline')   renderTimeline();
   if (name === 'blocking')  { renderBlocked(); populateRoomSelect(); }
   if (name === 'properties') renderPropCards();
+  if (name === 'gallery')    loadGallery();
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -1085,6 +1133,120 @@ function roomKey(n='') {
 }
 function set(id, v) { document.getElementById(id).textContent = v; }
 function setMsg(id, color, msg) { const el=document.getElementById(id); el.style.color=color; el.textContent=msg; }
+
+// ── Gallery management ────────────────────────────────────────────────────────
+
+let galleryImages = [];
+
+async function loadGallery() {
+  const room = document.getElementById('galleryRoomSel').value;
+  const grid = document.getElementById('galleryGrid');
+  grid.innerHTML = '<div class="gallery-empty">Loading…</div>';
+  try {
+    const r = await fetch(`/api/gallery?room=${room}`);
+    const d = await r.json();
+    galleryImages = d.images || [];
+    renderGalleryGrid();
+  } catch {
+    grid.innerHTML = '<div class="gallery-empty">Failed to load gallery.</div>';
+  }
+}
+
+function renderGalleryGrid() {
+  const grid = document.getElementById('galleryGrid');
+  if (!galleryImages.length) {
+    grid.innerHTML = '<div class="gallery-empty">No photos yet. Upload some above.</div>';
+    return;
+  }
+  const room = document.getElementById('galleryRoomSel').value;
+  grid.innerHTML = galleryImages.map(img => `
+    <div class="gallery-mgmt-card">
+      <img class="gallery-mgmt-img" src="${img.data}" alt="${img.alt || ''}">
+      <div class="gallery-mgmt-footer">
+        <span class="gallery-mgmt-alt">${img.alt || 'No caption'}</span>
+        <button class="gallery-delete-btn" onclick="deleteGalleryImage('${room}','${img.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function handleGalleryDrop(e) {
+  e.preventDefault();
+  document.getElementById('galleryDrop').classList.remove('drag-over');
+  handleGalleryFiles(e.dataTransfer.files);
+}
+
+async function handleGalleryFiles(files) {
+  if (!files || !files.length) return;
+  const room = document.getElementById('galleryRoomSel').value;
+  const st = document.getElementById('galleryStatus');
+  const total = files.length;
+  let done = 0;
+  st.style.color = 'var(--teal)';
+  st.textContent = `Uploading 0 / ${total}…`;
+
+  for (const file of Array.from(files)) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const compressed = await compressImage(file, 1200, 0.82);
+      const r = await fetch('/api/admin/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ room, data: compressed, alt: file.name.replace(/\.[^.]+$/, '') }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        galleryImages.push({ id: d.id, data: compressed, alt: file.name.replace(/\.[^.]+$/, '') });
+        done++;
+        st.textContent = `Uploading ${done} / ${total}…`;
+        renderGalleryGrid();
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+    }
+  }
+  st.style.color = done === total ? 'var(--teal)' : 'var(--terra)';
+  st.textContent = done === total ? `${done} photo${done !== 1 ? 's' : ''} uploaded.` : `${done} / ${total} uploaded (some failed).`;
+}
+
+function compressImage(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else        { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function deleteGalleryImage(room, id) {
+  if (!confirm('Remove this photo from the gallery?')) return;
+  try {
+    const r = await fetch('/api/admin/gallery', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ room, id }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      galleryImages = galleryImages.filter(img => img.id !== id);
+      renderGalleryGrid();
+    }
+  } catch { alert('Delete failed. Try again.'); }
+}
 
 // ── Auto-login ────────────────────────────────────────────────────────────────
 

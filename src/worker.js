@@ -52,6 +52,11 @@ export default {
     if (p === '/api/admin/onboarding'       && m === 'PATCH') return safeCall(() => adminUpdateOnboarding(request, env, cors), cors);
     if (p === '/api/admin/guest-profile'    && m === 'GET')   return safeCall(() => adminGetGuestProfile(request, env, cors), cors);
 
+    // Gallery (public read, admin write)
+    if (p === '/api/gallery'               && m === 'GET')    return handleGalleryGet(request, env, cors);
+    if (p === '/api/admin/gallery'         && m === 'POST')   return safeCall(() => adminGalleryAdd(request, env, cors), cors);
+    if (p === '/api/admin/gallery'         && m === 'DELETE') return safeCall(() => adminGalleryDelete(request, env, cors), cors);
+
     // Guest portal (public — ID is the auth token)
     if (p === '/api/guest'                  && m === 'GET')   return handleGuestGet(request, env, cors);
     if (p === '/api/guest/submit'           && m === 'POST')  return handleGuestSubmit(request, env, cors, ctx);
@@ -525,6 +530,48 @@ async function adminGetGuestProfile(request, env, cors) {
   const raw = await env.BOOKINGS.get(`guest__${id}`);
   if (!raw) return Response.json({ profile: null }, { headers: cors });
   return Response.json({ profile: JSON.parse(raw) }, { headers: cors });
+}
+
+// ── Public: gallery ───────────────────────────────────────────────────────────
+
+async function handleGalleryGet(request, env, cors) {
+  const room = new URL(request.url).searchParams.get('room') || 'river-room';
+  if (!env.BOOKINGS) return Response.json({ images: [] }, { headers: cors });
+  const raw = await env.BOOKINGS.get(`gallery__${room}`);
+  const images = raw ? JSON.parse(raw) : [];
+  return Response.json({ images }, { headers: cors });
+}
+
+// ── Admin: gallery management ─────────────────────────────────────────────────
+
+async function adminGalleryAdd(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { room, data, alt } = await request.json();
+  if (!room || !data) return Response.json({ error: 'room and data required' }, { status: 400, headers: cors });
+
+  const key = `gallery__${room}`;
+  const raw = await env.BOOKINGS.get(key);
+  const images = raw ? JSON.parse(raw) : [];
+  const id = `img_${Date.now()}`;
+  images.push({ id, data, alt: alt || '' });
+  await env.BOOKINGS.put(key, JSON.stringify(images));
+  return Response.json({ success: true, id }, { headers: cors });
+}
+
+async function adminGalleryDelete(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { room, id } = await request.json();
+  if (!room || !id) return Response.json({ error: 'room and id required' }, { status: 400, headers: cors });
+
+  const key = `gallery__${room}`;
+  const raw = await env.BOOKINGS.get(key);
+  const images = raw ? JSON.parse(raw) : [];
+  await env.BOOKINGS.put(key, JSON.stringify(images.filter(img => img.id !== id)));
+  return Response.json({ success: true }, { headers: cors });
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────

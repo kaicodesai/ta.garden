@@ -8,3 +8,6 @@ directory = "./public"
 [[kv_namespaces]]
 binding = "BOOKINGS"
 id = "8d5879ddbfb64e4ca94643fa844645fd"
+
+[triggers]
+crons = ["0 1 * * *"]

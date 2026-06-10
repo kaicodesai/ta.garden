@@ -22,6 +22,10 @@ const DEFAULT_PROPERTIES = [
 ];
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runEmailAutomation(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const cors = {
@@ -67,6 +71,9 @@ export default {
     if (p === '/api/admin/record-payment'   && m === 'POST')  return safeCall(() => adminRecordPayment(request, env, cors), cors);
     if (p === '/api/admin/record-payment'   && m === 'DELETE') return safeCall(() => adminDeletePayment(request, env, cors), cors);
     if (p === '/api/admin/payments'         && m === 'GET')   return safeCall(() => adminGetPayments(request, env, cors), cors);
+
+    // Email automation
+    if (p === '/api/admin/send-emails'     && m === 'POST')   return safeCall(() => adminRunEmails(request, env, cors), cors);
 
     // Room listings (public read, admin write)
     if (p === '/api/rooms'                 && m === 'GET')    return handleRoomsGet(request, env, cors);
@@ -745,6 +752,169 @@ async function adminSaveRoom(request, env, cors) {
   const existing = raw ? JSON.parse(raw) : {};
   await env.BOOKINGS.put(`room__${propId}__${slug}`, JSON.stringify({ ...existing, name, ...rest, updatedAt: new Date().toISOString() }));
   return Response.json({ success: true, slug }, { headers: cors });
+}
+
+// ── Email automation (cron + manual trigger) ──────────────────────────────────
+
+async function adminRunEmails(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const result = await runEmailAutomation(env);
+  return Response.json(result, { headers: cors });
+}
+
+async function runEmailAutomation(env) {
+  if (!env.BOOKINGS) return { sent: 0, skipped: 0, errors: [] };
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  const dateStr = (daysOffset) => {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() + daysOffset);
+    return d.toISOString().split('T')[0];
+  };
+
+  const propsRaw = await env.BOOKINGS.get('properties');
+  const props = propsRaw ? JSON.parse(propsRaw) : DEFAULT_PROPERTIES;
+
+  let sent = 0, skipped = 0;
+  const errors = [];
+
+  for (const prop of props) {
+    const key = enquiriesKey(prop.id);
+    const raw = await env.BOOKINGS.get(key);
+    if (!raw) continue;
+
+    const enquiries = JSON.parse(raw);
+    let changed = false;
+
+    for (const enq of enquiries) {
+      if (enq.status !== 'confirmed' || !enq.email) continue;
+
+      if (!enq.autoEmails) enq.autoEmails = {};
+      const ae = enq.autoEmails;
+
+      // 2 days before arrival
+      if (enq.checkIn === dateStr(2) && !ae.arrivalReminder) {
+        try {
+          await resend(FROM, enq.email, `Your stay at Ta.Garden starts in 2 days`, buildArrivalReminderEmail(enq));
+          ae.arrivalReminder = new Date().toISOString();
+          changed = true; sent++;
+        } catch (e) { errors.push(`arrivalReminder ${enq.id}: ${e.message}`); }
+      }
+
+      // Day of checkout
+      if (enq.checkOut === todayStr && !ae.checkoutReminder) {
+        try {
+          await resend(FROM, enq.email, `Checkout day — thank you for staying at Ta.Garden`, buildCheckoutReminderEmail(enq));
+          ae.checkoutReminder = new Date().toISOString();
+          changed = true; sent++;
+        } catch (e) { errors.push(`checkoutReminder ${enq.id}: ${e.message}`); }
+      }
+
+      // 3 days after checkout
+      if (enq.checkOut === dateStr(-3) && !ae.reviewRequest) {
+        try {
+          await resend(FROM, enq.email, `How was your stay at Ta.Garden?`, buildReviewRequestEmail(enq));
+          ae.reviewRequest = new Date().toISOString();
+          changed = true; sent++;
+        } catch (e) { errors.push(`reviewRequest ${enq.id}: ${e.message}`); }
+      }
+    }
+
+    if (changed) await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+  }
+
+  return { sent, skipped, errors, date: todayStr };
+}
+
+function buildArrivalReminderEmail(enq) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5efe8;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border:1px solid rgba(136,145,125,0.15);">
+    <div style="background:#2a2520;padding:32px 36px;">
+      <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Ta.Garden</div>
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;line-height:1.3;">Your arrival is in 2 days</div>
+    </div>
+    <div style="padding:36px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#2a2520;line-height:1.7;">Hi ${enq.name.split(' ')[0]},</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#5a534c;line-height:1.8;">We're looking forward to welcoming you to Ta.Garden on <strong style="color:#2a2520;">${fmt(enq.checkIn)}</strong>. A few things to know before you arrive:</p>
+
+      <div style="background:#f5efe8;padding:20px 24px;margin:24px 0;border-left:3px solid #c17a4a;">
+        <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Arrival Details</div>
+        <div style="font-size:13px;color:#2a2520;line-height:2;">
+          <div><strong>Check-in:</strong> From 2:00 PM</div>
+          <div><strong>Address:</strong> Ta.Garden, Cam Nam Island, Hội An</div>
+          <div><strong>Your room:</strong> ${enq.room}</div>
+        </div>
+      </div>
+
+      <p style="margin:0 0 16px;font-size:14px;color:#5a534c;line-height:1.8;">We'll meet you at the home, show you around, and hand over your keys. If your plans change or you're running late, just send a message — Ashley is always reachable on WhatsApp.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#5a534c;line-height:1.8;">Is there anything you need before you arrive? Just reply to this email.</p>
+      <p style="margin:0;font-size:14px;color:#5a534c;">See you soon,<br><span style="color:#2a2520;font-weight:500;">Ashley &amp; the Ta.Garden team</span></p>
+    </div>
+    <div style="padding:20px 36px;border-top:1px solid rgba(136,145,125,0.12);text-align:center;">
+      <div style="font-size:11px;color:#88917d;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam<br>A Soul &amp; Luna Property</div>
+    </div>
+  </div>
+</body></html>`;
+}
+
+function buildCheckoutReminderEmail(enq) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5efe8;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border:1px solid rgba(136,145,125,0.15);">
+    <div style="background:#2a2520;padding:32px 36px;">
+      <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Ta.Garden</div>
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;line-height:1.3;">Checkout day — thank you</div>
+    </div>
+    <div style="padding:36px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#2a2520;line-height:1.7;">Hi ${enq.name.split(' ')[0]},</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#5a534c;line-height:1.8;">Today is your checkout day. It's been a genuine pleasure having you at Ta.Garden.</p>
+
+      <div style="background:#f5efe8;padding:20px 24px;margin:24px 0;border-left:3px solid #c17a4a;">
+        <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Before You Go</div>
+        <div style="font-size:13px;color:#2a2520;line-height:2;">
+          <div><strong>Checkout time:</strong> By 11:00 AM</div>
+          <div><strong>Keys:</strong> Leave on the kitchen table or hand to Ashley directly</div>
+          <div><strong>Anything left behind?</strong> Message us and we'll hold it safely</div>
+        </div>
+      </div>
+
+      <p style="margin:0 0 16px;font-size:14px;color:#5a534c;line-height:1.8;">If you're not quite ready to leave Hội An, we're always happy to store your bags for the day. Just ask.</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#5a534c;line-height:1.8;">We hope your time here gave you what you came for. Safe travels wherever you're headed next.</p>
+      <p style="margin:0;font-size:14px;color:#5a534c;">With warmth,<br><span style="color:#2a2520;font-weight:500;">Ashley &amp; the Ta.Garden team</span></p>
+    </div>
+    <div style="padding:20px 36px;border-top:1px solid rgba(136,145,125,0.12);text-align:center;">
+      <div style="font-size:11px;color:#88917d;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam<br>A Soul &amp; Luna Property</div>
+    </div>
+  </div>
+</body></html>`;
+}
+
+function buildReviewRequestEmail(enq) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5efe8;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border:1px solid rgba(136,145,125,0.15);">
+    <div style="background:#2a2520;padding:32px 36px;">
+      <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Ta.Garden</div>
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;line-height:1.3;">How was your stay?</div>
+    </div>
+    <div style="padding:36px;">
+      <p style="margin:0 0 20px;font-size:15px;color:#2a2520;line-height:1.7;">Hi ${enq.name.split(' ')[0]},</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#5a534c;line-height:1.8;">We hope you've landed safely and are settling back in. We loved having you at Ta.Garden and hope the home gave you what you were looking for.</p>
+      <p style="margin:0 0 28px;font-size:14px;color:#5a534c;line-height:1.8;">If you have a moment, an honest review means the world to a small home like ours — it helps the right people find their way here.</p>
+
+      <div style="text-align:center;margin:28px 0;">
+        <a href="https://g.page/r/ta-garden-hoian/review" style="display:inline-block;padding:14px 36px;background:#2a2520;color:#ede0d1;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;">Leave a Review →</a>
+      </div>
+
+      <p style="margin:24px 0 0;font-size:14px;color:#5a534c;line-height:1.8;">And if anything wasn't quite right during your stay, please just reply to this email — we'd always rather hear it directly and have the chance to improve.</p>
+      <p style="margin:16px 0 0;font-size:14px;color:#5a534c;">Until next time,<br><span style="color:#2a2520;font-weight:500;">Ashley &amp; the Ta.Garden team</span></p>
+    </div>
+    <div style="padding:20px 36px;border-top:1px solid rgba(136,145,125,0.12);text-align:center;">
+      <div style="font-size:11px;color:#88917d;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam<br>A Soul &amp; Luna Property</div>
+    </div>
+  </div>
+</body></html>`;
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────

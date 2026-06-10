@@ -3,7 +3,7 @@ const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
 const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
 
 const ROOM_RATES = {
-  'The River Room':   { monthly: 350, nightly: 25 },
+  'The River Room':   { monthly: 340, nightly: 25 },
   'The Balcony Room': { monthly: 400, nightly: 30 },
   'The Sky Suite':    { monthly: 680, nightly: 50 },
 };

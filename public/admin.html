@@ -339,6 +339,19 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .listing-status-badge.maintenance { background: rgba(200,146,42,0.12); color: var(--amber); }
 .listing-status-badge.inactive { background: rgba(136,145,125,0.12); color: var(--mid); }
 @media (max-width: 580px) { .re-grid-3 { grid-template-columns: 1fr 1fr; } }
+
+/* ── Inline gallery grids (room modal + sanctuary) ── */
+.rm-gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 10px; min-height: 32px; }
+.rm-gal-thumb { position: relative; background: var(--light); border: 1px solid rgba(136,145,125,0.12); }
+.rm-gal-thumb img { width: 100%; height: 88px; object-fit: cover; display: block; }
+.rm-gal-del { position: absolute; top: 3px; right: 3px; background: rgba(26,26,24,0.65); border: none; color: #fff; width: 20px; height: 20px; font-size: 13px; cursor: pointer; border-radius: 2px; line-height: 20px; text-align: center; }
+.rm-gal-del:hover { background: var(--red); }
+.sg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.sg-thumb { position: relative; background: var(--light); border: 1px solid rgba(136,145,125,0.12); }
+.sg-thumb img { width: 100%; height: 120px; object-fit: cover; display: block; }
+.sg-thumb-caption { padding: 5px 8px; font-size: 10px; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-thumb-del { position: absolute; top: 4px; right: 4px; background: rgba(26,26,24,0.65); border: none; color: #fff; width: 22px; height: 22px; font-size: 14px; cursor: pointer; border-radius: 2px; line-height: 22px; text-align: center; }
+.sg-thumb-del:hover { background: var(--red); }
 </style>
 </head>
 <body>
@@ -525,6 +538,20 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     </div>
     <div class="modal-body" id="roomEditBody">
       <div class="re-section">
+        <div class="re-section-title">Photos</div>
+        <div id="rmGalleryGrid" class="rm-gal-grid">
+          <div style="grid-column:1/-1;color:var(--mid);font-size:12px;padding:4px 0;">Loading…</div>
+        </div>
+        <div class="gallery-drop" style="padding:14px 12px;" onclick="document.getElementById('rmGalleryInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleRmGalleryDrop(event)">
+          <div class="gallery-drop-icon" style="font-size:22px;">+</div>
+          <div class="gallery-drop-text" style="font-size:12px;">Drop photos here or click to browse</div>
+          <div class="gallery-drop-hint">JPEG / PNG · Auto-compressed to ~1200px</div>
+        </div>
+        <input type="file" id="rmGalleryInput" accept="image/*" multiple style="display:none" onchange="handleRmGalleryFiles(this.files)">
+        <div class="status-msg" id="rmGalleryStatus" style="margin-top:8px;min-height:14px;"></div>
+      </div>
+
+      <div class="re-section">
         <div class="re-section-title">Listing Details</div>
         <div class="fg" style="margin-bottom:10px;">
           <label class="modal-lbl">Room Name</label>
@@ -651,6 +678,8 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 let secret = '', currentProp = null, allProps = [], allEnquiries = [], allBlocked = [], icalEvents = [], filterStatus = 'all', pickedColorVal = '#86a2a6';
 let allRoomData = {}, currentRoomEdit = null;
+let roomModalGalleryImages = [], roomModalGallerySlug = '';
+let allSanctuaryGallery = [];
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -1423,9 +1452,13 @@ async function showSanctuaryDetail(propId) {
   const prop = allProps.find(p => p.id === propId);
   if (!prop) return;
   try {
-    const r = await fetch(`/api/admin/rooms?prop=${propId}`, { headers: { 'x-admin-secret': secret } });
-    allRoomData = (await r.json()).rooms || {};
-  } catch { allRoomData = {}; }
+    const [rr, gr] = await Promise.all([
+      fetch(`/api/admin/rooms?prop=${propId}`, { headers: { 'x-admin-secret': secret } }),
+      fetch(`/api/gallery?room=${propId}`),
+    ]);
+    allRoomData = (await rr.json()).rooms || {};
+    allSanctuaryGallery = (await gr.json()).images || [];
+  } catch { allRoomData = {}; allSanctuaryGallery = []; }
   document.getElementById('pane-sanctuary').innerHTML = renderSanctuaryDetail(prop);
   showTab('sanctuary');
 }
@@ -1471,6 +1504,20 @@ function renderSanctuaryDetail(prop) {
       <div class="s-stat"><div class="s-stat-n">${confirmed.length}</div><div class="s-stat-l">Confirmed</div></div>
       <div class="s-stat"><div class="s-stat-n" style="color:var(--amber);">${pending.length}</div><div class="s-stat-l">Pending</div></div>
       <div class="s-stat"><div class="s-stat-n">${revenue ? '$' + revenue.toLocaleString() : '—'}</div><div class="s-stat-l">Est. Revenue</div></div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-hd">
+        <div class="s-section-title">Sanctuary Photos</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn-sm" onclick="document.getElementById('sgInput').click()">+ Add Photos</button>
+          <input type="file" id="sgInput" accept="image/*" multiple style="display:none" onchange="handleSanctuaryFiles(this.files,'${prop.id}')">
+        </div>
+      </div>
+      <div id="sgGrid" class="sg-grid" ondragover="event.preventDefault();" ondrop="handleSanctuaryDrop(event,'${prop.id}')">
+        ${renderSanctuaryGalleryItems(prop.id)}
+      </div>
+      <div class="status-msg" id="sgStatus" style="min-height:14px;"></div>
     </div>
 
     <div class="s-section">
@@ -1842,9 +1889,15 @@ async function deleteGalleryImage(room, id) {
 
 // ── Room listing editor ───────────────────────────────────────────────────────
 
+function toRoomSlug(name) {
+  return name.toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
 function openRoomModal(roomName) {
   currentRoomEdit = roomName;
   const rd = allRoomData[roomName] || {};
+  roomModalGallerySlug = toRoomSlug(roomName);
+  roomModalGalleryImages = [];
   document.getElementById('roomEditTitle').textContent = `Edit: ${roomName}`;
   document.getElementById('re-name').value           = roomName;
   document.getElementById('re-tagline').value        = rd.tagline || '';
@@ -1861,6 +1914,13 @@ function openRoomModal(roomName) {
   document.getElementById('re-notes').value          = rd.notes || '';
   document.getElementById('roomEditStatus').textContent = '';
   document.getElementById('roomEditOverlay').classList.add('open');
+  // Load gallery for this room
+  const slug = roomModalGallerySlug;
+  document.getElementById('rmGalleryGrid').innerHTML = '<div style="grid-column:1/-1;color:var(--mid);font-size:12px;">Loading…</div>';
+  fetch(`/api/gallery?room=${slug}`)
+    .then(r => r.json())
+    .then(d => { roomModalGalleryImages = d.images || []; renderRmGallery(); })
+    .catch(() => { roomModalGalleryImages = []; renderRmGallery(); });
 }
 
 function closeRoomModal() {
@@ -1921,6 +1981,137 @@ async function saveRoomListing() {
     st.style.color = 'var(--red)'; st.textContent = `Save failed: ${err.message}`;
     btn.disabled = false; btn.textContent = 'Save Listing →';
   }
+}
+
+// ── Room modal gallery ────────────────────────────────────────────────────────
+
+function renderRmGallery() {
+  const grid = document.getElementById('rmGalleryGrid');
+  if (!grid) return;
+  if (!roomModalGalleryImages.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--mid);font-size:12px;padding:4px 0;">No photos yet.</div>';
+    return;
+  }
+  grid.innerHTML = roomModalGalleryImages.map(img => `
+    <div class="rm-gal-thumb">
+      <img src="${img.data}" alt="${img.alt || ''}">
+      <button class="rm-gal-del" onclick="deleteRmGalleryImage('${img.id}')">×</button>
+    </div>`).join('');
+}
+
+function handleRmGalleryDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  handleRmGalleryFiles(e.dataTransfer.files);
+}
+
+async function handleRmGalleryFiles(files) {
+  if (!files?.length) return;
+  const st = document.getElementById('rmGalleryStatus');
+  const slug = roomModalGallerySlug;
+  let done = 0;
+  st.style.color = 'var(--teal)'; st.textContent = `Uploading…`;
+  for (const file of Array.from(files)) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const compressed = await compressImage(file, 1200, 0.82);
+      const r = await fetch('/api/admin/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ room: slug, data: compressed, alt: file.name.replace(/\.[^.]+$/, '') }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        roomModalGalleryImages.push({ id: d.id, data: compressed, alt: file.name.replace(/\.[^.]+$/, '') });
+        done++;
+        renderRmGallery();
+      }
+    } catch {}
+  }
+  document.getElementById('rmGalleryInput').value = '';
+  st.style.color = done > 0 ? 'var(--teal)' : 'var(--terra)';
+  st.textContent = done > 0 ? `${done} photo${done > 1 ? 's' : ''} uploaded.` : 'Upload failed.';
+}
+
+async function deleteRmGalleryImage(id) {
+  if (!confirm('Remove this photo?')) return;
+  try {
+    const r = await fetch('/api/admin/gallery', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ room: roomModalGallerySlug, id }),
+    });
+    if ((await r.json()).success) {
+      roomModalGalleryImages = roomModalGalleryImages.filter(i => i.id !== id);
+      renderRmGallery();
+    }
+  } catch { alert('Delete failed. Try again.'); }
+}
+
+// ── Sanctuary gallery ─────────────────────────────────────────────────────────
+
+function renderSanctuaryGalleryItems(propId) {
+  if (!allSanctuaryGallery.length) {
+    return `<div style="color:var(--mid);font-size:13px;padding:12px 0;">No photos yet. Click + Add Photos or drag images here.</div>`;
+  }
+  return allSanctuaryGallery.map(img => `
+    <div class="sg-thumb">
+      <img src="${img.data}" alt="${img.alt || ''}">
+      ${img.alt ? `<div class="sg-thumb-caption">${img.alt}</div>` : ''}
+      <button class="sg-thumb-del" onclick="deleteSanctuaryImage('${propId}','${img.id}')">×</button>
+    </div>`).join('');
+}
+
+function handleSanctuaryDrop(e, propId) {
+  e.preventDefault();
+  handleSanctuaryFiles(e.dataTransfer.files, propId);
+}
+
+async function handleSanctuaryFiles(files, propId) {
+  if (!files?.length) return;
+  const st = document.getElementById('sgStatus');
+  if (!st) return;
+  let done = 0;
+  st.style.color = 'var(--teal)'; st.textContent = 'Uploading…';
+  for (const file of Array.from(files)) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const compressed = await compressImage(file, 1200, 0.82);
+      const r = await fetch('/api/admin/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ room: propId, data: compressed, alt: file.name.replace(/\.[^.]+$/, '') }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        allSanctuaryGallery.push({ id: d.id, data: compressed, alt: file.name.replace(/\.[^.]+$/, '') });
+        done++;
+        const grid = document.getElementById('sgGrid');
+        if (grid) grid.innerHTML = renderSanctuaryGalleryItems(propId);
+      }
+    } catch {}
+  }
+  document.getElementById('sgInput').value = '';
+  if (st) {
+    st.style.color = done > 0 ? 'var(--teal)' : 'var(--terra)';
+    st.textContent = done > 0 ? `${done} photo${done > 1 ? 's' : ''} uploaded.` : 'Upload failed.';
+  }
+}
+
+async function deleteSanctuaryImage(propId, id) {
+  if (!confirm('Remove this photo?')) return;
+  try {
+    const r = await fetch('/api/admin/gallery', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ room: propId, id }),
+    });
+    if ((await r.json()).success) {
+      allSanctuaryGallery = allSanctuaryGallery.filter(i => i.id !== id);
+      const grid = document.getElementById('sgGrid');
+      if (grid) grid.innerHTML = renderSanctuaryGalleryItems(propId);
+    }
+  } catch { alert('Delete failed. Try again.'); }
 }
 
 // ── Auto-login ────────────────────────────────────────────────────────────────

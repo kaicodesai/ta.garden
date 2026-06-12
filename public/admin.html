@@ -366,7 +366,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <input type="password" class="login-input" id="loginPw" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Sign In →</button>
     <div class="login-err" id="loginErr"></div>
-    <p class="login-hint">Set your password in Cloudflare: Workers &amp; Pages → ta-garden-landing → Settings → Variables &amp; Secrets → Add Secret named <strong>ADMIN_SECRET</strong>.</p>
+    <p class="login-hint">Set your password in Cloudflare: Workers &amp; Pages → ta-garden-landing → <strong>Settings → Variables &amp; Secrets → Add Secret</strong> → name it <strong>ADMIN_SECRET</strong>, value is your chosen password. Then enter that same password above.</p>
   </div>
 </div>
 
@@ -691,7 +691,7 @@ async function doLogin() {
   err.textContent = 'Verifying…';
   try {
     const r = await fetch('/api/admin/properties', { headers: { 'x-admin-secret': pw } });
-    if (r.status === 401) { err.textContent = 'Incorrect password. Check your ADMIN_SECRET in Cloudflare.'; return; }
+    if (r.status === 401) { err.textContent = 'Incorrect password. Make sure ADMIN_SECRET is set in Cloudflare Workers → Settings → Variables & Secrets.'; return; }
     if (!r.ok) { err.textContent = 'Server error. Try again shortly.'; return; }
     const data = await r.json();
     secret   = pw;
@@ -1911,7 +1911,7 @@ function openRoomModal(roomName) {
   document.getElementById('re-price-vnd').value      = rd.priceVND || '';
   document.getElementById('re-price-usd').value      = rd.priceUSD || '';
   document.getElementById('re-price-nightly').value  = rd.priceNightlyUSD || '';
-  document.getElementById('re-display-currency').value = rd.displayCurrency || 'usd';
+  document.getElementById('re-display-currency').value = rd.displayCurrency || 'vnd';
   document.getElementById('re-floor').value          = rd.floor || '';
   document.getElementById('re-size').value           = rd.size || '';
   document.getElementById('re-max-guests').value     = rd.maxGuests || '';

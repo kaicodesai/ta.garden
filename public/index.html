@@ -1290,14 +1290,15 @@ fetch('/api/rooms?prop=ta-garden')
       const priceSecondary = card.querySelector('.price-vnd');
 
       if (priceNum && pricePeriod) {
-        if (room.displayCurrency === 'vnd' && room.priceVND) {
+        if (room.priceVND) {
           priceNum.textContent = Number(room.priceVND).toLocaleString('en-US');
           pricePeriod.textContent = ' VND / month';
           if (priceSecondary && room.priceUSD) priceSecondary.textContent = `≈ $${room.priceUSD} USD · billed monthly`;
+          else if (priceSecondary) priceSecondary.textContent = '';
         } else if (room.priceUSD) {
           priceNum.textContent = `$${room.priceUSD}`;
           pricePeriod.textContent = '/ month';
-          if (priceSecondary && room.priceVND) priceSecondary.textContent = `${Number(room.priceVND).toLocaleString('en-US')} VND`;
+          if (priceSecondary) priceSecondary.textContent = '';
         }
       }
     });

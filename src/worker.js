@@ -96,25 +96,31 @@ export default {
 
 async function checkAuth(request, env) {
   const h = request.headers.get('x-admin-secret');
-  if (!h || !env.BOOKINGS) return false;
+  if (!h) return false;
+  // Check Cloudflare env secret first (set in Workers dashboard → Settings → Variables & Secrets)
+  if (env.ADMIN_SECRET) return h.trim() === env.ADMIN_SECRET.trim();
+  // Fallback: KV-stored password (for backwards compatibility)
+  if (!env.BOOKINGS) return false;
   const stored = await env.BOOKINGS.get('admin_password');
-  return stored && h.trim() === stored.trim();
+  return !!stored && h.trim() === stored.trim();
 }
 
 async function adminDebug(request, env, cors) {
-  const stored   = env.BOOKINGS ? await env.BOOKINGS.get('admin_password') : null;
+  const kvPassword = env.BOOKINGS ? await env.BOOKINGS.get('admin_password') : null;
   const enqRaw   = env.BOOKINGS ? await env.BOOKINGS.get('enquiries') : null;
   const propsRaw = env.BOOKINGS ? await env.BOOKINGS.get('properties') : null;
   const enquiries = enqRaw  ? JSON.parse(enqRaw)  : [];
   const props     = propsRaw ? JSON.parse(propsRaw) : null;
   return Response.json({
-    kvSet:           !!env.BOOKINGS,
-    passwordInKV:    !!stored,
-    passwordLength:  stored ? stored.length : 0,
-    enquiryCount:    enquiries.length,
-    latestEnquiry:   enquiries[0] ? { id: enquiries[0].id, name: enquiries[0].name, createdAt: enquiries[0].createdAt, status: enquiries[0].status } : null,
-    propertiesInKV:  !!propsRaw,
-    firstPropertyId: props ? props[0]?.id : 'using default (ta-garden)',
+    kvSet:              !!env.BOOKINGS,
+    adminSecretEnvSet:  !!env.ADMIN_SECRET,
+    resendKeyEnvSet:    !!env.RESEND_API_KEY,
+    passwordInKV:       !!kvPassword,
+    authMethod:         env.ADMIN_SECRET ? 'env.ADMIN_SECRET' : (kvPassword ? 'KV admin_password' : 'NONE — set ADMIN_SECRET in Cloudflare'),
+    enquiryCount:       enquiries.length,
+    latestEnquiry:      enquiries[0] ? { id: enquiries[0].id, name: enquiries[0].name, createdAt: enquiries[0].createdAt, status: enquiries[0].status } : null,
+    propertiesInKV:     !!propsRaw,
+    firstPropertyId:    props ? props[0]?.id : 'using default (ta-garden)',
   }, { headers: cors });
 }
 
@@ -713,7 +719,8 @@ async function handleRoomsGet(request, env, cors) {
     (prop.rooms || []).map(async (roomName) => {
       const raw = await env.BOOKINGS.get(`room__${propId}__${toRoomSlug(roomName)}`);
       if (!raw) return null;
-      const { notes, ...pub } = JSON.parse(raw);
+      const { notes, status, ...pub } = JSON.parse(raw);
+      if (status === 'inactive') return null;
       return pub;
     })
   )).filter(Boolean);

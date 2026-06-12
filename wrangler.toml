@@ -11,3 +11,7 @@ id = "8d5879ddbfb64e4ca94643fa844645fd"
 
 [triggers]
 crons = ["0 1 * * *"]
+
+[[routes]]
+pattern = "soulandlunawellness.com/sanctuaries/ta-garden*"
+zone_name = "soulandlunawellness.com"

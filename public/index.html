@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+(function(){
+  var BASE='/sanctuaries/ta-garden';
+  if(location.pathname===BASE||location.pathname.startsWith(BASE+'/')){
+    var _f=window.fetch;
+    window.fetch=function(u,o){
+      if(typeof u==='string'&&u.charAt(0)==='/'&&!u.startsWith(BASE))u=BASE+u;
+      return _f.call(this,u,o);
+    };
+  }
+  window._API_BASE=(location.pathname===BASE||location.pathname.startsWith(BASE+'/'))?BASE:'';
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Ta.Garden — Hội An</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
@@ -385,7 +398,7 @@ details.faq-item[open] summary::after { content: '\2212'; }
     <li><a href="#location">Location</a></li>
     <li><a href="#faq">FAQ</a></li>
     <li><a href="#apply">Enquire</a></li>
-    <li><a href="/guest.html" style="color:var(--teal);opacity:0.8;">Guest Portal</a></li>
+    <li><a href="guest.html" style="color:var(--teal);opacity:0.8;">Guest Portal</a></li>
   </ul>
 </nav>
 
@@ -835,10 +848,10 @@ details.faq-item[open] summary::after { content: '\2212'; }
     <a href="#rooms">Rooms</a>
     <a href="#location">Location</a>
     <a href="#apply">Enquire</a>
-    <a href="/guest.html">Guest Portal</a>
+    <a href="guest.html">Guest Portal</a>
     <a href="https://soulandlunawellness.com" target="_blank">Soul &amp; Luna Wellness</a>
   </div>
-  <div class="footer-copy">&copy; 2026 Ta.Garden &nbsp;&middot;&nbsp; Soul &amp; Luna Wellness &nbsp;&middot;&nbsp; Breathe. Nourish. Shine. &nbsp;&middot;&nbsp; <a href="/admin.html" style="color:inherit;text-decoration:none;opacity:0.4;">Admin</a></div>
+  <div class="footer-copy">&copy; 2026 Ta.Garden &nbsp;&middot;&nbsp; Soul &amp; Luna Wellness &nbsp;&middot;&nbsp; Breathe. Nourish. Shine. &nbsp;&middot;&nbsp; <a href="admin.html" style="color:inherit;text-decoration:none;opacity:0.4;">Admin</a></div>
 </footer>
 
 <!-- BOOKING MODAL -->

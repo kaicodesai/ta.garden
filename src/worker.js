@@ -95,8 +95,10 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/rooms'           && m === 'GET')    return safeCall(() => adminGetRooms(request, env, cors), cors);
     if (p === '/api/admin/room'            && m === 'POST')   return safeCall(() => adminSaveRoom(request, env, cors), cors);
 
-    // Serve static assets with no-cache for HTML so updates always reach the browser
-    // The ASSETS binding automatically strips the route prefix, so pass the original request
+    // Serve static assets with no-cache for HTML
+    if (!env.ASSETS) {
+      return new Response('ASSETS binding not configured — redeploy via: npx wrangler deploy', { status: 503 });
+    }
     const assetRes = await env.ASSETS.fetch(request);
     if (assetRes.headers.get('content-type')?.includes('text/html')) {
       const res = new Response(assetRes.body, assetRes);

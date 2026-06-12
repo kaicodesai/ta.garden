@@ -118,8 +118,9 @@ section { padding: 6rem 2rem; }
 .rooms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 3rem; }
 .room-card { background: var(--white); padding: 2.4rem 2.2rem; border: 1px solid rgba(136,145,125,0.12); transition: background 0.25s; }
 .room-card:hover { background: #faf6f0; }
-.room-card.featured { background: var(--dark); grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
-.room-card.wide { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+.room-card.featured { background: var(--dark); grid-column: span 2; }
+.room-card.wide { grid-column: span 2; }
+.room-card-main { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
 .room-floor { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--terra); margin-bottom: 0.5rem; }
 .room-card.featured .room-floor { color: var(--teal); }
 .room-name { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: var(--dark); line-height: 1.2; margin-bottom: 0.9rem; }
@@ -137,13 +138,21 @@ section { padding: 6rem 2rem; }
 .price-vnd { font-size: 11px; color: rgba(136,145,125,0.7); margin-top: 3px; }
 .room-card.featured .price-vnd { color: rgba(237,224,209,0.3); }
 
-/* ── Room photo gallery ── */
-.room-gallery { margin: 1.2rem 0 1rem; }
-.room-gallery-strip { display: flex; gap: 6px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.room-gallery-strip::-webkit-scrollbar { display: none; }
-.room-gallery-thumb { flex: 0 0 160px; height: 110px; object-fit: cover; scroll-snap-align: start; cursor: zoom-in; border-radius: 2px; transition: opacity 0.2s; }
-.room-gallery-thumb:hover { opacity: 0.88; }
-.room-gallery-hint { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); margin-top: 6px; opacity: 0.65; }
+/* ── Room photo grid ── */
+.room-gallery { margin-top: 1.8rem; }
+.rgrid { display: grid; gap: 3px; overflow: hidden; }
+.rg-1 { grid-template-columns: 1fr; height: 300px; }
+.rg-2 { grid-template-columns: 1fr 1fr; height: 240px; }
+.rg-3 { grid-template-columns: 1.5fr 1fr; grid-template-rows: 170px 170px; }
+.rg-3 .rgp:first-child { grid-row: span 2; }
+.rg-4 { grid-template-columns: 1.4fr 1fr; grid-template-rows: 130px 130px 130px; }
+.rg-4 .rgp:first-child { grid-row: span 3; }
+.rg-5 { grid-template-columns: 1.6fr 1fr 1fr; grid-template-rows: 200px 200px; }
+.rg-5 .rgp:first-child { grid-row: span 2; }
+.rgp { position: relative; overflow: hidden; cursor: zoom-in; }
+.rgp img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.55s ease; }
+.rgp:hover img { transform: scale(1.05); }
+.rg-more { position: absolute; inset: 0; background: rgba(42,37,32,0.6); display: flex; align-items: center; justify-content: center; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cream); pointer-events: none; }
 
 /* ── Lightbox ── */
 .lightbox { position: fixed; inset: 0; background: rgba(26,26,24,0.94); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
@@ -227,8 +236,9 @@ footer { background: var(--dark); padding: 4.5rem 2rem 3rem; text-align: center;
   .gallery-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 220px 220px 220px; }
   .photo-cell.span-rows { grid-row: span 2; }
   .rooms-grid { grid-template-columns: 1fr; gap: 2px; }
-  .room-card.featured { grid-column: span 1; grid-template-columns: 1fr; gap: 1.8rem; }
-  .room-card.wide { grid-column: span 1; grid-template-columns: 1fr; gap: 1rem; }
+  .room-card.featured { grid-column: span 1; }
+  .room-card.wide { grid-column: span 1; }
+  .room-card-main { grid-template-columns: 1fr; gap: 1.8rem; }
   .location-grid { grid-template-columns: 1fr; gap: 2.5rem; }
   .includes-grid { grid-template-columns: 1fr 1fr; gap: 2px; }
   .rules-grid { grid-template-columns: 1fr; gap: 2.5rem; }
@@ -470,81 +480,86 @@ details.faq-item[open] summary::after { content: '\2212'; }
     <div class="rooms-grid">
 
       <div class="room-card" data-room="river-room">
-        <div class="room-floor">Floor 2</div>
-        <h3 class="room-name serif">The River Room</h3>
-        <p class="room-desc">Second-floor bedroom with a botanical feature wall, rattan pendant lights, and warm wooden ceiling. Peaceful, private, and beautifully finished.</p>
-        <div class="room-features">
-          <span class="tag">Private en-suite</span>
-          <span class="tag">Queen bed</span>
-          <span class="tag">Botanical wallpaper</span>
+        <div class="room-card-main">
+          <div>
+            <div class="room-floor">Floor 2</div>
+            <h3 class="room-name serif">The River Room</h3>
+            <p class="room-desc">Second-floor bedroom with a botanical feature wall, rattan pendant lights, and warm wooden ceiling. Peaceful, private, and beautifully finished.</p>
+            <div class="room-features">
+              <span class="tag">Private en-suite</span>
+              <span class="tag">Queen bed</span>
+              <span class="tag">Botanical wallpaper</span>
+            </div>
+          </div>
+          <div>
+            <div class="room-price">
+              <span class="price-num serif">8,500,000</span>
+              <span class="price-period">&nbsp;VND / month</span>
+            </div>
+            <div class="price-vnd">≈ $340 USD · billed monthly</div>
+            <button class="btn-book-room" onclick="openBooking('The River Room')">Enquire / Book This Room &rarr;</button>
+          </div>
         </div>
-
-        <!-- Photo gallery (loaded dynamically from admin gallery) -->
+        <!-- Photo gallery -->
         <div class="room-gallery" id="riverRoomGallery" style="display:none">
-          <div class="room-gallery-strip" id="riverRoomStrip"></div>
-          <div class="room-gallery-hint">↔ Scroll to view all photos · Click to enlarge</div>
+          <div class="rgrid" id="riverRoomStrip"></div>
         </div>
-
-        <div class="room-price">
-          <span class="price-num serif">8,500,000</span>
-          <span class="price-period">&nbsp;VND / month</span>
-        </div>
-        <div class="price-vnd">≈ $340 USD · billed monthly</div>
-        <button class="btn-book-room" onclick="openBooking('The River Room')">Enquire / Book This Room &rarr;</button>
       </div>
 
       <div class="room-card wide" data-room="balcony-room">
-        <div>
-          <div class="room-floor">Floor 2</div>
-          <h3 class="room-name serif">The Balcony Room</h3>
-          <p class="room-desc">Second-floor bedroom with a private balcony — a rare feature for a monthly rental in Hội An. Lovely for morning tea, golden hour, and a breath of river air before bed.</p>
-          <div class="room-features">
-            <span class="tag">Private balcony</span>
-            <span class="tag">En-suite bath</span>
-            <span class="tag">River breeze</span>
+        <div class="room-card-main">
+          <div>
+            <div class="room-floor">Floor 2</div>
+            <h3 class="room-name serif">The Balcony Room</h3>
+            <p class="room-desc">Second-floor bedroom with a private balcony — a rare feature for a monthly rental in Hội An. Lovely for morning tea, golden hour, and a breath of river air before bed.</p>
+            <div class="room-features">
+              <span class="tag">Private balcony</span>
+              <span class="tag">En-suite bath</span>
+              <span class="tag">River breeze</span>
+            </div>
+          </div>
+          <div>
+            <div class="room-price">
+              <span class="price-num serif">10,000,000</span>
+              <span class="price-period">&nbsp;VND / month</span>
+            </div>
+            <div class="price-vnd">≈ $400 USD · billed monthly</div>
+            <button class="btn-book-room" onclick="openBooking('The Balcony Room')">Enquire / Book This Room &rarr;</button>
           </div>
         </div>
-        <div>
-          <!-- Photo gallery (loaded dynamically from admin gallery) -->
-          <div class="room-gallery" id="balconyRoomGallery" style="display:none">
-            <div class="room-gallery-strip" id="balconyRoomStrip"></div>
-            <div class="room-gallery-hint">↔ Scroll to view all photos · Click to enlarge</div>
-          </div>
-          <div class="room-price">
-            <span class="price-num serif">10,000,000</span>
-            <span class="price-period">&nbsp;VND / month</span>
-          </div>
-          <div class="price-vnd">≈ $400 USD · billed monthly</div>
-          <button class="btn-book-room" onclick="openBooking('The Balcony Room')">Enquire / Book This Room &rarr;</button>
+        <!-- Photo gallery -->
+        <div class="room-gallery" id="balconyRoomGallery" style="display:none">
+          <div class="rgrid" id="balconyRoomStrip"></div>
         </div>
       </div>
 
       <div class="room-card featured" data-room="sky-suite">
-        <div>
-          <div class="room-floor">Floor 3 &mdash; The Crown</div>
-          <h3 class="room-name serif">The Sky Suite</h3>
-          <p class="room-desc">An entire private floor. Exposed beam cathedral ceilings, your own fully-equipped kitchen, a private balcony with open sky views, and a creative lounge and studio space. The most complete private living experience in Ta.Garden.</p>
-          <div class="room-features">
-            <span class="tag">Private kitchen</span>
-            <span class="tag">Private balcony</span>
-            <span class="tag">Full floor</span>
-            <span class="tag">Exposed beams</span>
-            <span class="tag">Creative studio</span>
+        <div class="room-card-main">
+          <div>
+            <div class="room-floor">Floor 3 &mdash; The Crown</div>
+            <h3 class="room-name serif">The Sky Suite</h3>
+            <p class="room-desc">An entire private floor. Exposed beam cathedral ceilings, your own fully-equipped kitchen, a private balcony with open sky views, and a creative lounge and studio space. The most complete private living experience in Ta.Garden.</p>
+            <div class="room-features">
+              <span class="tag">Private kitchen</span>
+              <span class="tag">Private balcony</span>
+              <span class="tag">Full floor</span>
+              <span class="tag">Exposed beams</span>
+              <span class="tag">Creative studio</span>
+            </div>
+          </div>
+          <div>
+            <div class="room-price">
+              <span class="price-num serif">17,000,000</span>
+              <span class="price-period">&nbsp;VND / month</span>
+            </div>
+            <div class="price-vnd">≈ $680 USD · billed monthly</div>
+            <p class="featured-note">Comparable Hội An river properties on Airbnb: $60–90/night. The Sky Suite is exceptional value for a fully private top-floor monthly stay.</p>
+            <button class="btn-book-room" onclick="openBooking('The Sky Suite')">Enquire / Book This Room &rarr;</button>
           </div>
         </div>
-        <div>
-          <!-- Photo gallery (loaded dynamically from admin gallery) -->
-          <div class="room-gallery" id="skySuiteGallery" style="display:none">
-            <div class="room-gallery-strip" id="skySuiteStrip"></div>
-            <div class="room-gallery-hint">↔ Scroll to view all photos · Click to enlarge</div>
-          </div>
-          <div class="room-price">
-            <span class="price-num serif">17,000,000</span>
-            <span class="price-period">&nbsp;VND / month</span>
-          </div>
-          <div class="price-vnd">≈ $680 USD · billed monthly</div>
-          <p class="featured-note">Comparable Hội An river properties on Airbnb: $60–90/night. The Sky Suite is exceptional value for a fully private top-floor monthly stay.</p>
-          <button class="btn-book-room" onclick="openBooking('The Sky Suite')">Enquire / Book This Room &rarr;</button>
+        <!-- Photo gallery -->
+        <div class="room-gallery" id="skySuiteGallery" style="display:none">
+          <div class="rgrid" id="skySuiteStrip"></div>
         </div>
       </div>
 
@@ -1197,10 +1212,12 @@ let lightboxPhotos = [];
 let lightboxIndex = 0;
 
 const GALLERIES = [
-  { slug: 'river-room',   stripId: 'riverRoomStrip',   wrapId: 'riverRoomGallery',   label: 'River Room' },
-  { slug: 'balcony-room', stripId: 'balconyRoomStrip', wrapId: 'balconyRoomGallery', label: 'Balcony Room' },
-  { slug: 'sky-suite',    stripId: 'skySuiteStrip',    wrapId: 'skySuiteGallery',    label: 'Sky Suite' },
+  { slug: 'river-room',   gridId: 'riverRoomStrip',   wrapId: 'riverRoomGallery',   label: 'River Room' },
+  { slug: 'balcony-room', gridId: 'balconyRoomStrip', wrapId: 'balconyRoomGallery', label: 'Balcony Room' },
+  { slug: 'sky-suite',    gridId: 'skySuiteStrip',    wrapId: 'skySuiteGallery',    label: 'Sky Suite' },
 ];
+
+const RG_CLASS = ['rg-1','rg-1','rg-2','rg-3','rg-4','rg-5'];
 
 GALLERIES.forEach(g => {
   fetch('/api/gallery?room=' + g.slug)
@@ -1209,21 +1226,29 @@ GALLERIES.forEach(g => {
       const images = d.images || [];
       if (!images.length) return;
       const photos = images.map(img => img.data);
-      const strip = document.getElementById(g.stripId);
-      if (!strip) return;
-      strip.innerHTML = images.map((img, i) =>
-        `<img class="room-gallery-thumb" src="${img.data}" alt="${img.alt || g.label}" onclick="openLightbox('${g.slug}',${i})">`
-      ).join('');
+      const grid = document.getElementById(g.gridId);
+      if (!grid) return;
+      const show = Math.min(images.length, 5);
+      const extra = images.length - show;
+      const cls = RG_CLASS[Math.min(show, 5)];
+      grid.className = 'rgrid ' + cls;
+      grid.innerHTML = images.slice(0, show).map((img, i) => {
+        const isLast = i === show - 1 && extra > 0;
+        return `<div class="rgp" onclick="openLightbox('${g.slug}',${i})">`
+          + `<img src="${img.data}" alt="${img.alt || g.label}" loading="lazy">`
+          + (isLast ? `<div class="rg-more">+${extra} more</div>` : '')
+          + '</div>';
+      }).join('');
       document.getElementById(g.wrapId).style.display = '';
-      strip._photos = photos;
+      grid._photos = photos;
     })
     .catch(() => {});
 });
 
 function openLightbox(slug, idx) {
   const g = GALLERIES.find(x => x.slug === slug);
-  const strip = document.getElementById(g.stripId);
-  lightboxPhotos = strip._photos || [];
+  const grid = document.getElementById(g.gridId);
+  lightboxPhotos = grid._photos || [];
   lightboxIndex = idx;
   document.getElementById('lightboxImg').src = lightboxPhotos[lightboxIndex];
   document.getElementById('lightbox').classList.add('open');

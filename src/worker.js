@@ -1,4 +1,5 @@
-const RESEND_API_KEY = 're_Tu3YJdBj_KKyLdGr93ByYaE4FZ13J5Nku';
+// RESEND_API_KEY must be set as a secret in Cloudflare Workers dashboard
+// (Settings → Variables & Secrets → Add Secret → RESEND_API_KEY)
 const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
 const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
 
@@ -183,8 +184,8 @@ async function handleEnquiry(request, env, cors, ctx) {
     const adminHtml = buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateInfo, checkIn, checkOut, message, price });
     const guestHtml = buildGuestEmail({ name, room, stayLabel, dateInfo, message });
     const emailWork = Promise.all([
-      ...TO_EMAILS.map(to => resend(FROM, to, `New Enquiry — ${room} (${name})`, adminHtml, email)),
-      resend(FROM, email, 'We received your enquiry — Ta.Garden', guestHtml),
+      ...TO_EMAILS.map(to => resend(FROM, to, `New Enquiry — ${room} (${name})`, adminHtml, email, env)),
+      resend(FROM, email, 'We received your enquiry — Ta.Garden', guestHtml, null, env),
     ]).catch(err => console.error('Email send error:', err));
     if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
@@ -335,7 +336,7 @@ async function adminNotify(request, env, cors) {
     ? `Your booking at Ta.Garden is confirmed — ${enq.room}`
     : `Re: Your enquiry at Ta.Garden — ${enq.room}`;
 
-  await resend(FROM, enq.email, subject, html);
+  await resend(FROM, enq.email, subject, html, null, env);
   return Response.json({ success: true, status: newStatus }, { headers: cors });
 }
 
@@ -522,7 +523,7 @@ async function handleGuestSubmit(request, env, cors, ctx) {
       <p style="margin-top:16px;font-size:13px;color:#88917d;">Log in to the admin dashboard to view documents.</p>
     </div>`;
     const emailWork = Promise.all(
-      TO_EMAILS.map(to => resend(FROM, to, `Guest profile submitted — ${fullName}`, adminHtml))
+      TO_EMAILS.map(to => resend(FROM, to, `Guest profile submitted — ${fullName}`, adminHtml, null, env))
     ).catch(err => console.error('Email error:', err));
     if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
@@ -591,7 +592,7 @@ async function handleGuestRequestLogin(request, env, cors, ctx) {
     await env.BOOKINGS.put(`magic__${token}`, JSON.stringify({ enquiryId: foundEnq.id, propId: foundPropId }), { expirationTtl: 3600 });
     const origin = new URL(request.url).origin;
     const loginUrl = `${origin}/guest.html?token=${token}`;
-    const emailWork = resend(FROM, email, 'Your Ta.Garden portal link', buildMagicLinkEmail(foundEnq.name, loginUrl))
+    const emailWork = resend(FROM, email, 'Your Ta.Garden portal link', buildMagicLinkEmail(foundEnq.name, loginUrl), null, env)
       .catch(err => console.error('Magic link email error:', err));
     if (ctx?.waitUntil) ctx.waitUntil(emailWork);
   }
@@ -798,7 +799,7 @@ async function runEmailAutomation(env) {
       // 2 days before arrival
       if (enq.checkIn === dateStr(2) && !ae.arrivalReminder) {
         try {
-          await resend(FROM, enq.email, `Your stay at Ta.Garden starts in 2 days`, buildArrivalReminderEmail(enq));
+          await resend(FROM, enq.email, `Your stay at Ta.Garden starts in 2 days`, buildArrivalReminderEmail(enq), null, env);
           ae.arrivalReminder = new Date().toISOString();
           changed = true; sent++;
         } catch (e) { errors.push(`arrivalReminder ${enq.id}: ${e.message}`); }
@@ -807,7 +808,7 @@ async function runEmailAutomation(env) {
       // Day of checkout
       if (enq.checkOut === todayStr && !ae.checkoutReminder) {
         try {
-          await resend(FROM, enq.email, `Checkout day — thank you for staying at Ta.Garden`, buildCheckoutReminderEmail(enq));
+          await resend(FROM, enq.email, `Checkout day — thank you for staying at Ta.Garden`, buildCheckoutReminderEmail(enq), null, env);
           ae.checkoutReminder = new Date().toISOString();
           changed = true; sent++;
         } catch (e) { errors.push(`checkoutReminder ${enq.id}: ${e.message}`); }
@@ -816,7 +817,7 @@ async function runEmailAutomation(env) {
       // 3 days after checkout
       if (enq.checkOut === dateStr(-3) && !ae.reviewRequest) {
         try {
-          await resend(FROM, enq.email, `How was your stay at Ta.Garden?`, buildReviewRequestEmail(enq));
+          await resend(FROM, enq.email, `How was your stay at Ta.Garden?`, buildReviewRequestEmail(enq), null, env);
           ae.reviewRequest = new Date().toISOString();
           changed = true; sent++;
         } catch (e) { errors.push(`reviewRequest ${enq.id}: ${e.message}`); }
@@ -1111,10 +1112,12 @@ function roomKey(name) {
   return 'all';
 }
 
-async function resend(from, to, subject, html, replyTo) {
+async function resend(from, to, subject, html, replyTo, env) {
+  const key = env?.RESEND_API_KEY;
+  if (!key) { console.error('RESEND_API_KEY not set'); return; }
   return fetch('https://api.resend.com/emails', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from, to: [to], reply_to: replyTo, subject, html }),
   });
 }

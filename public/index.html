@@ -505,11 +505,16 @@ details.faq-item[open] summary::after { content: '\2212'; }
           </div>
         </div>
         <div>
-          <div class="room-price">
-            <span class="price-num serif">$400</span>
-            <span class="price-period">/ month</span>
+          <!-- Photo gallery (loaded dynamically from admin gallery) -->
+          <div class="room-gallery" id="balconyRoomGallery" style="display:none">
+            <div class="room-gallery-strip" id="balconyRoomStrip"></div>
+            <div class="room-gallery-hint">↔ Scroll to view all photos · Click to enlarge</div>
           </div>
-          <div class="price-vnd">10,000,000 VND</div>
+          <div class="room-price">
+            <span class="price-num serif">10,000,000</span>
+            <span class="price-period">&nbsp;VND / month</span>
+          </div>
+          <div class="price-vnd">≈ $400 USD · billed monthly</div>
           <button class="btn-book-room" onclick="openBooking('The Balcony Room')">Enquire / Book This Room &rarr;</button>
         </div>
       </div>
@@ -528,11 +533,16 @@ details.faq-item[open] summary::after { content: '\2212'; }
           </div>
         </div>
         <div>
-          <div class="room-price">
-            <span class="price-num serif">$680</span>
-            <span class="price-period">/ month</span>
+          <!-- Photo gallery (loaded dynamically from admin gallery) -->
+          <div class="room-gallery" id="skySuiteGallery" style="display:none">
+            <div class="room-gallery-strip" id="skySuiteStrip"></div>
+            <div class="room-gallery-hint">↔ Scroll to view all photos · Click to enlarge</div>
           </div>
-          <div class="price-vnd">17,000,000 VND</div>
+          <div class="room-price">
+            <span class="price-num serif">17,000,000</span>
+            <span class="price-period">&nbsp;VND / month</span>
+          </div>
+          <div class="price-vnd">≈ $680 USD · billed monthly</div>
           <p class="featured-note">Comparable Hội An river properties on Airbnb: $60–90/night. The Sky Suite is exceptional value for a fully private top-floor monthly stay.</p>
           <button class="btn-book-room" onclick="openBooking('The Sky Suite')">Enquire / Book This Room &rarr;</button>
         </div>
@@ -1183,27 +1193,39 @@ details.faq-item[open] summary::after { content: '\2212'; }
 </div>
 
 <script>
-let riverRoomPhotos = [];
+let lightboxPhotos = [];
 let lightboxIndex = 0;
 
-// Load River Room gallery from API
-fetch('/api/gallery?room=river-room')
-  .then(r => r.json())
-  .then(d => {
-    const images = d.images || [];
-    if (!images.length) return;
-    riverRoomPhotos = images.map(img => img.data);
-    const strip = document.getElementById('riverRoomStrip');
-    strip.innerHTML = images.map((img, i) =>
-      `<img class="room-gallery-thumb" src="${img.data}" alt="${img.alt || 'River Room'}" onclick="openLightbox(${i})">`
-    ).join('');
-    document.getElementById('riverRoomGallery').style.display = '';
-  })
-  .catch(() => {});
+const GALLERIES = [
+  { slug: 'river-room',   stripId: 'riverRoomStrip',   wrapId: 'riverRoomGallery',   label: 'River Room' },
+  { slug: 'balcony-room', stripId: 'balconyRoomStrip', wrapId: 'balconyRoomGallery', label: 'Balcony Room' },
+  { slug: 'sky-suite',    stripId: 'skySuiteStrip',    wrapId: 'skySuiteGallery',    label: 'Sky Suite' },
+];
 
-function openLightbox(idx) {
+GALLERIES.forEach(g => {
+  fetch('/api/gallery?room=' + g.slug)
+    .then(r => r.json())
+    .then(d => {
+      const images = d.images || [];
+      if (!images.length) return;
+      const photos = images.map(img => img.data);
+      const strip = document.getElementById(g.stripId);
+      if (!strip) return;
+      strip.innerHTML = images.map((img, i) =>
+        `<img class="room-gallery-thumb" src="${img.data}" alt="${img.alt || g.label}" onclick="openLightbox('${g.slug}',${i})">`
+      ).join('');
+      document.getElementById(g.wrapId).style.display = '';
+      strip._photos = photos;
+    })
+    .catch(() => {});
+});
+
+function openLightbox(slug, idx) {
+  const g = GALLERIES.find(x => x.slug === slug);
+  const strip = document.getElementById(g.stripId);
+  lightboxPhotos = strip._photos || [];
   lightboxIndex = idx;
-  document.getElementById('lightboxImg').src = riverRoomPhotos[lightboxIndex];
+  document.getElementById('lightboxImg').src = lightboxPhotos[lightboxIndex];
   document.getElementById('lightbox').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -1212,9 +1234,9 @@ function closeLightbox() {
   document.body.style.overflow = '';
 }
 function lightboxStep(dir) {
-  if (!document.getElementById('lightbox').classList.contains('open') || !riverRoomPhotos.length) return;
-  lightboxIndex = (lightboxIndex + dir + riverRoomPhotos.length) % riverRoomPhotos.length;
-  document.getElementById('lightboxImg').src = riverRoomPhotos[lightboxIndex];
+  if (!document.getElementById('lightbox').classList.contains('open') || !lightboxPhotos.length) return;
+  lightboxIndex = (lightboxIndex + dir + lightboxPhotos.length) % lightboxPhotos.length;
+  document.getElementById('lightboxImg').src = lightboxPhotos[lightboxIndex];
 }
 </script>
 

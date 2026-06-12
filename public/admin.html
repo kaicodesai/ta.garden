@@ -2,19 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>
-(function(){
-  var BASE='/sanctuaries/ta-garden';
-  if(location.pathname===BASE||location.pathname.startsWith(BASE+'/')){
-    var _f=window.fetch;
-    window.fetch=function(u,o){
-      if(typeof u==='string'&&u.charAt(0)==='/'&&!u.startsWith(BASE))u=BASE+u;
-      return _f.call(this,u,o);
-    };
-  }
-  window._API_BASE=(location.pathname===BASE||location.pathname.startsWith(BASE+'/'))?BASE:'';
-})();
-</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Soul & Luna Sanctuaries — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400&display=swap" rel="stylesheet">

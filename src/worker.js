@@ -46,11 +46,7 @@ async function handleFetch(request, env, ctx) {
     };
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
 
-    const BASE = '/sanctuaries/ta-garden';
-    let p = url.pathname;
-    if (p === BASE || p.startsWith(BASE + '/')) {
-      p = p.slice(BASE.length) || '/';
-    }
+    const p = url.pathname;
     const m = request.method;
 
     if (p === '/api/enquire'               && m === 'POST')  return handleEnquiry(request, env, cors, ctx);

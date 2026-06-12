@@ -91,17 +91,9 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/rooms'           && m === 'GET')    return safeCall(() => adminGetRooms(request, env, cors), cors);
     if (p === '/api/admin/room'            && m === 'POST')   return safeCall(() => adminSaveRoom(request, env, cors), cors);
 
-    // Serve static assets with no-cache for HTML
-    if (!env.ASSETS) {
-      return new Response('ASSETS binding not configured — redeploy via: npx wrangler deploy', { status: 503 });
-    }
-    const assetRes = await env.ASSETS.fetch(request);
-    if (assetRes.headers.get('content-type')?.includes('text/html')) {
-      const res = new Response(assetRes.body, assetRes);
-      res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      return res;
-    }
-    return assetRes;
+    // Static files are served automatically by Cloudflare before the worker runs.
+    // This fallback only triggers for unmatched paths with no static file.
+    return new Response('Not found', { status: 404 });
 }
 
 // ── Auth helper ───────────────────────────────────────────────────────────────

@@ -28,6 +28,16 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    try {
+      return await handleFetch(request, env, ctx);
+    } catch (err) {
+      console.error('Worker unhandled exception:', err);
+      return Response.json({ error: err.message, stack: err.stack, url: request.url }, { status: 500 });
+    }
+  },
+};
+
+async function handleFetch(request, env, ctx) {
     const url = new URL(request.url);
     const cors = {
       'Access-Control-Allow-Origin': '*',
@@ -94,8 +104,7 @@ export default {
       return res;
     }
     return assetRes;
-  },
-};
+}
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 

@@ -86,14 +86,8 @@ export default {
     if (p === '/api/admin/room'            && m === 'POST')   return safeCall(() => adminSaveRoom(request, env, cors), cors);
 
     // Serve static assets with no-cache for HTML so updates always reach the browser
-    // Strip path prefix before handing to the assets binding
-    const assetUrl = new URL(request.url);
-    const BASE2 = '/sanctuaries/ta-garden';
-    if (assetUrl.pathname === BASE2 || assetUrl.pathname.startsWith(BASE2 + '/')) {
-      assetUrl.pathname = assetUrl.pathname.slice(BASE2.length) || '/';
-    }
-    const assetReq = assetUrl.href === request.url ? request : new Request(assetUrl.toString(), request);
-    const assetRes = await env.ASSETS.fetch(assetReq);
+    // The ASSETS binding automatically strips the route prefix, so pass the original request
+    const assetRes = await env.ASSETS.fetch(request);
     if (assetRes.headers.get('content-type')?.includes('text/html')) {
       const res = new Response(assetRes.body, assetRes);
       res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');

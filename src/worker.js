@@ -849,12 +849,141 @@ async function runEmailAutomation(env) {
           changed = true; sent++;
         } catch (e) { errors.push(`reviewRequest ${enq.id}: ${e.message}`); }
       }
+
+      // Monthly payment reminder — send on the 26th of each month for payment due on the 1st
+      // Applies to: ongoing stays (no checkOut) OR monthly stays still active
+      const isOngoing = !enq.checkOut || enq.checkOut > todayStr;
+      if (enq.stayType === 'monthly' && isOngoing && today.getUTCDate() === 26) {
+        const nextMonth = today.getUTCMonth() + 2; // 1-based next month
+        const nextYear  = nextMonth > 12 ? today.getUTCFullYear() + 1 : today.getUTCFullYear();
+        const nm        = nextMonth > 12 ? 1 : nextMonth;
+        const reminderKey = `payReminder_${nextYear}_${String(nm).padStart(2,'0')}`;
+        if (!ae[reminderKey]) {
+          try {
+            const dueDate = `${nextYear}-${String(nm).padStart(2,'0')}-01`;
+            const rentUsd = enq.rentUsd || ROOM_RATES[enq.room]?.monthly;
+            const stripeUrl = enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+            await resend(FROM, enq.email, `Monthly rent due ${fmt(dueDate)} — Ta.Garden`, buildMonthlyReminderGuestEmail(enq, dueDate, rentUsd, stripeUrl), null, env);
+            // Also notify admin with calendar link
+            const gcalUrl = buildGCalLink(`Rent Due — ${enq.name} (${enq.room})`, dueDate, `$${rentUsd || '?'} monthly rent due. Guest: ${enq.email}`);
+            const adminHtml = buildMonthlyReminderAdminEmail(enq, dueDate, rentUsd, gcalUrl);
+            await Promise.all(TO_EMAILS.map(to => resend(FROM, to, `Payment reminder: ${enq.name} — ${enq.room} — ${fmt(dueDate)}`, adminHtml, null, env)));
+            ae[reminderKey] = new Date().toISOString();
+            changed = true; sent++;
+          } catch (e) { errors.push(`monthlyReminder ${enq.id}: ${e.message}`); }
+        }
+      }
     }
 
     if (changed) await env.BOOKINGS.put(key, JSON.stringify(enquiries));
   }
 
   return { sent, skipped, errors, date: todayStr };
+}
+
+function buildGCalLink(title, dateStr, details) {
+  const d = dateStr.replace(/-/g, '');
+  const next = new Date(dateStr);
+  next.setUTCDate(next.getUTCDate() + 1);
+  const d2 = next.toISOString().split('T')[0].replace(/-/g,'');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${d}/${d2}&details=${encodeURIComponent(details)}`;
+}
+
+function buildMonthlyReminderGuestEmail(enq, dueDate, rentUsd, stripeUrl) {
+  const first = enq.name.split(' ')[0];
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#86a2a6;padding:24px 32px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td><p style="margin:0;font-family:Georgia,serif;font-size:18px;color:#fff;">Ta.Garden</p></td>
+      <td align="right"><p style="margin:0;font-family:Arial,sans-serif;font-size:10px;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;">Payment Reminder</p></td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:28px 32px;" class="pad">
+    <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:15px;color:#3a3a2a;">Hi ${first},</p>
+    <p style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:15px;color:#3a3a2a;line-height:1.6;">This is a friendly reminder that your monthly rent is due on <strong>${fmt(dueDate)}</strong>.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;margin-bottom:24px;">
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Room</p></td>
+          <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:15px;color:#3a3a2a;">${enq.room}</p></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Amount Due</p></td>
+          <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:20px;color:#3a3a2a;">${rentUsd ? `$${rentUsd}` : 'As agreed'}</p></td>
+        </tr></table>
+      </td></tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+      <a href="${stripeUrl}" style="display:inline-block;padding:16px 40px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Now via Stripe</a>
+    </td></tr></table>
+    <p style="margin:20px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;text-align:center;">Thank you for being part of Ta.Garden 🌿</p>
+  </td></tr>
+  <tr><td style="background:#3a3a2a;padding:16px 32px;text-align:center;" class="pad">
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;color:#88917d;">Ta.Garden · Cam Nam Island · Hội An, Vietnam</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function buildMonthlyReminderAdminEmail(enq, dueDate, rentUsd, gcalUrl) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#3a3a2a;padding:20px 32px;" class="pad">
+    <p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#c8b89a;">Ta.Garden Admin — Payment Reminder</p>
+  </td></tr>
+  <tr><td style="padding:24px 32px;" class="pad">
+    <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:15px;color:#3a3a2a;"><strong>${enq.name}</strong> has a payment due on <strong>${fmt(dueDate)}</strong>.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;margin-bottom:20px;">
+      ${[
+        ['Guest', enq.name],
+        ['Email', enq.email],
+        ['Room', enq.room],
+        ['Amount', rentUsd ? `$${rentUsd}` : 'As agreed'],
+        ['Due Date', fmt(dueDate)],
+      ].map(([k,v]) => `<tr><td style="padding:12px 16px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;width:40%;border-bottom:1px solid #e0d9d0;">${k}</td><td style="padding:12px 16px;font-size:14px;color:#3a3a2a;border-bottom:1px solid #e0d9d0;">${v}</td></tr>`).join('')}
+    </table>
+    <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;">A reminder email has been sent to the guest. A guest reminder email was sent automatically.</p>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td>
+      <a href="${gcalUrl}" style="display:inline-block;padding:12px 24px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Add to Google Calendar</a>
+    </td></tr></table>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildArrivalReminderEmail(enq) {

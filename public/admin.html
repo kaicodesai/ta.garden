@@ -494,12 +494,21 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <!-- Create new link form -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-title">Create a Booking Link</div>
+
+        <!-- Enquiry selector -->
+        <div class="fg" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border,#ddd5c8);">
+          <label class="modal-lbl">Pre-fill from existing enquiry (optional)</label>
+          <select class="fc" id="bl-enq-select" onchange="blSelectEnquiry(this.value)" style="margin-bottom:0;">
+            <option value="">— Enter new guest info below —</option>
+          </select>
+        </div>
+
         <div class="fg" style="margin-bottom:12px;">
           <label class="modal-lbl">Room</label>
-          <select class="fc" id="bl-room">
-            <option value="The River Room">The River Room ($340/mo · $25/night)</option>
-            <option value="The Balcony Room">The Balcony Room ($400/mo · $30/night)</option>
-            <option value="The Sky Suite">The Sky Suite ($680/mo · $50/night)</option>
+          <select class="fc" id="bl-room" onchange="blRoomChanged()">
+            <option value="The River Room">The River Room (8,500,000 VND · $340/mo)</option>
+            <option value="The Balcony Room">The Balcony Room (10,000,000 VND · $400/mo)</option>
+            <option value="The Sky Suite">The Sky Suite (17,000,000 VND · $680/mo)</option>
           </select>
         </div>
         <div class="fg" style="margin-bottom:12px;">
@@ -511,31 +520,38 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
           <div class="fg">
-            <label class="modal-lbl">Guest Name (optional — pre-fills form)</label>
+            <label class="modal-lbl">Guest Name</label>
             <input class="fc" id="bl-guestname" placeholder="Shakira Quinn">
           </div>
           <div class="fg">
-            <label class="modal-lbl">Guest Email (optional — pre-fills form)</label>
+            <label class="modal-lbl">Guest Email</label>
             <input class="fc" id="bl-guestemail" placeholder="guest@email.com">
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div class="fg">
-            <label class="modal-lbl">Monthly Rent (USD) — override</label>
-            <input class="fc" id="bl-rentusd" type="number" placeholder="340">
+
+        <!-- Pricing — VND first -->
+        <div style="background:rgba(134,162,166,0.07);padding:14px;border-radius:6px;border:1px solid rgba(134,162,166,0.2);margin-bottom:12px;">
+          <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:10px;">Pricing (enter VND → USD auto-calculated)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="fg">
+              <label class="modal-lbl">Monthly Rent (VND)</label>
+              <input class="fc" id="bl-rentvnd" type="number" placeholder="8500000" oninput="blVndChanged()" style="font-size:13px;padding:8px 10px;">
+            </div>
+            <div class="fg">
+              <label class="modal-lbl">Monthly Rent (USD equiv.)</label>
+              <input class="fc" id="bl-rentusd" type="number" placeholder="340" oninput="blUsdChanged()" style="font-size:13px;padding:8px 10px;">
+            </div>
+            <div class="fg">
+              <label class="modal-lbl">Deposit (USD = 1 month)</label>
+              <input class="fc" id="bl-deposit" type="number" placeholder="auto" style="font-size:13px;padding:8px 10px;background:rgba(136,145,125,0.06);" readonly>
+            </div>
           </div>
-          <div class="fg">
-            <label class="modal-lbl">Monthly Rent (VND) — override</label>
-            <input class="fc" id="bl-rentvnd" type="number" placeholder="8500000">
-          </div>
-          <div class="fg">
-            <label class="modal-lbl">Deposit Amount (USD)</label>
-            <input class="fc" id="bl-deposit" type="number" placeholder="= 1 month rent">
-          </div>
+          <div style="font-size:10px;color:var(--mid);margin-top:6px;">Using ~25,000 VND per $1 USD. Deposit auto-set to 1 month's rent.</div>
         </div>
+
         <div class="fg" style="margin-bottom:12px;">
-          <label class="modal-lbl">Stripe Payment Link (paste here — sent to guest on confirmation)</label>
-          <input class="fc" id="bl-stripe" placeholder="https://buy.stripe.com/...">
+          <label class="modal-lbl">Stripe Payment Link</label>
+          <input class="fc" id="bl-stripe" value="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02">
         </div>
         <div class="fg" style="margin-bottom:16px;">
           <label class="modal-lbl">Personal Note to Guest (shown on booking page)</label>
@@ -744,9 +760,9 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <div id="modalRatesBlock" style="display:none;margin-bottom:16px;background:rgba(134,162,166,0.08);padding:14px;border-radius:6px;border:1px solid rgba(134,162,166,0.2);">
         <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:10px;">Pricing (editable — pre-filled from room defaults)</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-          <div><label class="modal-lbl">Monthly Rent (USD)</label><input class="fc" id="modalRentUsd" type="number" placeholder="340" min="0" style="font-size:13px;padding:8px 10px;"></div>
-          <div><label class="modal-lbl">Monthly Rent (VND)</label><input class="fc" id="modalRentVnd" type="number" placeholder="8500000" min="0" style="font-size:13px;padding:8px 10px;"></div>
-          <div><label class="modal-lbl">Deposit Amount (USD)</label><input class="fc" id="modalDeposit" type="number" placeholder="340" min="0" style="font-size:13px;padding:8px 10px;"></div>
+          <div><label class="modal-lbl">Monthly Rent (VND)</label><input class="fc" id="modalRentVnd" type="number" placeholder="8500000" min="0" style="font-size:13px;padding:8px 10px;" oninput="const u=Math.round(this.value/25000);document.getElementById('modalRentUsd').value=u||'';document.getElementById('modalDeposit').value=u||'';"></div>
+          <div><label class="modal-lbl">Monthly Rent (USD)</label><input class="fc" id="modalRentUsd" type="number" placeholder="340" min="0" style="font-size:13px;padding:8px 10px;" oninput="const v=Math.round(this.value*25000);document.getElementById('modalRentVnd').value=v||'';document.getElementById('modalDeposit').value=this.value||'';"></div>
+          <div><label class="modal-lbl">Deposit (USD = 1 month)</label><input class="fc" id="modalDeposit" type="number" placeholder="= 1 month" min="0" style="font-size:13px;padding:8px 10px;background:rgba(136,145,125,0.06);"></div>
         </div>
         <div style="font-size:10px;color:var(--mid);margin-top:8px;">These amounts appear in the confirmation email and are stored on the booking.</div>
       </div>
@@ -852,7 +868,7 @@ function showTab(name) {
   if (name === 'blocking')    { renderBlocked(); populateRoomSelect(); }
   if (name === 'properties')   renderPropCards();
   if (name === 'gallery')      loadGallery();
-  if (name === 'bookinglinks') loadBookingLinks();
+  if (name === 'bookinglinks') { loadBookingLinks(); blPopulateEnquiryDropdown(); blRoomChanged(); }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -1005,9 +1021,11 @@ function openConfirmModal(id) {
   document.getElementById('modalSendBtn').onclick = () => doNotify('confirm');
   // Show and pre-fill rates
   const rates = ROOM_RATES_JS[e.room] || {};
-  document.getElementById('modalRentUsd').value = e.rentUsd || rates.monthly || '';
-  document.getElementById('modalRentVnd').value = e.rentVnd || rates.vnd || '';
-  document.getElementById('modalDeposit').value = e.depositAmount || e.rentUsd || rates.monthly || '';
+  const defUsd = e.rentUsd || rates.monthly || '';
+  const defVnd = e.rentVnd || rates.vnd || '';
+  document.getElementById('modalRentUsd').value = defUsd;
+  document.getElementById('modalRentVnd').value = defVnd;
+  document.getElementById('modalDeposit').value = e.depositAmount || defUsd;
   document.getElementById('modalRatesBlock').style.display = 'block';
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -2235,6 +2253,63 @@ async function deleteSanctuaryImage(propId, id) {
 }
 
 // ── Booking Links ─────────────────────────────────────────────────────────────
+
+const BL_ROOM_VND = {
+  'The River Room':   { vnd: 8500000,  usd: 340 },
+  'The Balcony Room': { vnd: 10000000, usd: 400 },
+  'The Sky Suite':    { vnd: 17000000, usd: 680 },
+};
+const VND_RATE = 25000;
+
+function blRoomChanged() {
+  const room = document.getElementById('bl-room').value;
+  const rates = BL_ROOM_VND[room];
+  if (rates) {
+    document.getElementById('bl-rentvnd').value = rates.vnd;
+    document.getElementById('bl-rentusd').value = rates.usd;
+    document.getElementById('bl-deposit').value = rates.usd;
+  }
+}
+
+function blVndChanged() {
+  const vnd = Number(document.getElementById('bl-rentvnd').value) || 0;
+  const usd = vnd ? Math.round(vnd / VND_RATE) : '';
+  document.getElementById('bl-rentusd').value = usd || '';
+  document.getElementById('bl-deposit').value = usd || '';
+}
+
+function blUsdChanged() {
+  const usd = Number(document.getElementById('bl-rentusd').value) || 0;
+  const vnd = usd ? Math.round(usd * VND_RATE) : '';
+  document.getElementById('bl-rentvnd').value = vnd || '';
+  document.getElementById('bl-deposit').value = usd || '';
+}
+
+function blSelectEnquiry(id) {
+  if (!id) return;
+  const enq = allEnquiries.find(e => e.id === id);
+  if (!enq) return;
+  document.getElementById('bl-guestname').value  = enq.name  || '';
+  document.getElementById('bl-guestemail').value = enq.email || '';
+  // Set room
+  const roomSel = document.getElementById('bl-room');
+  if (enq.room) {
+    for (const opt of roomSel.options) { if (opt.value === enq.room) { roomSel.value = enq.room; break; } }
+  }
+  // Set stay type
+  const stySel = document.getElementById('bl-staytype');
+  if (enq.stayType) {
+    for (const opt of stySel.options) { if (opt.value === enq.stayType) { stySel.value = enq.stayType; break; } }
+  }
+  blRoomChanged();
+}
+
+function blPopulateEnquiryDropdown() {
+  const sel = document.getElementById('bl-enq-select');
+  const pending = allEnquiries.filter(e => e.status === 'pending');
+  sel.innerHTML = '<option value="">— Enter new guest info below —</option>' +
+    pending.map(e => `<option value="${e.id}">${e.name} — ${(e.room||'').replace('The ','')} (${e.stayType||'monthly'})</option>`).join('');
+}
 
 async function createBookingLink() {
   const btn    = document.getElementById('blCreateBtn');

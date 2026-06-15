@@ -151,10 +151,16 @@
                 <label for="checkIn">Move-in / Check-in</label>
                 <input type="date" id="checkIn" name="checkIn" required>
               </div>
-              <div>
+              <div id="checkOutWrap">
                 <label for="checkOut">Move-out / Check-out</label>
-                <input type="date" id="checkOut" name="checkOut" required>
+                <input type="date" id="checkOut" name="checkOut">
               </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);cursor:pointer;text-transform:none;letter-spacing:0;">
+                <input type="checkbox" id="ongoingToggle" style="width:auto;padding:0;border:none;cursor:pointer;">
+                No end date — ongoing monthly rental
+              </label>
             </div>
             <div class="price-box price-hidden" id="priceBox">
               <div class="price-row">
@@ -162,15 +168,15 @@
                 <span id="priceDuration">—</span>
               </div>
               <div class="price-row">
-                <span class="price-label">Rate</span>
+                <span class="price-label">Monthly Rate</span>
                 <span id="priceRate">—</span>
               </div>
               <div class="price-row">
                 <span class="price-label">Deposit (1 month)</span>
                 <span id="priceDeposit">—</span>
               </div>
-              <div class="price-row">
-                <span>Total Stay</span>
+              <div class="price-row" id="priceTotalRow">
+                <span>Estimated Total</span>
                 <span id="priceTotal">—</span>
               </div>
             </div>
@@ -197,13 +203,20 @@
             </div>
           </div>
 
+          <!-- Contract preview -->
+          <div class="form-section" id="contractSection" style="display:none;">
+            <div class="form-section-title">Rental Agreement</div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Please review your rental agreement below. A signed copy will be emailed to you after confirmation.</p>
+            <div class="contract-box" id="contractPreview"></div>
+          </div>
+
           <!-- Signature -->
           <div class="form-section">
             <div class="form-section-title">Confirm &amp; Sign</div>
             <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
-              By signing below, you confirm your reservation and agree to our house rules and cancellation policy.
+              By signing below, you confirm your reservation and agree to our rental agreement and house rules.
               Your deposit of <strong id="sigDepositAmt">1 month's rent</strong> is due within 48 hours to secure your dates.
-              Your contract will be sent to your email.
+              A signed copy of your rental agreement will be emailed to you.
             </p>
             <div class="sig-wrap">
               <label for="signature">Type your full name as signature</label>
@@ -231,10 +244,11 @@
   let linkData  = null;
 
   const $ = id => document.getElementById(id);
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   function showState(name) {
     ['stateLoading','stateError','stateSuccess','stateForm'].forEach(s => {
-      $( s).classList.toggle('active', s === name);
+      $(s).classList.toggle('active', s === name);
     });
   }
 
@@ -243,7 +257,6 @@
     showState('stateError');
   }
 
-  // Load link data
   async function init() {
     if (!token) return showError('No booking token found in this link.');
     try {
@@ -258,79 +271,140 @@
     }
   }
 
+  function effectiveRates() {
+    if (!linkData) return { monthly: 0, nightly: 0 };
+    const base = linkData.rates || { monthly: 0, nightly: 0 };
+    return {
+      monthly:  linkData.customRentUsd  || base.monthly,
+      nightly:  base.nightly,
+      deposit:  linkData.customDeposit  || linkData.customRentUsd || base.monthly,
+    };
+  }
+
   function populatePage(d) {
-    $('roomName').textContent = d.room;
+    $('roomName').textContent  = d.room;
     $('stayBadge').textContent = d.stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
 
-    if (d.guestName) $('guestName').value = d.guestName;
+    if (d.guestName)  $('guestName').value  = d.guestName;
     if (d.guestEmail) $('guestEmail').value = d.guestEmail;
 
-    if (d.notes) {
-      $('notesText').textContent = d.notes;
-      $('notesText').style.display = 'block';
-    }
+    if (d.notes) { $('notesText').textContent = d.notes; $('notesText').style.display = 'block'; }
 
-    if (d.rates) {
-      const rr = $('rateRow');
-      rr.innerHTML = `
-        <div class="rate-pill"><strong>$${d.rates.monthly}/mo</strong><span>Monthly</span></div>
-        <div class="rate-pill"><strong>$${d.rates.nightly}/night</strong><span>Nightly</span></div>
-        <div class="rate-pill"><strong>$${d.rates.monthly}</strong><span>Deposit</span></div>
+    const r = effectiveRates();
+    if (r.monthly) {
+      $('rateRow').innerHTML = `
+        <div class="rate-pill"><strong>$${r.monthly}/mo</strong><span>Monthly</span></div>
+        ${r.nightly ? `<div class="rate-pill"><strong>$${r.nightly}/night</strong><span>Nightly</span></div>` : ''}
+        <div class="rate-pill"><strong>$${r.deposit}</strong><span>Deposit</span></div>
       `;
     }
 
-    $('sigDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    // Set min date for check-in to today
-    const today = new Date().toISOString().split('T')[0];
-    $('checkIn').setAttribute('min', today);
+    $('sigDate').textContent = today;
+    $('checkIn').setAttribute('min', new Date().toISOString().split('T')[0]);
   }
 
   function calcAndShow() {
     const checkIn  = $('checkIn').value;
-    const checkOut = $('checkOut').value;
-    if (!checkIn || !checkOut || !linkData?.rates) {
-      $('priceBox').classList.add('price-hidden');
-      return;
-    }
-    const days = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
-    if (days <= 0) { $('priceBox').classList.add('price-hidden'); return; }
+    const isOngoing = $('ongoingToggle').checked;
+    const checkOut  = isOngoing ? null : $('checkOut').value;
+    const r = effectiveRates();
 
-    const rates = linkData.rates;
+    if (!checkIn || !r.monthly) { $('priceBox').classList.add('price-hidden'); return; }
+
     const isMonthly = linkData.stayType === 'monthly';
-    let total, durationLabel, rateLabel;
+    let durationLabel = 'Ongoing from ' + fmtDate(checkIn);
+    let rateLabel     = `$${r.monthly}/month`;
+    let totalLabel    = 'Ongoing';
 
-    if (isMonthly) {
-      const months = Math.round((days / 30) * 10) / 10;
-      total = Math.round(months * rates.monthly);
-      durationLabel = `${days} days (~${months} month${months !== 1 ? 's' : ''})`;
-      rateLabel = `$${rates.monthly}/month`;
-    } else {
-      total = days * rates.nightly;
-      durationLabel = `${days} night${days !== 1 ? 's' : ''}`;
-      rateLabel = `$${rates.nightly}/night`;
+    if (!isOngoing && checkOut) {
+      const days = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+      if (days <= 0) { $('priceBox').classList.add('price-hidden'); return; }
+      if (isMonthly) {
+        const months = Math.round((days / 30) * 10) / 10;
+        durationLabel = `${days} days (~${months} month${months !== 1 ? 's' : ''})`;
+        totalLabel = `$${Math.round(months * r.monthly)}`;
+      } else {
+        durationLabel = `${days} night${days !== 1 ? 's' : ''}`;
+        rateLabel = `$${r.nightly}/night`;
+        totalLabel = `$${days * r.nightly}`;
+      }
     }
 
-    const deposit = rates.monthly;
     $('priceDuration').textContent = durationLabel;
     $('priceRate').textContent     = rateLabel;
-    $('priceDeposit').textContent  = `$${deposit}`;
-    $('priceTotal').textContent    = `$${total}`;
-    $('sigDepositAmt').textContent = `$${deposit} (1 month)`;
+    $('priceDeposit').textContent  = `$${r.deposit}`;
+    $('priceTotal').textContent    = totalLabel;
+    $('sigDepositAmt').textContent = `$${r.deposit} (1 month)`;
+    $('priceTotalRow').style.display = isOngoing ? 'none' : '';
     $('priceBox').classList.remove('price-hidden');
+
+    updateContractPreview();
   }
 
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y,m,d] = iso.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[+m-1]} ${+d}, ${y}`;
+  }
+
+  function updateContractPreview() {
+    const name  = $('guestName').value.trim()  || '[Tenant Name]';
+    const email = $('guestEmail').value.trim() || '[Email]';
+    const phone = $('guestPhone').value.trim() || '—';
+    const checkIn = $('checkIn').value;
+    const r = effectiveRates();
+    const room = linkData?.room || '[Room]';
+
+    if (!checkIn || !name || name === '[Tenant Name]') {
+      $('contractSection').style.display = 'none';
+      return;
+    }
+
+    $('contractSection').style.display = 'block';
+    $('contractPreview').innerHTML = `
+      <p><strong>TA.GARDEN — Monthly Room Rental Agreement</strong></p>
+      <p>Landlord: Kai Edwards / Soul &amp; Luna Wellness</p>
+      <p>Tenant: <strong>${name}</strong></p>
+      <hr style="border:none;border-top:1px solid #ddd5c8;margin:10px 0;">
+      <p><strong>Room:</strong> ${room}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Phone:</strong> ${phone}</p>
+      <p><strong>Monthly Rent:</strong> $${r.monthly}/mo</p>
+      <p><strong>Security Deposit:</strong> $${r.deposit} (1 month's rent)</p>
+      <p><strong>Tenancy Start:</strong> ${fmtDate(checkIn)}</p>
+      <p><strong>Minimum Term:</strong> 1 month — renewable monthly</p>
+      <p><strong>Notice to Vacate:</strong> 15 days written notice</p>
+      <hr style="border:none;border-top:1px solid #ddd5c8;margin:10px 0;">
+      <p><em>Payment due on 1st of each month. 3-day grace period. 5% late fee after 3 days.</em></p>
+      <p><em>Security deposit returned within 14 days of move-out, less deductions.</em></p>
+      <p><em>Quiet hours 10pm–7am. No smoking indoors. No illegal substances. No pets without approval.</em></p>
+      <p><em>15 days written notice required to vacate. Early departure forfeits deposit.</em></p>
+      <p><em>Passport &amp; visa copy required within 24 hours of move-in via Guest Portal.</em></p>
+      <hr style="border:none;border-top:1px solid #ddd5c8;margin:10px 0;">
+      <p><strong>Date of Agreement:</strong> ${today}</p>
+    `;
+  }
+
+  $('ongoingToggle').addEventListener('change', function () {
+    $('checkOutWrap').style.opacity = this.checked ? '0.4' : '1';
+    $('checkOutWrap').style.pointerEvents = this.checked ? 'none' : '';
+    if (this.checked) $('checkOut').value = '';
+    calcAndShow();
+  });
+
   $('checkIn').addEventListener('change', function () {
-    // Ensure checkout is after checkin
-    const ci = $('checkIn').value;
-    if (ci) $('checkOut').setAttribute('min', ci);
+    if ($('checkIn').value) $('checkOut').setAttribute('min', $('checkIn').value);
     calcAndShow();
   });
   $('checkOut').addEventListener('change', calcAndShow);
+  $('guestName').addEventListener('input', updateContractPreview);
+  $('guestEmail').addEventListener('input', updateContractPreview);
+  $('guestPhone').addEventListener('input', updateContractPreview);
 
   $('bookingForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    const btn = $('submitBtn');
+    const btn   = $('submitBtn');
     const errEl = $('errorMsg');
     errEl.classList.remove('show');
 
@@ -338,11 +412,17 @@
     const email     = $('guestEmail').value.trim();
     const phone     = $('guestPhone').value.trim();
     const checkIn   = $('checkIn').value;
-    const checkOut  = $('checkOut').value;
+    const isOngoing = $('ongoingToggle').checked;
+    const checkOut  = isOngoing ? null : $('checkOut').value;
     const signature = $('signature').value.trim();
 
-    if (!name || !email || !checkIn || !checkOut || !signature) {
-      errEl.textContent = 'Please fill in all required fields and sign to confirm.';
+    if (!name || !email || !checkIn || !signature) {
+      errEl.textContent = 'Please fill in your name, email, move-in date, and signature.';
+      errEl.classList.add('show');
+      return;
+    }
+    if (!isOngoing && !checkOut) {
+      errEl.textContent = 'Please enter a move-out date, or check "No end date" for an ongoing rental.';
       errEl.classList.add('show');
       return;
     }

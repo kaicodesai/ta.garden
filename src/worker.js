@@ -334,7 +334,7 @@ async function adminNotify(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
-  const { enquiryId, propertyId = 'ta-garden', action, customMessage } = await request.json();
+  const { enquiryId, propertyId = 'ta-garden', action, customMessage, rentUsd, rentVnd, depositAmount } = await request.json();
   const key = enquiriesKey(propertyId);
   const val = await env.BOOKINGS.get(key);
   const enquiries = val ? JSON.parse(val) : [];
@@ -344,15 +344,25 @@ async function adminNotify(request, env, cors) {
   const enq = enquiries[idx];
   const newStatus = action === 'confirm' ? 'confirmed' : 'cancelled';
   enquiries[idx].status = newStatus;
+  if (action === 'confirm') {
+    if (rentUsd) enquiries[idx].rentUsd = Number(rentUsd);
+    if (rentVnd) enquiries[idx].rentVnd = Number(rentVnd);
+    if (depositAmount) enquiries[idx].depositAmount = Number(depositAmount);
+  }
   await env.BOOKINGS.put(key, JSON.stringify(enquiries));
 
   const origin = new URL(request.url).origin;
-  const html    = action === 'confirm' ? buildConfirmEmail(enq, customMessage, origin, propertyId) : buildDeclineEmail(enq, customMessage);
+  const customRates = { rentUsd: rentUsd || enquiries[idx].rentUsd, rentVnd: rentVnd || enquiries[idx].rentVnd, depositAmount: depositAmount || enquiries[idx].depositAmount };
+  const html    = action === 'confirm' ? buildConfirmEmail(enq, customMessage, origin, propertyId, customRates) : buildDeclineEmail(enq, customMessage);
   const subject = action === 'confirm'
     ? `Your booking at Ta.Garden is confirmed — ${enq.room}`
     : `Re: Your enquiry at Ta.Garden — ${enq.room}`;
 
   await resend(FROM, enq.email, subject, html, null, env);
+  if (action === 'confirm') {
+    const contractHtml = buildContractEmail(enq, customRates);
+    await resend(FROM, enq.email, `Your Ta.Garden Rental Agreement — ${enq.room}`, contractHtml, null, env);
+  }
   return Response.json({ success: true, status: newStatus }, { headers: cors });
 }
 
@@ -939,12 +949,12 @@ function buildReviewRequestEmail(enq) {
 
 async function adminCreateBookingLink(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
-  const { room, stayType = 'monthly', guestName = '', guestEmail = '', notes = '', stripeUrl = '', expiryDays = 60 } = await request.json();
+  const { room, stayType = 'monthly', guestName = '', guestEmail = '', notes = '', stripeUrl = '', rentUsd, rentVnd, depositAmount, expiryDays = 60 } = await request.json();
   if (!room) return Response.json({ error: 'room is required' }, { status: 400, headers: cors });
 
   const token = Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b => b.toString(16).padStart(2,'0')).join('');
   const expiresAt = new Date(Date.now() + expiryDays * 86400000).toISOString();
-  const link = { token, room, stayType, guestName, guestEmail, notes, stripeUrl, expiresAt, createdAt: new Date().toISOString(), status: 'pending' };
+  const link = { token, room, stayType, guestName, guestEmail, notes, stripeUrl, rentUsd: rentUsd || null, rentVnd: rentVnd || null, depositAmount: depositAmount || null, expiresAt, createdAt: new Date().toISOString(), status: 'pending' };
 
   await env.BOOKINGS.put(`booking_link_${token}`, JSON.stringify(link), { expirationTtl: expiryDays * 86400 });
 
@@ -982,6 +992,9 @@ async function handleBookingLinkGet(request, env, cors) {
     guestEmail: link.guestEmail,
     notes: link.notes,
     rates,
+    customRentUsd: link.rentUsd || null,
+    customRentVnd: link.rentVnd || null,
+    customDeposit: link.depositAmount || null,
   }, { headers: cors });
 }
 
@@ -997,7 +1010,7 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   if (link.status === 'confirmed') return Response.json({ error: 'Already confirmed' }, { status: 410, headers: cors });
 
   const { name, email, phone, checkIn, checkOut, signature } = await request.json();
-  if (!name || !email || !checkIn || !checkOut || !signature) {
+  if (!name || !email || !checkIn || !signature) {
     return Response.json({ error: 'Missing required fields' }, { status: 400, headers: cors });
   }
 
@@ -1052,8 +1065,11 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl: link.stripeUrl });
   const adminHtml = buildDirectBookingAdminEmail({ name, email, phone, room: link.room, stayType: link.stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId });
 
+  const contractRates = { rentUsd: link.rentUsd || rates?.monthly, rentVnd: link.rentVnd, depositAmount: link.depositAmount || deposit };
+  const contractHtml = buildContractEmail({ ...{ name, email, phone, room: link.room, stayType: link.stayType, checkIn, checkOut, signature }, ...contractRates && { rentUsd: contractRates.rentUsd, rentVnd: contractRates.rentVnd, depositAmount: contractRates.depositAmount } }, contractRates);
   const emailWork = Promise.all([
     resend(FROM, email, `Booking Confirmed — ${link.room} at Ta.Garden`, guestHtml, null, env),
+    resend(FROM, email, `Your Ta.Garden Rental Agreement — ${link.room}`, contractHtml, null, env),
     ...TO_EMAILS.map(to => resend(FROM, to, `Direct Booking Confirmed — ${link.room} (${name})`, adminHtml, email, env)),
   ]).catch(err => console.error('Booking link email error:', err));
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
@@ -1186,9 +1202,11 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 </html>`;
 }
 
-function buildConfirmEmail(enq, customMessage, origin, propertyId) {
+function buildConfirmEmail(enq, customMessage, origin, propertyId, rates = {}) {
   const guestPortalUrl = origin ? `${origin}/guest.html?id=${enq.id}&p=${propertyId || 'ta-garden'}` : null;
   const price = calcPrice(enq.room, enq.stayType, enq.checkIn, enq.checkOut);
+  const effectiveRentUsd = rates.rentUsd || ROOM_RATES[enq.room]?.monthly;
+  const effectiveDeposit = rates.depositAmount || effectiveRentUsd;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1247,13 +1265,32 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
                 </td>
                 <td style="padding:14px 20px;vertical-align:top;border-left:1px solid rgba(136,145,125,0.15);">
                   <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;font-family:Arial,sans-serif;">Check-out</div>
-                  <div style="font-size:14px;font-family:Arial,sans-serif;">${fmt(enq.checkOut)}</div>
+                  <div style="font-size:14px;font-family:Arial,sans-serif;">${enq.checkOut ? fmt(enq.checkOut) : 'Ongoing'}</div>
                 </td>
               </tr>
             </table>
           </td>
         </tr>
       </table>
+
+      ${effectiveRentUsd ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
+  <tr>
+    <td style="padding:14px 20px;border-bottom:1px solid rgba(136,145,125,0.15);">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;">Monthly Rent</td>
+        <td style="text-align:right;font-size:14px;font-family:Georgia,serif;">$${effectiveRentUsd}${rates.rentVnd ? ` / ${Number(rates.rentVnd).toLocaleString()} VND` : ''}</td>
+      </tr></table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:14px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;">Deposit Due</td>
+        <td style="text-align:right;font-size:14px;font-family:Georgia,serif;">$${effectiveDeposit} <span style="font-size:11px;color:#88917d;">(1 month)</span></td>
+      </tr></table>
+    </td>
+  </tr>
+</table>` : ''}
 
       ${customMessage ? `<div style="padding:16px;background:#fff;border-left:3px solid #86a2a6;margin-bottom:24px;font-size:14px;line-height:1.8;color:#1a1a18;font-family:Arial,sans-serif;">${customMessage.replace(/\n/g,'<br>')}</div>` : ''}
 
@@ -1275,7 +1312,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 
       <!-- Buttons -->
       ${guestPortalUrl ? `<a href="${guestPortalUrl}" class="btn" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;font-family:Arial,sans-serif;">Complete Guest Profile →</a>` : ''}
-      <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" class="btn" style="display:block;text-align:center;padding:16px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;font-family:Arial,sans-serif;">Complete Payment via Stripe →</a>
+      ${(enq.stripeUrl || effectiveDeposit) ? `<a href="${enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02'}" class="btn" style="display:block;text-align:center;padding:16px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay Deposit${effectiveDeposit ? ` — $${effectiveDeposit}` : ''} via Stripe →</a>` : ''}
     </td>
   </tr>
 
@@ -1286,6 +1323,99 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
     </td>
   </tr>
 
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function buildContractEmail(enq, rates = {}) {
+  const rentUsd = rates.rentUsd || ROOM_RATES[enq.room]?.monthly || '___';
+  const rentVnd = rates.rentVnd || '___';
+  const deposit = rates.depositAmount || rentUsd;
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const startDate = enq.checkIn ? fmt(enq.checkIn) : '___';
+  const sig = enq.signature || enq.name;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;font-family:Arial,sans-serif;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#3a3a2a;padding:24px 32px;text-align:center;" class="pad">
+    <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:20px;color:#c8b89a;letter-spacing:0.05em;">Ta.Garden</p>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;color:#88917d;letter-spacing:0.2em;text-transform:uppercase;">Monthly Room Rental Agreement</p>
+  </td></tr>
+  <tr><td style="padding:32px;" class="pad">
+    <p style="margin:0 0 6px;font-size:11px;color:#88917d;letter-spacing:0.12em;text-transform:uppercase;">A Soul &amp; Luna Property · Cam Nam Island, Hội An, Vietnam</p>
+    <p style="margin:0 0 24px;font-size:11px;color:#88917d;">ta-garden.soulandlunawellness.com</p>
+
+    <p style="margin:0 0 16px;font-size:14px;color:#3a3a2a;line-height:1.7;">This Monthly Room Rental Agreement is entered into between:</p>
+    <p style="margin:0 0 6px;font-size:14px;color:#3a3a2a;"><strong>Landlord:</strong> Kai Edwards / Soul &amp; Luna Wellness</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#3a3a2a;"><strong>Tenant:</strong> ${enq.name}</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd5c8;border-radius:6px;margin-bottom:24px;">
+      ${[
+        ['Tenant Full Name', enq.name],
+        ['Email Address', enq.email],
+        ['WhatsApp / Phone', enq.phone || '—'],
+        ['Room', enq.room],
+        ['Monthly Rent (USD)', `$${rentUsd}`],
+        ['Monthly Rent (VND)', rentVnd !== '___' ? `${Number(rentVnd).toLocaleString()} VND` : '—'],
+        ['Security Deposit', `$${deposit} (1 month's rent)`],
+        ['Tenancy Start Date', startDate],
+        ['Minimum Term', '1 month — renewable monthly'],
+        ['Notice to Vacate', '15 days written notice required'],
+      ].map((row, i, arr) => `<tr>
+        <td style="padding:12px 16px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;width:45%;${i < arr.length-1 ? 'border-bottom:1px solid #e8e0d5;' : ''}">${row[0]}</td>
+        <td style="padding:12px 16px;font-size:14px;color:#3a3a2a;${i < arr.length-1 ? 'border-bottom:1px solid #e8e0d5;' : ''}">${row[1]}</td>
+      </tr>`).join('')}
+    </table>
+
+    ${['3. PAYMENT TERMS','3.1 Payment Method — All rent is paid monthly in advance via the Ta.Garden Guest Portal. Accepted methods: bank transfer or card via the portal.','3.2 Due Date — Rent is due on the 1st of each calendar month. A 3-day grace period applies. Payments more than 3 days late incur a 5% late fee.','3.3 Security Deposit — A security deposit equal to one (1) month\'s rent is held against damage, unpaid rent, or early departure. Returned within 14 days of move-out, less deductions.','3.4 Utilities — Electricity and water are metered and billed monthly based on actual usage. WiFi is included in the monthly rent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
+    ${['4. HOUSE RULES','4.1 Guests — Overnight guests require prior approval. Maximum 1 overnight guest. Guest stays exceeding 3 consecutive nights require written consent.','4.2 Noise — Quiet hours are 10pm–7am. Loud music, parties, or disruptive behaviour is grounds for immediate termination.','4.3 Common Areas — Shared spaces to be kept clean and tidy. Dishes cleaned within 24 hours.','4.4 Smoking &amp; Substances — No indoor smoking. Illegal substances strictly prohibited. Violation = immediate termination without deposit refund.','4.5 Pets — No pets without prior written approval.','4.6 Alterations — No physical alterations without written consent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
+    ${['5. VISA &amp; DOCUMENTATION','5.1 Passport Copy — Must be uploaded to the Guest Portal within 24 hours of move-in. Required for Vietnamese legal compliance.','5.2 Visa Responsibility — Tenant is solely responsible for maintaining a valid visa. Ta.Garden does not provide visa sponsorship.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
+    <p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;"><strong>6. PROPERTY MANAGER</strong> — The on-site Property Manager is Colt, reachable via WhatsApp for day-to-day matters. Landlord (Kai Edwards) contactable via the Guest Portal for billing, lease, or escalation matters.</p>
+
+    ${['8. TERMINATION','8.1 By Tenant — 15 days written notice via the Guest Portal or WhatsApp. Rent is due through the last day of the notice period.','8.2 By Landlord — 15 days written notice, or immediately for: non-payment, house rule violations, illegal activity, or misrepresentation.','8.3 Early Departure — If Tenant departs without 15 days notice, the security deposit is forfeited.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
+    <p style="margin:0 0 24px;font-size:13px;color:#4a4a3a;line-height:1.7;"><strong>10. GOVERNING LAW</strong> — This Agreement is governed by the laws of the Socialist Republic of Vietnam.</p>
+
+    <!-- Signatures -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #3a3a2a;padding-top:24px;margin-top:8px;">
+      <tr>
+        <td style="width:50%;padding-right:16px;vertical-align:top;">
+          <p style="margin:0 0 8px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Landlord</p>
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:16px;font-style:italic;color:#3a3a2a;">Kai Edwards</p>
+          <p style="margin:0;font-size:11px;color:#88917d;">Soul &amp; Luna Wellness</p>
+          <p style="margin:8px 0 0;font-size:11px;color:#88917d;">Date: ${today}</p>
+        </td>
+        <td style="width:50%;padding-left:16px;vertical-align:top;border-left:1px solid #e0d9d0;">
+          <p style="margin:0 0 8px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Tenant</p>
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:16px;font-style:italic;color:#3a3a2a;">${sig}</p>
+          <p style="margin:0;font-size:11px;color:#88917d;">Electronically signed</p>
+          <p style="margin:8px 0 0;font-size:11px;color:#88917d;">Date: ${today}</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+  <tr><td style="background:#3a3a2a;padding:16px 32px;text-align:center;" class="pad">
+    <p style="margin:0;font-size:10px;color:#88917d;letter-spacing:0.1em;">Ta.Garden · Cam Nam Island · Hội An, Vietnam · ta-garden.soulandlunawellness.com</p>
+  </td></tr>
 </table>
 </td></tr>
 </table>

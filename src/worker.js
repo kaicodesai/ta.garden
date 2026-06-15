@@ -91,6 +91,12 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/rooms'           && m === 'GET')    return safeCall(() => adminGetRooms(request, env, cors), cors);
     if (p === '/api/admin/room'            && m === 'POST')   return safeCall(() => adminSaveRoom(request, env, cors), cors);
 
+    // Direct booking links
+    if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
+    if (p === '/api/admin/booking-links'   && m === 'GET')    return safeCall(() => adminListBookingLinks(request, env, cors), cors);
+    if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return handleBookingLinkConfirm(request, env, cors, ctx);
+    if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
+
     // Static files are served automatically by Cloudflare before the worker runs.
     // This fallback only triggers for unmatched paths with no static file.
     return new Response('Not found', { status: 404 });
@@ -929,6 +935,132 @@ function buildReviewRequestEmail(enq) {
 </body></html>`;
 }
 
+// ── Direct booking links ──────────────────────────────────────────────────────
+
+async function adminCreateBookingLink(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { room, stayType = 'monthly', guestName = '', guestEmail = '', notes = '', stripeUrl = '', expiryDays = 60 } = await request.json();
+  if (!room) return Response.json({ error: 'room is required' }, { status: 400, headers: cors });
+
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b => b.toString(16).padStart(2,'0')).join('');
+  const expiresAt = new Date(Date.now() + expiryDays * 86400000).toISOString();
+  const link = { token, room, stayType, guestName, guestEmail, notes, stripeUrl, expiresAt, createdAt: new Date().toISOString(), status: 'pending' };
+
+  await env.BOOKINGS.put(`booking_link_${token}`, JSON.stringify(link), { expirationTtl: expiryDays * 86400 });
+
+  // Keep an index of all links for admin listing
+  const idx = JSON.parse(await env.BOOKINGS.get('booking_links_idx') || '[]');
+  idx.unshift({ token, room, guestName, guestEmail, createdAt: link.createdAt, status: 'pending' });
+  await env.BOOKINGS.put('booking_links_idx', JSON.stringify(idx.slice(0, 100)));
+
+  const url = `https://ta-garden.soulandlunawellness.com/book.html?t=${token}`;
+  return Response.json({ token, url }, { headers: cors });
+}
+
+async function adminListBookingLinks(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const idx = JSON.parse(await env.BOOKINGS.get('booking_links_idx') || '[]');
+  return Response.json({ links: idx }, { headers: cors });
+}
+
+async function handleBookingLinkGet(request, env, cors) {
+  const token = new URL(request.url).pathname.replace('/api/booking-link/', '').split('/')[0];
+  if (!token || !env.BOOKINGS) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+
+  const raw = await env.BOOKINGS.get(`booking_link_${token}`);
+  if (!raw) return Response.json({ error: 'Link not found or expired' }, { status: 404, headers: cors });
+
+  const link = JSON.parse(raw);
+  if (new Date(link.expiresAt) < new Date()) return Response.json({ error: 'This link has expired' }, { status: 410, headers: cors });
+  if (link.status === 'confirmed') return Response.json({ error: 'This booking has already been confirmed' }, { status: 410, headers: cors });
+
+  const rates = ROOM_RATES[link.room] || null;
+  return Response.json({
+    room: link.room,
+    stayType: link.stayType,
+    guestName: link.guestName,
+    guestEmail: link.guestEmail,
+    notes: link.notes,
+    rates,
+  }, { headers: cors });
+}
+
+async function handleBookingLinkConfirm(request, env, cors, ctx) {
+  const parts = new URL(request.url).pathname.split('/');
+  const token = parts[parts.length - 2];
+
+  const raw = token && env.BOOKINGS ? await env.BOOKINGS.get(`booking_link_${token}`) : null;
+  if (!raw) return Response.json({ error: 'Link not found or expired' }, { status: 404, headers: cors });
+
+  const link = JSON.parse(raw);
+  if (new Date(link.expiresAt) < new Date()) return Response.json({ error: 'This link has expired' }, { status: 410, headers: cors });
+  if (link.status === 'confirmed') return Response.json({ error: 'Already confirmed' }, { status: 410, headers: cors });
+
+  const { name, email, phone, checkIn, checkOut, signature } = await request.json();
+  if (!name || !email || !checkIn || !checkOut || !signature) {
+    return Response.json({ error: 'Missing required fields' }, { status: 400, headers: cors });
+  }
+
+  const price = calcPrice(link.room, link.stayType, checkIn, checkOut);
+  const rates  = ROOM_RATES[link.room] || {};
+  const deposit = rates.monthly || 0;
+
+  // Save as a confirmed enquiry
+  const enqId = `enq_${Date.now()}`;
+  const key = enquiriesKey('ta-garden');
+  const enquiries = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+  enquiries.unshift({
+    id: enqId, propertyId: 'ta-garden',
+    name, email, phone: phone || '', room: link.room,
+    stayType: link.stayType, checkIn, checkOut,
+    message: `Direct booking (link: ${token})`,
+    price: price ? price.total : null,
+    status: 'confirmed',
+    createdAt: new Date().toISOString(),
+    onboarding: { paymentReceived: false, contractSigned: false, passportUploaded: false, visaUploaded: false },
+    bookingLinkToken: token,
+    signature,
+    signedAt: new Date().toISOString(),
+  });
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
+  await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
+
+  // Block the dates
+  const blocked = JSON.parse(await env.BOOKINGS.get(blockedKey('ta-garden')) || '[]');
+  blocked.push({ start: checkIn, end: checkOut, label: `${name} — ${link.room}`, enqId });
+  await env.BOOKINGS.put(blockedKey('ta-garden'), JSON.stringify(blocked));
+
+  // Mark link confirmed
+  link.status = 'confirmed';
+  link.confirmedAt = new Date().toISOString();
+  link.confirmedBy = { name, email, enqId };
+  await env.BOOKINGS.put(`booking_link_${token}`, JSON.stringify(link));
+
+  // Update index
+  const idx = JSON.parse(await env.BOOKINGS.get('booking_links_idx') || '[]');
+  const li = idx.find(l => l.token === token);
+  if (li) { li.status = 'confirmed'; li.confirmedAt = link.confirmedAt; }
+  await env.BOOKINGS.put('booking_links_idx', JSON.stringify(idx));
+
+  // Send emails
+  const dateRange = `${fmt(checkIn)} → ${fmt(checkOut)}`;
+  const nights = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+  const months = link.stayType === 'monthly' ? (Math.round((nights / 30) * 10) / 10) : null;
+  const totalStr = price ? `$${price.total}` : 'TBD';
+  const depositStr = `$${deposit}`;
+
+  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl: link.stripeUrl });
+  const adminHtml = buildDirectBookingAdminEmail({ name, email, phone, room: link.room, stayType: link.stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId });
+
+  const emailWork = Promise.all([
+    resend(FROM, email, `Booking Confirmed — ${link.room} at Ta.Garden`, guestHtml, null, env),
+    ...TO_EMAILS.map(to => resend(FROM, to, `Direct Booking Confirmed — ${link.room} (${name})`, adminHtml, email, env)),
+  ]).catch(err => console.error('Booking link email error:', err));
+  if (ctx?.waitUntil) ctx.waitUntil(emailWork);
+
+  return Response.json({ success: true, enqId, message: 'Booking confirmed! Check your email for next steps.' }, { headers: cors });
+}
+
 // ── Email builders ────────────────────────────────────────────────────────────
 
 function buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateInfo, checkIn, checkOut, message, price }) {
@@ -1331,6 +1463,210 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 </html>`;
 }
 
+function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl }) {
+  const firstName = name.split(' ')[0];
+  const stayLabel = stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
+  const paySection = stripeUrl
+    ? `<tr><td style="padding:24px 32px;">
+        <p style="margin:0 0 16px 0;font-family:Arial,sans-serif;font-size:15px;color:#4a4a3a;">To complete your reservation, please pay your <strong>1 month deposit of ${depositStr}</strong>:</p>
+        <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+          <a href="${stripeUrl}" style="display:inline-block;padding:16px 36px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay Deposit — ${depositStr}</a>
+        </td></tr></table>
+        <p style="margin:16px 0 0 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;text-align:center;">Secure payment powered by Stripe</p>
+      </td></tr>`
+    : `<tr><td style="padding:24px 32px;">
+        <p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:#4a4a3a;">Your deposit of <strong>${depositStr}</strong> will be collected shortly. We'll be in touch with payment details.</p>
+      </td></tr>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;}
+@media only screen and (max-width:600px){
+  .w600{width:100%!important;}
+  .pad{padding:20px!important;}
+}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#86a2a6;padding:32px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td><p style="margin:0;font-family:Georgia,serif;font-size:22px;color:#fff;letter-spacing:0.05em;">Ta.Garden</p></td>
+      <td align="right"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.8);letter-spacing:0.1em;text-transform:uppercase;">Booking Confirmed</p></td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:32px;" class="pad">
+    <p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Dear ${firstName},</p>
+    <h2 style="margin:0 0 16px 0;font-family:Georgia,serif;font-size:26px;color:#3a3a2a;font-weight:normal;">Your booking is confirmed.</h2>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:#4a4a3a;line-height:1.6;">We're delighted to welcome you to Ta.Garden. Here are your reservation details:</p>
+  </td></tr>
+  <tr><td style="padding:0 32px 24px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
+      <tr>
+        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Room</p></td>
+            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${room}</p></td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Stay Type</p></td>
+            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${stayLabel}</p></td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Dates</p></td>
+            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:15px;color:#3a3a2a;">${dateRange}</p></td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Total</p></td>
+            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${totalStr}</p></td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:20px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Deposit Due</p></td>
+            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${depositStr} <span style="font-size:12px;color:#88917d;">(1 month)</span></p></td>
+          </tr></table>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+  ${paySection}
+  <tr><td style="padding:24px 32px;border-top:1px solid #e8e0d5;" class="pad">
+    <p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.6;"><strong>What's next?</strong></p>
+    <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;">1. Pay your deposit using the link above</p>
+    <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;">2. Your contract will be sent to you separately</p>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;">3. We'll reach out to confirm arrival details</p>
+  </td></tr>
+  <tr><td style="background:#3a3a2a;padding:24px 32px;text-align:center;" class="pad">
+    <p style="margin:0 0 4px 0;font-family:Georgia,serif;font-size:14px;color:#c8b89a;">Ta.Garden</p>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;">Cam Nam Island · Hội An, Vietnam</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function buildDirectBookingAdminEmail({ name, email, phone, room, stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId }) {
+  const stayLabel = stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
+  const waBtn = phone
+    ? `<a href="https://wa.me/${phone.replace(/[^0-9]/g,'')}" style="display:inline-block;padding:14px 24px;background:#25D366;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;margin-bottom:8px;">WhatsApp ${name.split(' ')[0]}</a>&nbsp;`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;}
+@media only screen and (max-width:600px){
+  .w600{width:100%!important;}
+  .pad{padding:20px!important;}
+}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#3a3a2a;padding:24px 32px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td><p style="margin:0;font-family:Georgia,serif;font-size:18px;color:#c8b89a;">Ta.Garden Admin</p></td>
+      <td align="right"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Direct Booking Confirmed</p></td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:28px 32px 16px;" class="pad">
+    <h2 style="margin:0 0 8px 0;font-family:Georgia,serif;font-size:22px;color:#3a3a2a;font-weight:normal;">New booking: ${room}</h2>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#88917d;">Guest confirmed via direct booking link</p>
+  </td></tr>
+  <tr><td style="padding:0 32px 24px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Guest</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${name}</p></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Email</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${email}</p></td>
+        </tr></table>
+      </td></tr>
+      ${phone ? `<tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Phone</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${phone}</p></td>
+        </tr></table>
+      </td></tr>` : ''}
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Room</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${room} — ${stayLabel}</p></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Dates</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${dateRange}</p></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Total</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${totalStr}</p></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #e0d9d0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Deposit</p></td>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;">${depositStr}</p></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:40%;"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;">Signature</p></td>
+          <td><p style="margin:0;font-family:Georgia,serif;font-size:15px;color:#3a3a2a;font-style:italic;">${signature}</p></td>
+        </tr></table>
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:20px 32px 28px;" class="pad">
+    ${waBtn}
+    <a href="mailto:${email}" style="display:inline-block;padding:14px 24px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Email ${name.split(' ')[0]}</a>
+    <p style="margin:16px 0 0 0;font-family:Arial,sans-serif;font-size:12px;color:#88917d;">Enquiry ID: ${enqId} · Calendar dates have been automatically blocked</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function calcPrice(room, stayType, checkIn, checkOut) {
@@ -1357,11 +1693,16 @@ function roomKey(name) {
 async function resend(from, to, subject, html, replyTo, env) {
   const key = env?.RESEND_API_KEY;
   if (!key) { console.error('RESEND_API_KEY not set'); return; }
-  return fetch('https://api.resend.com/emails', {
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: [to], reply_to: replyTo, subject, html }),
+    body: JSON.stringify({ from, to: [to], reply_to: replyTo || undefined, subject, html }),
   });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Resend error ${res.status} sending to ${to}: ${body}`);
+  }
+  return res;
 }
 
 function fmt(dateStr) {

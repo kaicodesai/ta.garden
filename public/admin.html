@@ -388,6 +388,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <button class="tab"     onclick="showTab('blocking')">Blocking</button>
     <button class="tab"     onclick="showTab('properties')">Properties</button>
     <button class="tab"     onclick="showTab('gallery')">Gallery</button>
+    <button class="tab"     onclick="showTab('bookinglinks')">Book Links</button>
   </div>
   <div class="body">
 
@@ -482,6 +483,67 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 
     <!-- SANCTUARY DETAIL (populated by JS) -->
     <div id="pane-sanctuary" style="display:none"></div>
+
+    <!-- BOOKING LINKS -->
+    <div id="pane-bookinglinks" style="display:none">
+      <div class="ph">
+        <div class="ph-title serif">Direct Booking Links</div>
+        <div class="ph-sub">Generate a private link for a guest — pre-selects the room, lets them pick dates, calculates price + deposit, and auto-blocks the calendar on confirmation.</div>
+      </div>
+
+      <!-- Create new link form -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">Create a Booking Link</div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label class="modal-lbl">Room</label>
+          <select class="fc" id="bl-room">
+            <option value="The River Room">The River Room ($340/mo · $25/night)</option>
+            <option value="The Balcony Room">The Balcony Room ($400/mo · $30/night)</option>
+            <option value="The Sky Suite">The Sky Suite ($680/mo · $50/night)</option>
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label class="modal-lbl">Stay Type</label>
+          <select class="fc" id="bl-staytype">
+            <option value="monthly">Monthly Stay</option>
+            <option value="nightly">Short Stay (nightly)</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="fg">
+            <label class="modal-lbl">Guest Name (optional — pre-fills form)</label>
+            <input class="fc" id="bl-guestname" placeholder="Shakira Quinn">
+          </div>
+          <div class="fg">
+            <label class="modal-lbl">Guest Email (optional — pre-fills form)</label>
+            <input class="fc" id="bl-guestemail" placeholder="guest@email.com">
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label class="modal-lbl">Stripe Payment Link (paste here — sent to guest on confirmation)</label>
+          <input class="fc" id="bl-stripe" placeholder="https://buy.stripe.com/...">
+        </div>
+        <div class="fg" style="margin-bottom:16px;">
+          <label class="modal-lbl">Personal Note to Guest (shown on booking page)</label>
+          <input class="fc" id="bl-notes" placeholder="Looking forward to hosting you! Let us know if you have any questions.">
+        </div>
+        <button class="btn-confirm-send" onclick="createBookingLink()" id="blCreateBtn">Generate Link →</button>
+        <div class="status-msg" id="blStatus" style="margin-top:10px;min-height:16px;"></div>
+        <div id="blResult" style="display:none;margin-top:16px;padding:14px 16px;background:var(--bg-light,#f0ebe4);border-radius:6px;border:1px solid var(--border,#ddd5c8);">
+          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:8px;">Booking Link Generated</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input class="fc" id="blResultUrl" readonly style="flex:1;min-width:200px;font-size:12px;background:#fff;">
+            <button class="btn-confirm-send" onclick="copyBlLink()" style="white-space:nowrap;">Copy Link</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Past links -->
+      <div class="card">
+        <div class="card-title">Recent Links</div>
+        <div id="blListContainer"><div class="loading">Loading…</div></div>
+      </div>
+    </div>
 
     <!-- PROPERTIES -->
     <div id="pane-properties" style="display:none">
@@ -755,17 +817,18 @@ async function switchProperty(id) {
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 function showTab(name) {
-  ['enquiries','timeline','blocking','properties','gallery','sanctuary'].forEach(t => {
+  ['enquiries','timeline','blocking','properties','gallery','sanctuary','bookinglinks'].forEach(t => {
     document.getElementById('pane-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el,i) => {
-    el.classList.toggle('on', ['enquiries','timeline','blocking','properties','gallery'][i] === name);
+    el.classList.toggle('on', ['enquiries','timeline','blocking','properties','gallery','bookinglinks'][i] === name);
   });
-  if (name === 'enquiries')  renderEnquiries();
-  if (name === 'timeline')   renderTimeline();
-  if (name === 'blocking')  { renderBlocked(); populateRoomSelect(); }
-  if (name === 'properties') renderPropCards();
-  if (name === 'gallery')    loadGallery();
+  if (name === 'enquiries')    renderEnquiries();
+  if (name === 'timeline')     renderTimeline();
+  if (name === 'blocking')    { renderBlocked(); populateRoomSelect(); }
+  if (name === 'properties')   renderPropCards();
+  if (name === 'gallery')      loadGallery();
+  if (name === 'bookinglinks') loadBookingLinks();
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -2118,6 +2181,98 @@ async function deleteSanctuaryImage(propId, id) {
       if (grid) grid.innerHTML = renderSanctuaryGalleryItems(propId);
     }
   } catch { alert('Delete failed. Try again.'); }
+}
+
+// ── Booking Links ─────────────────────────────────────────────────────────────
+
+async function createBookingLink() {
+  const btn    = document.getElementById('blCreateBtn');
+  const status = document.getElementById('blStatus');
+  const result = document.getElementById('blResult');
+  result.style.display = 'none';
+  status.style.color = 'var(--mid)';
+  status.textContent = 'Generating…';
+  btn.disabled = true;
+
+  const payload = {
+    room:        document.getElementById('bl-room').value,
+    stayType:    document.getElementById('bl-staytype').value,
+    guestName:   document.getElementById('bl-guestname').value.trim(),
+    guestEmail:  document.getElementById('bl-guestemail').value.trim(),
+    stripeUrl:   document.getElementById('bl-stripe').value.trim(),
+    notes:       document.getElementById('bl-notes').value.trim(),
+  };
+
+  try {
+    const r = await fetch('/api/admin/booking-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Unknown error');
+
+    document.getElementById('blResultUrl').value = d.url;
+    result.style.display = 'block';
+    status.style.color = 'var(--teal)';
+    status.textContent = 'Link created!';
+    loadBookingLinks();
+  } catch (err) {
+    status.style.color = 'var(--red, #c0392b)';
+    status.textContent = 'Error: ' + err.message;
+  }
+  btn.disabled = false;
+}
+
+function copyBlLink() {
+  const input = document.getElementById('blResultUrl');
+  input.select();
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = input.nextElementSibling;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
+}
+
+async function loadBookingLinks() {
+  const container = document.getElementById('blListContainer');
+  container.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const r = await fetch('/api/admin/booking-links', { headers: { 'x-admin-secret': secret } });
+    const d = await r.json();
+    const links = d.links || [];
+    if (!links.length) {
+      container.innerHTML = '<div style="padding:20px;color:var(--mid);font-size:13px;">No booking links created yet.</div>';
+      return;
+    }
+    container.innerHTML = links.map(l => {
+      const url = `https://ta-garden.soulandlunawellness.com/book.html?t=${l.token}`;
+      const isConfirmed = l.status === 'confirmed';
+      return `<div style="padding:16px 20px;border-bottom:1px solid var(--border,#ddd5c8);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:14px;color:var(--stone,#3a3a2a);font-weight:600;">${l.room}</div>
+            ${l.guestName ? `<div style="font-size:12px;color:var(--mid);margin-top:2px;">${l.guestName}${l.guestEmail ? ' · ' + l.guestEmail : ''}</div>` : ''}
+            <div style="font-size:11px;color:var(--mid);margin-top:4px;">Created ${fmtDate(l.createdAt)}${isConfirmed ? ' · Confirmed ' + fmtDate(l.confirmedAt) : ''}</div>
+          </div>
+          <span style="display:inline-block;padding:4px 10px;border-radius:12px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;background:${isConfirmed ? 'rgba(134,162,166,0.15)' : 'rgba(200,184,154,0.2)'};color:${isConfirmed ? 'var(--teal,#86a2a6)' : 'var(--gold,#c8b89a)'};">${isConfirmed ? 'Confirmed' : 'Pending'}</span>
+        </div>
+        ${!isConfirmed ? `<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input value="${url}" readonly style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border,#ddd5c8);border-radius:4px;font-size:11px;color:var(--mid);background:#fff;">
+          <button onclick="navigator.clipboard.writeText('${url}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="padding:8px 14px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Copy</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<div style="padding:20px;color:var(--red,#c0392b);font-size:13px;">Failed to load links: ${err.message}</div>`;
+  }
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // ── Auto-login ────────────────────────────────────────────────────────────────

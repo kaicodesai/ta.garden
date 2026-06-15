@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Book Your Stay — Ta.Garden</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --sand: #e8e0d5;
+    --stone: #3a3a2a;
+    --teal: #86a2a6;
+    --muted: #88917d;
+    --cream: #faf8f5;
+    --warm: #f0ebe4;
+    --border: #ddd5c8;
+    --gold: #c8b89a;
+  }
+  body { background: var(--sand); color: var(--stone); font-family: Arial, sans-serif; min-height: 100vh; }
+  a { color: var(--teal); }
+
+  /* Header */
+  .header { background: var(--stone); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header-logo { font-family: Georgia, serif; font-size: 20px; color: var(--gold); letter-spacing: 0.05em; }
+  .header-tag { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+
+  /* Layout */
+  .page { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+  .card { background: var(--cream); border-radius: 10px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .card-header { background: var(--teal); padding: 20px 28px; }
+  .card-header h2 { font-family: Georgia, serif; font-size: 20px; color: #fff; font-weight: normal; }
+  .card-header p { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+  .card-body { padding: 24px 28px; }
+
+  /* Room info */
+  .room-badge { display: inline-block; background: var(--warm); border: 1px solid var(--border); padding: 6px 14px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-radius: 4px; margin-bottom: 16px; }
+  .room-name { font-family: Georgia, serif; font-size: 26px; color: var(--stone); margin-bottom: 6px; }
+  .room-location { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .rate-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .rate-pill { background: var(--warm); padding: 10px 18px; border-radius: 6px; font-size: 13px; color: var(--stone); border: 1px solid var(--border); }
+  .rate-pill strong { font-size: 16px; display: block; color: var(--stone); }
+  .rate-pill span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Form */
+  .form-section { margin-bottom: 24px; }
+  .form-section-title { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--cream); font-size: 14px; color: var(--stone); font-family: Arial, sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--teal); }
+  input[type="date"] { cursor: pointer; }
+
+  /* Price summary */
+  .price-box { background: var(--warm); border-radius: 8px; padding: 20px; margin-top: 16px; border: 1px solid var(--border); }
+  .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; color: var(--stone); }
+  .price-row:last-child { margin-bottom: 0; padding-top: 12px; border-top: 1px solid var(--border); font-size: 16px; font-weight: bold; }
+  .price-label { color: var(--muted); font-size: 12px; }
+  .price-hidden { display: none; }
+
+  /* Contract placeholder */
+  .contract-box { background: var(--warm); border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-size: 13px; color: var(--muted); line-height: 1.7; max-height: 220px; overflow-y: auto; margin-bottom: 16px; }
+  .contract-box p { margin-bottom: 10px; }
+
+  /* Signature */
+  .sig-wrap { position: relative; }
+  .sig-input { font-family: Georgia, serif; font-size: 18px; font-style: italic; letter-spacing: 0.02em; padding: 14px; border-bottom: 2px solid var(--stone); border-top: none; border-left: none; border-right: none; border-radius: 0; background: transparent; }
+  .sig-label-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* Submit */
+  .btn-submit {
+    width: 100%; padding: 18px; background: var(--teal); color: #fff; border: none; cursor: pointer;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; font-family: Arial, sans-serif;
+    border-radius: 6px; margin-top: 8px; transition: background 0.2s;
+  }
+  .btn-submit:hover { background: #7191959e; }
+  .btn-submit:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* States */
+  .state { display: none; text-align: center; padding: 60px 24px; }
+  .state.active { display: block; }
+  .state-icon { font-size: 48px; margin-bottom: 16px; }
+  .state h2 { font-family: Georgia, serif; font-size: 28px; color: var(--stone); font-weight: normal; margin-bottom: 12px; }
+  .state p { font-size: 15px; color: var(--muted); line-height: 1.6; max-width: 420px; margin: 0 auto 20px; }
+
+  /* Error */
+  .error-msg { background: #fde8e8; border: 1px solid #f5c6c6; color: #8b2020; padding: 12px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .error-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-logo">Ta.Garden</span>
+  <span class="header-tag">Direct Booking</span>
+</div>
+
+<!-- Loading state -->
+<div id="stateLoading" class="state active" style="padding-top:80px;">
+  <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
+  <p style="color:var(--muted);font-size:14px;">Loading your booking...</p>
+</div>
+
+<!-- Error state -->
+<div id="stateError" class="state">
+  <div class="state-icon">🌿</div>
+  <h2>Link Unavailable</h2>
+  <p id="stateErrorMsg">This booking link is invalid, expired, or has already been used.</p>
+  <a href="/" style="display:inline-block;padding:14px 28px;background:var(--teal);color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;border-radius:4px;">Return to Ta.Garden</a>
+</div>
+
+<!-- Success state -->
+<div id="stateSuccess" class="state">
+  <div class="state-icon">✓</div>
+  <h2>Booking Confirmed</h2>
+  <p>Thank you! A confirmation email has been sent to you with your booking details and payment instructions.</p>
+  <p style="font-size:13px;color:var(--muted);">Your room has been reserved and the calendar has been blocked for your dates.</p>
+</div>
+
+<!-- Booking form -->
+<div id="stateForm" class="state">
+  <div class="page">
+
+    <div class="card">
+      <div class="card-header">
+        <h2 id="roomName">Loading...</h2>
+        <p>Cam Nam Island · Hội An, Vietnam</p>
+      </div>
+      <div class="card-body">
+        <div id="stayBadge" class="room-badge">Monthly Stay</div>
+        <div class="rate-row" id="rateRow"></div>
+        <p id="notesText" style="margin-top:16px;font-size:13px;color:var(--muted);line-height:1.6;display:none;"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="bookingForm">
+          <!-- Dates -->
+          <div class="form-section">
+            <div class="form-section-title">Your Dates</div>
+            <div class="form-row">
+              <div>
+                <label for="checkIn">Move-in / Check-in</label>
+                <input type="date" id="checkIn" name="checkIn" required>
+              </div>
+              <div>
+                <label for="checkOut">Move-out / Check-out</label>
+                <input type="date" id="checkOut" name="checkOut" required>
+              </div>
+            </div>
+            <div class="price-box price-hidden" id="priceBox">
+              <div class="price-row">
+                <span class="price-label">Duration</span>
+                <span id="priceDuration">—</span>
+              </div>
+              <div class="price-row">
+                <span class="price-label">Rate</span>
+                <span id="priceRate">—</span>
+              </div>
+              <div class="price-row">
+                <span class="price-label">Deposit (1 month)</span>
+                <span id="priceDeposit">—</span>
+              </div>
+              <div class="price-row">
+                <span>Total Stay</span>
+                <span id="priceTotal">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guest info -->
+          <div class="form-section">
+            <div class="form-section-title">Your Details</div>
+            <div class="form-row">
+              <div>
+                <label for="guestName">Full Name</label>
+                <input type="text" id="guestName" name="name" placeholder="As on passport" required>
+              </div>
+              <div>
+                <label for="guestEmail">Email</label>
+                <input type="email" id="guestEmail" name="email" placeholder="you@email.com" required>
+              </div>
+            </div>
+            <div class="form-row single">
+              <div>
+                <label for="guestPhone">WhatsApp / Phone</label>
+                <input type="tel" id="guestPhone" name="phone" placeholder="+1 234 567 890">
+              </div>
+            </div>
+          </div>
+
+          <!-- Signature -->
+          <div class="form-section">
+            <div class="form-section-title">Confirm &amp; Sign</div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+              By signing below, you confirm your reservation and agree to our house rules and cancellation policy.
+              Your deposit of <strong id="sigDepositAmt">1 month's rent</strong> is due within 48 hours to secure your dates.
+              Your contract will be sent to your email.
+            </p>
+            <div class="sig-wrap">
+              <label for="signature">Type your full name as signature</label>
+              <input type="text" id="signature" name="signature" placeholder="Your full name" class="sig-input" required autocomplete="off">
+            </div>
+            <p class="sig-label-note">Signed electronically on <span id="sigDate"></span></p>
+          </div>
+
+          <button type="submit" class="btn-submit" id="submitBtn">Confirm My Booking</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+(function () {
+  const params  = new URLSearchParams(location.search);
+  const token   = params.get('t');
+  let linkData  = null;
+
+  const $ = id => document.getElementById(id);
+
+  function showState(name) {
+    ['stateLoading','stateError','stateSuccess','stateForm'].forEach(s => {
+      $( s).classList.toggle('active', s === name);
+    });
+  }
+
+  function showError(msg) {
+    $('stateErrorMsg').textContent = msg;
+    showState('stateError');
+  }
+
+  // Load link data
+  async function init() {
+    if (!token) return showError('No booking token found in this link.');
+    try {
+      const res = await fetch(`/api/booking-link/${token}`);
+      const data = await res.json();
+      if (!res.ok) return showError(data.error || 'This link is invalid or has expired.');
+      linkData = data;
+      populatePage(data);
+      showState('stateForm');
+    } catch (e) {
+      showError('Failed to load booking details. Please try again.');
+    }
+  }
+
+  function populatePage(d) {
+    $('roomName').textContent = d.room;
+    $('stayBadge').textContent = d.stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
+
+    if (d.guestName) $('guestName').value = d.guestName;
+    if (d.guestEmail) $('guestEmail').value = d.guestEmail;
+
+    if (d.notes) {
+      $('notesText').textContent = d.notes;
+      $('notesText').style.display = 'block';
+    }
+
+    if (d.rates) {
+      const rr = $('rateRow');
+      rr.innerHTML = `
+        <div class="rate-pill"><strong>$${d.rates.monthly}/mo</strong><span>Monthly</span></div>
+        <div class="rate-pill"><strong>$${d.rates.nightly}/night</strong><span>Nightly</span></div>
+        <div class="rate-pill"><strong>$${d.rates.monthly}</strong><span>Deposit</span></div>
+      `;
+    }
+
+    $('sigDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    // Set min date for check-in to today
+    const today = new Date().toISOString().split('T')[0];
+    $('checkIn').setAttribute('min', today);
+  }
+
+  function calcAndShow() {
+    const checkIn  = $('checkIn').value;
+    const checkOut = $('checkOut').value;
+    if (!checkIn || !checkOut || !linkData?.rates) {
+      $('priceBox').classList.add('price-hidden');
+      return;
+    }
+    const days = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+    if (days <= 0) { $('priceBox').classList.add('price-hidden'); return; }
+
+    const rates = linkData.rates;
+    const isMonthly = linkData.stayType === 'monthly';
+    let total, durationLabel, rateLabel;
+
+    if (isMonthly) {
+      const months = Math.round((days / 30) * 10) / 10;
+      total = Math.round(months * rates.monthly);
+      durationLabel = `${days} days (~${months} month${months !== 1 ? 's' : ''})`;
+      rateLabel = `$${rates.monthly}/month`;
+    } else {
+      total = days * rates.nightly;
+      durationLabel = `${days} night${days !== 1 ? 's' : ''}`;
+      rateLabel = `$${rates.nightly}/night`;
+    }
+
+    const deposit = rates.monthly;
+    $('priceDuration').textContent = durationLabel;
+    $('priceRate').textContent     = rateLabel;
+    $('priceDeposit').textContent  = `$${deposit}`;
+    $('priceTotal').textContent    = `$${total}`;
+    $('sigDepositAmt').textContent = `$${deposit} (1 month)`;
+    $('priceBox').classList.remove('price-hidden');
+  }
+
+  $('checkIn').addEventListener('change', function () {
+    // Ensure checkout is after checkin
+    const ci = $('checkIn').value;
+    if (ci) $('checkOut').setAttribute('min', ci);
+    calcAndShow();
+  });
+  $('checkOut').addEventListener('change', calcAndShow);
+
+  $('bookingForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const btn = $('submitBtn');
+    const errEl = $('errorMsg');
+    errEl.classList.remove('show');
+
+    const name      = $('guestName').value.trim();
+    const email     = $('guestEmail').value.trim();
+    const phone     = $('guestPhone').value.trim();
+    const checkIn   = $('checkIn').value;
+    const checkOut  = $('checkOut').value;
+    const signature = $('signature').value.trim();
+
+    if (!name || !email || !checkIn || !checkOut || !signature) {
+      errEl.textContent = 'Please fill in all required fields and sign to confirm.';
+      errEl.classList.add('show');
+      return;
+    }
+    if (signature.toLowerCase() !== name.toLowerCase()) {
+      errEl.textContent = 'Your signature must match your full name exactly.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Confirming...';
+
+    try {
+      const res = await fetch(`/api/booking-link/${token}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, checkIn, checkOut, signature }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errEl.textContent = data.error || 'Something went wrong. Please try again.';
+        errEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Confirm My Booking';
+        return;
+      }
+      showState('stateSuccess');
+    } catch (err) {
+      errEl.textContent = 'Network error. Please check your connection and try again.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Confirm My Booking';
+    }
+  });
+
+  init();
+})();
+</script>
+
+</body>
+</html>

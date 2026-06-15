@@ -947,17 +947,20 @@ async function runEmailAutomation(env) {
         } catch (e) { errors.push(`reviewRequest ${enq.id}: ${e.message}`); }
       }
 
-      // Monthly payment reminder — send on the 26th of each month for payment due on the 1st
+      // Monthly payment reminder — send 5 days before their due day (same day of month as check-in)
       // Applies to: ongoing stays (no checkOut) OR monthly stays still active
       const isOngoing = !enq.checkOut || enq.checkOut > todayStr;
-      if (enq.stayType === 'monthly' && isOngoing && today.getUTCDate() === 26) {
-        const nextMonth = today.getUTCMonth() + 2; // 1-based next month
-        const nextYear  = nextMonth > 12 ? today.getUTCFullYear() + 1 : today.getUTCFullYear();
-        const nm        = nextMonth > 12 ? 1 : nextMonth;
-        const reminderKey = `payReminder_${nextYear}_${String(nm).padStart(2,'0')}`;
+      const dueDay = enq.checkIn ? new Date(enq.checkIn + 'T00:00:00Z').getUTCDate() : 1;
+      const reminderDay = dueDay <= 5 ? (dueDay - 5 + 28) : (dueDay - 5); // send 5 days before
+      if (enq.stayType === 'monthly' && isOngoing && today.getUTCDate() === reminderDay) {
+        // Due date is dueDay of next month (or this month if dueDay > today)
+        const nm = today.getUTCDate() < dueDay ? today.getUTCMonth() + 1 : today.getUTCMonth() + 2;
+        const nextYear  = nm > 12 ? today.getUTCFullYear() + 1 : today.getUTCFullYear();
+        const normNm    = nm > 12 ? 1 : nm;
+        const reminderKey = `payReminder_${nextYear}_${String(normNm).padStart(2,'0')}`;
         if (!ae[reminderKey]) {
           try {
-            const dueDate = `${nextYear}-${String(nm).padStart(2,'0')}-01`;
+            const dueDate = `${nextYear}-${String(normNm).padStart(2,'0')}-${String(dueDay).padStart(2,'0')}`;
             const rentUsd = enq.rentUsd || ROOM_RATES[enq.room]?.monthly;
             const stripeUrl = enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
             await resend(FROM, enq.email, `Monthly rent due ${fmt(dueDate)} — Ta.Garden`, buildMonthlyReminderGuestEmail(enq, dueDate, rentUsd, stripeUrl), null, env);
@@ -1824,12 +1827,19 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 </html>`;
 }
 
+function ordinal(n) {
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
 function buildContractEmail(enq, rates = {}) {
   const rentUsd = rates.rentUsd || ROOM_RATES[enq.room]?.monthly || '___';
   const rentVnd = rates.rentVnd || '___';
   const deposit = rates.depositAmount || rentUsd;
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const startDate = enq.checkIn ? fmt(enq.checkIn) : '___';
+  const dueDay = enq.checkIn ? new Date(enq.checkIn + 'T00:00:00Z').getUTCDate() : null;
+  const dueDayStr = dueDay ? `the ${ordinal(dueDay)} of each month` : 'the same day of each month as the tenancy start date';
   const sig = enq.signature || enq.name;
 
   return `<!DOCTYPE html>
@@ -1877,7 +1887,7 @@ body{background:#e8e0d5;font-family:Arial,sans-serif;}
       </tr>`).join('')}
     </table>
 
-    ${['3. PAYMENT TERMS','3.1 Payment Method — All rent is paid monthly in advance via the Ta.Garden Guest Portal. Accepted methods: bank transfer or card via the portal.','3.2 Due Date — Rent is due on the 1st of each calendar month. A 3-day grace period applies. Payments more than 3 days late incur a 5% late fee.','3.3 Security Deposit — A security deposit equal to one (1) month\'s rent is held against damage, unpaid rent, or early departure. Returned within 14 days of move-out, less deductions.','3.4 Utilities — Electricity and water are metered and billed monthly based on actual usage. WiFi is included in the monthly rent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+    ${['3. PAYMENT TERMS','3.1 Payment Method — All rent is paid monthly in advance via the Ta.Garden Guest Portal. Accepted methods: bank transfer or card via the portal.',`3.2 Due Date — Rent is due on ${dueDayStr} (matching the tenancy start date). A 3-day grace period applies. Payments more than 3 days late incur a 5% late fee.`,'3.3 Security Deposit — A security deposit equal to one (1) month\'s rent is held against damage, unpaid rent, or early departure. Returned within 14 days of move-out, less deductions.','3.4 Utilities — Electricity and water are metered and billed monthly based on actual usage. WiFi is included in the monthly rent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
 
     ${['4. HOUSE RULES','4.1 Guests — Overnight guests require prior approval. Maximum 1 overnight guest. Guest stays exceeding 3 consecutive nights require written consent.','4.2 Noise — Quiet hours are 10pm–7am. Loud music, parties, or disruptive behaviour is grounds for immediate termination.','4.3 Common Areas — Shared spaces to be kept clean and tidy. Dishes cleaned within 24 hours.','4.4 Smoking &amp; Substances — No indoor smoking. Illegal substances strictly prohibited. Violation = immediate termination without deposit refund.','4.5 Pets — No pets without prior written approval.','4.6 Alterations — No physical alterations without written consent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
 
@@ -2184,7 +2194,7 @@ body{background:#e8e0d5;}
       ${[
         ['01', 'Pay your deposit via Stripe to secure your room'],
         ['02', 'Open your Guest Portal to sign your contract and upload your documents'],
-        ['03', 'We\'ll send you a payment reminder before each monthly due date (1st of the month)'],
+        ['03', 'We\'ll send you a payment reminder a few days before each monthly due date'],
         ['04', 'We\'ll reach out closer to your move-in date with arrival details'],
       ].map(([n, t]) => `<tr>
         <td width="32" style="padding:0 10px 12px 0;vertical-align:top;">

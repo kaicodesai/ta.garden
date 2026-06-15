@@ -75,6 +75,7 @@ async function handleFetch(request, env, ctx) {
     // Guest portal (public — ID is the auth token)
     if (p === '/api/guest'                  && m === 'GET')   return handleGuestGet(request, env, cors);
     if (p === '/api/guest/submit'           && m === 'POST')  return handleGuestSubmit(request, env, cors, ctx);
+    if (p === '/api/guest/sign-contract'   && m === 'POST')  return safeCall(() => handleGuestSignContract(request, env, cors), cors);
     if (p === '/api/guest/request-login'    && m === 'POST')  return safeCall(() => handleGuestRequestLogin(request, env, cors, ctx), cors);
     if (p === '/api/guest/verify-token'     && m === 'GET')   return handleGuestVerifyToken(request, env, cors);
 
@@ -546,6 +547,9 @@ async function guestPortalData(enquiryId, propId, env, cors) {
     checkOut: enq.checkOut,
     status: enq.status,
     onboarding: enq.onboarding || {},
+    signedAt: enq.signedAt || null,
+    rentUsd: enq.rentUsd || null,
+    depositAmount: enq.depositAmount || null,
     profileSubmitted: !!profile,
     profile: profile ? {
       fullName: profile.fullName, nationality: profile.nationality,
@@ -607,6 +611,47 @@ async function handleGuestSubmit(request, env, cors, ctx) {
     console.error(err);
     return Response.json({ error: 'Submission failed' }, { status: 500, headers: cors });
   }
+}
+
+async function handleGuestSignContract(request, env, cors) {
+  const { id, propertyId = 'ta-garden', signature } = await request.json().catch(() => ({}));
+  if (!id || !signature) return Response.json({ error: 'id and signature are required' }, { status: 400, headers: cors });
+  if (!env.BOOKINGS) return Response.json({ error: 'Storage unavailable' }, { status: 503, headers: cors });
+
+  const key = enquiriesKey(propertyId);
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
+  const idx = enquiries.findIndex(e => e.id === id);
+  if (idx < 0) return Response.json({ error: 'Booking not found' }, { status: 404, headers: cors });
+
+  const enq = enquiries[idx];
+  if (!enq.onboarding?.paymentReceived) {
+    return Response.json({ error: 'Contract is locked until your deposit is confirmed. Please check back once your payment has been verified.' }, { status: 403, headers: cors });
+  }
+  if (enq.onboarding?.contractSigned) {
+    return Response.json({ error: 'Contract already signed.' }, { status: 409, headers: cors });
+  }
+
+  const signedAt = new Date().toISOString();
+  enquiries[idx].signature  = signature;
+  enquiries[idx].signedAt   = signedAt;
+  enquiries[idx].onboarding = { ...(enq.onboarding || {}), contractSigned: true };
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+
+  // Rebuild contract with actual signature and send
+  const rates = { rentUsd: enq.rentUsd, rentVnd: enq.rentVnd, depositAmount: enq.depositAmount };
+  const contractHtml = buildContractEmail({ ...enq, signature, signedAt }, rates);
+  await env.BOOKINGS.put(`contract_${id}`, contractHtml);
+
+  await sendAndLog(env, id, 'contract_email', enq.email, `Your Ta.Garden Rental Agreement — ${enq.room}`, contractHtml, null);
+  await appendLog(env, id, { type: 'contract_signed', note: `Guest e-signed contract: "${signature}"` });
+
+  await Promise.all(TO_EMAILS.map(to =>
+    resend(FROM, to, `Contract signed — ${enq.name} (${enq.room})`,
+      `<p style="font-family:Georgia,serif;max-width:600px;margin:24px auto;"><strong>${enq.name}</strong> has signed their rental agreement for <strong>${enq.room}</strong>.<br><br>Signed at: ${new Date(signedAt).toLocaleString()}</p>`,
+      null, env)
+  ));
+
+  return Response.json({ success: true, message: 'Contract signed. A copy has been emailed to you.' }, { headers: cors });
 }
 
 // ── Admin: update onboarding checklist ────────────────────────────────────────
@@ -1887,6 +1932,17 @@ body{background:#e8e0d5;font-family:Arial,sans-serif;}
       </tr>`).join('')}
     </table>
 
+    ${[
+      '1. PREMISES',
+      'The Landlord agrees to rent to the Tenant the room described above, located at the property known as Ta.Garden, K570/24, Cam Nam Island, Hội An, Vietnam (the "Property"). The Tenant shall have access to shared common areas including kitchen, bathrooms, and outdoor spaces as designated by the Landlord.',
+    ].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
+    ${[
+      '2. TERM',
+      `2.1 Commencement — The tenancy commences on ${startDate} on a month-to-month basis, renewable each month unless notice is given.`,
+      '2.2 Renewal — The tenancy renews automatically each month unless either party provides 15 days written notice of termination prior to the renewal date.',
+    ].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
     ${['3. PAYMENT TERMS','3.1 Payment Method — All rent is paid monthly in advance via the Ta.Garden Guest Portal. Accepted methods: bank transfer or card via the portal.',`3.2 Due Date — Rent is due on ${dueDayStr} (matching the tenancy start date). A 3-day grace period applies. Payments more than 3 days late incur a 5% late fee.`,'3.3 Security Deposit — A security deposit equal to one (1) month\'s rent is held against damage, unpaid rent, or early departure. Returned within 14 days of move-out, less deductions.','3.4 Utilities — Electricity and water are metered and billed monthly based on actual usage. WiFi is included in the monthly rent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
 
     ${['4. HOUSE RULES','4.1 Guests — Overnight guests require prior approval. Maximum 1 overnight guest. Guest stays exceeding 3 consecutive nights require written consent.','4.2 Noise — Quiet hours are 10pm–7am. Loud music, parties, or disruptive behaviour is grounds for immediate termination.','4.3 Common Areas — Shared spaces to be kept clean and tidy. Dishes cleaned within 24 hours.','4.4 Smoking &amp; Substances — No indoor smoking. Illegal substances strictly prohibited. Violation = immediate termination without deposit refund.','4.5 Pets — No pets without prior written approval.','4.6 Alterations — No physical alterations without written consent.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
@@ -1895,7 +1951,19 @@ body{background:#e8e0d5;font-family:Arial,sans-serif;}
 
     <p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;"><strong>6. PROPERTY MANAGER</strong> — The on-site Property Manager is Colt, reachable via WhatsApp for day-to-day matters. Landlord (Kai Edwards) contactable via the Guest Portal for billing, lease, or escalation matters.</p>
 
+    ${[
+      '7. MAINTENANCE &amp; REPAIRS',
+      '7.1 Tenant Responsibilities — The Tenant shall keep the room clean and in good condition. Any damage beyond normal wear and tear will be deducted from the security deposit.',
+      '7.2 Reporting — The Tenant must promptly report any maintenance issues or damage to the Property Manager via WhatsApp or the Guest Portal.',
+      '7.3 Landlord Responsibilities — The Landlord shall maintain the property in habitable condition and attend to reasonable repair requests within a reasonable timeframe.',
+    ].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
     ${['8. TERMINATION','8.1 By Tenant — 15 days written notice via the Guest Portal or WhatsApp. Rent is due through the last day of the notice period.','8.2 By Landlord — 15 days written notice, or immediately for: non-payment, house rule violations, illegal activity, or misrepresentation.','8.3 Early Departure — If Tenant departs without 15 days notice, the security deposit is forfeited.'].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
+
+    ${[
+      '9. ENTRY BY LANDLORD',
+      '9.1 The Landlord or Property Manager may enter the Tenant\'s room with a minimum of 24 hours written notice for the purposes of inspection, maintenance, or repairs. In cases of emergency, entry may be made without prior notice.',
+    ].map(s => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;">${s}</p>`).join('')}
 
     <p style="margin:0 0 24px;font-size:13px;color:#4a4a3a;line-height:1.7;"><strong>10. GOVERNING LAW</strong> — This Agreement is governed by the laws of the Socialist Republic of Vietnam.</p>
 

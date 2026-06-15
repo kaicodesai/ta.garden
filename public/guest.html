@@ -345,6 +345,35 @@ function renderPortal() {
       </div>
     </div>
 
+    <!-- Contract Signing -->
+    <div class="section" id="contractSection">
+      <div class="section-title">House Agreement</div>
+      ${ob.contractSigned
+        ? `<div style="display:flex;align-items:center;gap:10px;">
+            <span style="color:var(--green);font-size:16px;">✓</span>
+            <span style="font-size:13px;color:var(--mid);">Signed${session.signedAt ? ' on ' + new Date(session.signedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''}. A copy was emailed to you.</span>
+           </div>`
+        : ob.paymentReceived
+          ? `<p style="font-size:13px;color:var(--mid);margin:0 0 16px;line-height:1.6;">Your deposit has been received. Please review and sign your rental agreement below.</p>
+             <div style="background:var(--light);border:1px solid var(--border,#ddd5c8);border-radius:6px;padding:16px 20px;font-size:12px;color:var(--mid);line-height:1.7;max-height:200px;overflow-y:auto;margin-bottom:16px;">
+               <strong>Ta.Garden — Monthly Room Rental Agreement</strong><br>
+               Room: ${session.room || '—'} &nbsp;·&nbsp; Start: ${fmt(session.checkIn)}<br>
+               Rent: $${session.rentUsd || '—'}/mo &nbsp;·&nbsp; Deposit: $${session.depositAmount || '—'}<br><br>
+               By signing, you agree to the full rental agreement including payment terms, house rules, 15-day notice to vacate, and all conditions as emailed to you.
+             </div>
+             <div style="margin-bottom:12px;">
+               <label style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);display:block;margin-bottom:6px;">Type your full name as e-signature</label>
+               <input type="text" id="contractSigInput" placeholder="Your full legal name" style="width:100%;padding:12px;border:1px solid var(--border,#ddd5c8);border-radius:4px;font-size:14px;font-family:Georgia,serif;box-sizing:border-box;">
+             </div>
+             <button onclick="submitContractSign()" style="padding:12px 28px;background:var(--dark,#3a3a2a);color:#c8b89a;border:none;border-radius:4px;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;">Sign Agreement</button>
+             <div id="contractSignError" style="margin-top:10px;font-size:13px;color:var(--red,#c0392b);display:none;"></div>`
+          : `<div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--light);border-radius:6px;">
+               <span style="font-size:16px;">🔒</span>
+               <span style="font-size:13px;color:var(--mid);">Available once your deposit payment is confirmed.</span>
+             </div>`
+      }
+    </div>
+
     <!-- Profile -->
     <div class="section" id="profileSection">
       <div class="section-title">Guest Profile</div>
@@ -558,6 +587,34 @@ async function submitProfile() {
   } catch (ex) {
     err.textContent = 'Something went wrong: ' + ex.message + '. Please try again or email hi@soulandlunawellness.com';
     btn.disabled = false; btn.textContent = 'Submit Guest Profile →';
+  }
+}
+
+async function submitContractSign() {
+  const sig = (document.getElementById('contractSigInput')?.value || '').trim();
+  const errEl = document.getElementById('contractSignError');
+  if (!sig) { errEl.textContent = 'Please type your full name to sign.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/guest/sign-contract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: session.enquiryId, propertyId: session.propId || 'ta-garden', signature: sig }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      session.onboarding = { ...(session.onboarding || {}), contractSigned: true };
+      session.signedAt = new Date().toISOString();
+      sessionStorage.setItem('tg_guest', JSON.stringify(session));
+      renderPortal();
+    } else {
+      errEl.textContent = d.error || 'Signing failed. Please try again.';
+      errEl.style.display = 'block';
+    }
+  } catch (ex) {
+    errEl.textContent = 'Something went wrong. Please try again.';
+    errEl.style.display = 'block';
   }
 }
 

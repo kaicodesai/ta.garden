@@ -1307,7 +1307,7 @@ async function openProfileModal(id) {
         <div style="font-size:13px;color:var(--mid);">No contract on file yet.</div>
       </div>`;
 
-  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded' };
+  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded' };
   const logSection = `<div class="profile-section">
     <div class="profile-section-title">Activity Log</div>
     ${activityLog.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${activityLog.map(e => {

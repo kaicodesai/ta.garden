@@ -97,7 +97,10 @@ async function handleFetch(request, env, ctx) {
     // Direct booking links
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
     if (p === '/api/admin/booking-links'   && m === 'GET')    return safeCall(() => adminListBookingLinks(request, env, cors), cors);
-    if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return handleBookingLinkConfirm(request, env, cors, ctx);
+    if (p === '/api/admin/direct-booking'  && m === 'POST')   return safeCall(() => adminDirectBooking(request, env, cors, ctx), cors);
+    if (p === '/api/admin/activity-log'    && m === 'GET')    return safeCall(() => adminGetActivityLog(request, env, cors), cors);
+    if (p === '/api/admin/contract'        && m === 'GET')    return safeCall(() => adminGetContract(request, env, cors), cors);
+    if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return safeCall(() => handleBookingLinkConfirm(request, env, cors, ctx), cors);
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
 
     // Static files are served automatically by Cloudflare before the worker runs.
@@ -162,6 +165,27 @@ function blockedKey(propId) {
 
 function icalKey(propId) {
   return `ical__${propId}`;
+}
+
+// ── Activity log helpers ──────────────────────────────────────────────────────
+
+async function appendLog(env, enqId, entry) {
+  if (!env?.BOOKINGS || !enqId) return;
+  try {
+    const raw = await env.BOOKINGS.get(`log_${enqId}`);
+    const log = raw ? JSON.parse(raw) : [];
+    log.unshift({ ...entry, at: new Date().toISOString() });
+    await env.BOOKINGS.put(`log_${enqId}`, JSON.stringify(log.slice(0, 200)));
+  } catch (e) {
+    console.error('appendLog error:', e.message);
+  }
+}
+
+async function sendAndLog(env, enqId, type, to, subject, html, replyTo) {
+  const res = await resend(FROM, to, subject, html, replyTo || null, env);
+  const status = res?.ok ? 'sent' : 'failed';
+  await appendLog(env, enqId, { type, to, subject, emailStatus: status });
+  return res;
 }
 
 // ── Public: enquiry submission ────────────────────────────────────────────────
@@ -361,10 +385,15 @@ async function adminNotify(request, env, cors) {
     ? `Your booking at Ta.Garden is confirmed — ${enq.room}`
     : `Re: Your enquiry at Ta.Garden — ${enq.room}`;
 
-  await resend(FROM, enq.email, subject, html, null, env);
+  await sendAndLog(env, enquiryId, action === 'confirm' ? 'confirmation_email' : 'decline_email', enq.email, subject, html, null);
   if (action === 'confirm') {
     const contractHtml = buildContractEmail(enq, customRates);
-    await resend(FROM, enq.email, `Your Ta.Garden Rental Agreement — ${enq.room}`, contractHtml, null, env);
+    const contractSubject = `Your Ta.Garden Rental Agreement — ${enq.room}`;
+    await sendAndLog(env, enquiryId, 'contract_email', enq.email, contractSubject, contractHtml, null);
+    await env.BOOKINGS.put(`contract_${enquiryId}`, contractHtml);
+    await appendLog(env, enquiryId, { type: 'booking_confirmed', note: 'Booking confirmed by admin. Status → confirmed.' });
+  } else {
+    await appendLog(env, enquiryId, { type: 'booking_declined', note: 'Booking declined by admin.' });
   }
   return Response.json({ success: true, status: newStatus }, { headers: cors });
 }
@@ -593,9 +622,33 @@ async function adminGetGuestProfile(request, env, cors) {
   const id = new URL(request.url).searchParams.get('id');
   if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
 
-  const raw = await env.BOOKINGS.get(`guest__${id}`);
-  if (!raw) return Response.json({ profile: null }, { headers: cors });
-  return Response.json({ profile: JSON.parse(raw) }, { headers: cors });
+  const [profileRaw, logRaw, contractRaw] = await Promise.all([
+    env.BOOKINGS.get(`guest__${id}`),
+    env.BOOKINGS.get(`log_${id}`),
+    env.BOOKINGS.get(`contract_${id}`),
+  ]);
+  return Response.json({
+    profile: profileRaw ? JSON.parse(profileRaw) : null,
+    log: logRaw ? JSON.parse(logRaw) : [],
+    hasContract: !!contractRaw,
+  }, { headers: cors });
+}
+
+async function adminGetActivityLog(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
+  const raw = await env.BOOKINGS.get(`log_${id}`);
+  return Response.json({ log: raw ? JSON.parse(raw) : [] }, { headers: cors });
+}
+
+async function adminGetContract(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return new Response('id required', { status: 400, headers: cors });
+  const html = await env.BOOKINGS.get(`contract_${id}`);
+  if (!html) return new Response('Contract not found', { status: 404, headers: cors });
+  return new Response(html, { status: 200, headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
 // ── Guest: magic link login ───────────────────────────────────────────────────
@@ -662,8 +715,10 @@ async function adminRecordPayment(request, env, cors) {
   const raw = await env.BOOKINGS.get(key);
   const payments = raw ? JSON.parse(raw) : [];
   const id = `pay_${Date.now()}`;
-  payments.unshift({ id, amount: Number(amount), currency, date: date || new Date().toISOString().split('T')[0], note: note || '', recordedAt: new Date().toISOString() });
+  const payDate = date || new Date().toISOString().split('T')[0];
+  payments.unshift({ id, amount: Number(amount), currency, date: payDate, note: note || '', recordedAt: new Date().toISOString() });
   await env.BOOKINGS.put(key, JSON.stringify(payments));
+  await appendLog(env, enquiryId, { type: 'payment_recorded', note: `${Number(amount).toLocaleString()} ${currency} recorded${note ? ' — ' + note : ''} (${payDate})` });
   return Response.json({ success: true, id }, { headers: cors });
 }
 
@@ -1251,16 +1306,95 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml = buildDirectBookingAdminEmail({ name, email, phone, room: link.room, stayType: link.stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId });
 
-  const contractRates = { rentUsd: link.rentUsd || rates?.monthly, rentVnd: link.rentVnd, depositAmount: link.depositAmount || deposit };
-  const contractHtml = buildContractEmail({ ...{ name, email, phone, room: link.room, stayType: link.stayType, checkIn, checkOut, signature }, ...contractRates && { rentUsd: contractRates.rentUsd, rentVnd: contractRates.rentVnd, depositAmount: contractRates.depositAmount } }, contractRates);
-  const emailWork = Promise.all([
-    resend(FROM, email, `Booking Confirmed — ${link.room} at Ta.Garden`, guestHtml, null, env),
-    resend(FROM, email, `Your Ta.Garden Rental Agreement — ${link.room}`, contractHtml, null, env),
-    ...TO_EMAILS.map(to => resend(FROM, to, `Direct Booking Confirmed — ${link.room} (${name})`, adminHtml, email, env)),
-  ]).catch(err => console.error('Booking link email error:', err));
+  const contractRates = { rentUsd: link.rentUsd || rates?.monthly || null, rentVnd: link.rentVnd || null, depositAmount: link.depositAmount || deposit || null };
+  const contractEnq = { name, email, phone: phone || '', room: link.room, stayType: link.stayType, checkIn, checkOut: checkOut || null, signature, rentUsd: contractRates.rentUsd, rentVnd: contractRates.rentVnd, depositAmount: contractRates.depositAmount };
+  const contractHtml = buildContractEmail(contractEnq, contractRates);
+
+  const emailWork = (async () => {
+    await env.BOOKINGS.put(`contract_${enqId}`, contractHtml);
+    await appendLog(env, enqId, { type: 'booking_confirmed', note: `Guest completed booking form (link token: ${token})` });
+    await sendAndLog(env, enqId, 'confirmation_email', email, `Booking Confirmed — ${link.room} at Ta.Garden`, guestHtml, null);
+    await sendAndLog(env, enqId, 'contract_email', email, `Your Ta.Garden Rental Agreement — ${link.room}`, contractHtml, null);
+    await Promise.all(TO_EMAILS.map(to => resend(FROM, to, `Direct Booking Confirmed — ${link.room} (${name})`, adminHtml, email, env)));
+  })().catch(err => console.error('Booking link email error:', err));
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
   return Response.json({ success: true, enqId, message: 'Booking confirmed! Check your email for next steps.' }, { headers: cors });
+}
+
+// ── Admin: direct booking (email-first, no link required) ────────────────────
+
+async function adminDirectBooking(request, env, cors, ctx) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const {
+    room, stayType = 'monthly', guestName, guestEmail, guestPhone = '',
+    checkIn, checkOut, rentUsd, rentVnd, depositAmount, stripeUrl, notes = '',
+  } = await request.json();
+
+  if (!room || !guestName || !guestEmail || !checkIn) {
+    return Response.json({ error: 'room, guestName, guestEmail, and checkIn are required' }, { status: 400, headers: cors });
+  }
+
+  const rates = ROOM_RATES[room] || {};
+  const effectiveRentUsd = rentUsd ? Number(rentUsd) : (rates.monthly || null);
+  const effectiveRentVnd = rentVnd ? Number(rentVnd) : null;
+  const effectiveDeposit = depositAmount ? Number(depositAmount) : effectiveRentUsd;
+  const effectiveStripe  = stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+
+  const enqId = `enq_${Date.now()}`;
+  const key   = enquiriesKey('ta-garden');
+  const enquiries = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+
+  const enq = {
+    id: enqId, propertyId: 'ta-garden',
+    name: guestName, email: guestEmail, phone: guestPhone,
+    room, stayType, checkIn, checkOut: checkOut || null,
+    message: notes || 'Direct booking created by admin.',
+    price: effectiveRentUsd,
+    status: 'confirmed',
+    createdAt: new Date().toISOString(),
+    onboarding: { paymentReceived: false, contractSigned: false, passportUploaded: false, visaUploaded: false },
+    rentUsd: effectiveRentUsd,
+    rentVnd: effectiveRentVnd,
+    depositAmount: effectiveDeposit,
+    stripeUrl: effectiveStripe,
+    directBooking: true,
+  };
+
+  enquiries.unshift(enq);
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
+  await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
+
+  // Block calendar dates
+  const blocked = JSON.parse(await env.BOOKINGS.get(blockedKey('ta-garden')) || '[]');
+  blocked.push({ start: checkIn, end: checkOut || null, label: `${guestName} — ${room}`, enqId });
+  await env.BOOKINGS.put(blockedKey('ta-garden'), JSON.stringify(blocked));
+
+  // Build and send emails
+  const origin = new URL(request.url).origin;
+  const guestPortalUrl = `${origin}/guest.html?id=${enqId}&p=ta-garden`;
+  const dateRange = checkIn && checkOut ? `${fmt(checkIn)} → ${fmt(checkOut)}` : (checkIn ? `From ${fmt(checkIn)} (ongoing)` : 'TBD');
+  const depositStr = `$${effectiveDeposit || effectiveRentUsd || '?'}`;
+  const totalStr   = stayType === 'monthly' ? 'Monthly' : depositStr;
+  const price      = calcPrice(room, stayType, checkIn, checkOut);
+
+  const guestHtml  = buildDirectBookingGuestEmail({ name: guestName, room, stayType, checkIn, checkOut, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
+  const adminHtml  = buildDirectBookingAdminEmail({ name: guestName, email: guestEmail, phone: guestPhone, room, stayType, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, signature: guestName, enqId });
+  const contractRates = { rentUsd: effectiveRentUsd, rentVnd: effectiveRentVnd, depositAmount: effectiveDeposit };
+  const contractHtml  = buildContractEmail({ ...enq, signature: guestName }, contractRates);
+
+  const emailWork = (async () => {
+    await env.BOOKINGS.put(`contract_${enqId}`, contractHtml);
+    await appendLog(env, enqId, { type: 'booking_confirmed', note: 'Direct booking created by admin (email-first flow).' });
+    await sendAndLog(env, enqId, 'confirmation_email', guestEmail, `Booking Confirmed — ${room} at Ta.Garden`, guestHtml, null);
+    await sendAndLog(env, enqId, 'contract_email', guestEmail, `Your Ta.Garden Rental Agreement — ${room}`, contractHtml, null);
+    await Promise.all(TO_EMAILS.map(to => resend(FROM, to, `New Direct Booking — ${room} (${guestName})`, adminHtml, guestEmail, env)));
+  })().catch(err => console.error('Direct booking email error:', err));
+  if (ctx?.waitUntil) ctx.waitUntil(emailWork);
+
+  return Response.json({ success: true, enqId, message: `Booking confirmed and emails sent to ${guestEmail}.` }, { headers: cors });
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────

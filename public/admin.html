@@ -487,13 +487,20 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <!-- BOOKING LINKS -->
     <div id="pane-bookinglinks" style="display:none">
       <div class="ph">
-        <div class="ph-title serif">Direct Booking Links</div>
-        <div class="ph-sub">Generate a private link for a guest — pre-selects the room, lets them pick dates, calculates price + deposit, and auto-blocks the calendar on confirmation.</div>
+        <div class="ph-title serif">Booking Management</div>
+        <div class="ph-sub">Send a booking confirmation email directly, or generate a private link for the guest to complete their details.</div>
       </div>
 
-      <!-- Create new link form -->
+      <!-- Mode toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button id="blModeEmail" onclick="blSetMode('email')" style="flex:1;padding:10px;border:2px solid var(--teal,#86a2a6);background:var(--teal,#86a2a6);color:#fff;border-radius:6px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;">Send Booking Email</button>
+        <button id="blModeLink" onclick="blSetMode('link')" style="flex:1;padding:10px;border:2px solid var(--border,#ddd5c8);background:transparent;color:var(--mid,#88917d);border-radius:6px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:Arial,sans-serif;">Generate Link Only</button>
+      </div>
+
+      <!-- Create form -->
       <div class="card" style="margin-bottom:20px;">
-        <div class="card-title">Create a Booking Link</div>
+        <div class="card-title" id="blFormTitle">Send Booking Confirmation</div>
+        <p id="blFormDesc" style="font-size:12px;color:var(--mid);margin-bottom:16px;line-height:1.6;">Fill in all guest details — a confirmation email + rental agreement will be sent instantly. The booking will appear as confirmed in your dashboard.</p>
 
         <!-- Enquiry selector -->
         <div class="fg" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border,#ddd5c8);">
@@ -528,6 +535,22 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
             <input class="fc" id="bl-guestemail" placeholder="guest@email.com">
           </div>
         </div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label class="modal-lbl">Guest Phone / WhatsApp (optional)</label>
+          <input class="fc" id="bl-guestphone" placeholder="+84 ...">
+        </div>
+
+        <!-- Dates — shown in email mode -->
+        <div id="blDatesBlock" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="fg">
+            <label class="modal-lbl">Check-in Date</label>
+            <input class="fc" id="bl-checkin" type="date">
+          </div>
+          <div class="fg">
+            <label class="modal-lbl">Check-out Date <span style="color:var(--mid);font-weight:normal;">(leave blank = ongoing)</span></label>
+            <input class="fc" id="bl-checkout" type="date">
+          </div>
+        </div>
 
         <!-- Pricing — VND first -->
         <div style="background:rgba(134,162,166,0.07);padding:14px;border-radius:6px;border:1px solid rgba(134,162,166,0.2);margin-bottom:12px;">
@@ -554,13 +577,13 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <input class="fc" id="bl-stripe" value="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02">
         </div>
         <div class="fg" style="margin-bottom:16px;">
-          <label class="modal-lbl">Personal Note to Guest (shown on booking page)</label>
+          <label class="modal-lbl">Personal Note to Guest</label>
           <input class="fc" id="bl-notes" placeholder="Looking forward to hosting you! Let us know if you have any questions.">
         </div>
-        <button class="btn-confirm-send" onclick="createBookingLink()" id="blCreateBtn">Generate Link →</button>
+        <button class="btn-confirm-send" onclick="blSubmit()" id="blCreateBtn">Send Booking Email →</button>
         <div class="status-msg" id="blStatus" style="margin-top:10px;min-height:16px;"></div>
         <div id="blResult" style="display:none;margin-top:16px;padding:14px 16px;background:var(--bg-light,#f0ebe4);border-radius:6px;border:1px solid var(--border,#ddd5c8);">
-          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:8px;">Booking Link Generated</div>
+          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:8px;" id="blResultLabel">Booking Link Generated</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <input class="fc" id="blResultUrl" readonly style="flex:1;min-width:200px;font-size:12px;background:#fff;">
             <button class="btn-confirm-send" onclick="copyBlLink()" style="white-space:nowrap;">Copy Link</button>
@@ -1159,13 +1182,16 @@ async function openProfileModal(id) {
   document.getElementById('profileModalBody').innerHTML = '<div class="loading">Loading…</div>';
   document.getElementById('profileOverlay').classList.add('open');
 
-  let profile = null;
+  let profile = null, activityLog = [], hasContract = false;
   try {
     const [pr, payr] = await Promise.all([
       fetch(`/api/admin/guest-profile?id=${id}`, { headers: { 'x-admin-secret': secret } }),
       fetch(`/api/admin/payments?id=${id}`, { headers: { 'x-admin-secret': secret } }),
     ]);
-    profile = (await pr.json()).profile;
+    const pd = await pr.json();
+    profile = pd.profile;
+    activityLog = pd.log || [];
+    hasContract = pd.hasContract || false;
     profilePayments = (await payr.json()).payments || [];
   } catch {}
 
@@ -1250,7 +1276,39 @@ async function openProfileModal(id) {
     </div>
   </div>`;
 
-  document.getElementById('profileModalBody').innerHTML = checklistHtml + portalHtml + profileHtml + paymentsHtml;
+  const contractSection = hasContract
+    ? `<div class="profile-section">
+        <div class="profile-section-title">Rental Agreement</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:13px;color:var(--stone);">Contract on file ✓</span>
+          <button onclick="viewContract('${id}')" style="padding:6px 14px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Contract</button>
+        </div>
+      </div>`
+    : `<div class="profile-section">
+        <div class="profile-section-title">Rental Agreement</div>
+        <div style="font-size:13px;color:var(--mid);">No contract on file yet.</div>
+      </div>`;
+
+  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded' };
+  const logSection = `<div class="profile-section">
+    <div class="profile-section-title">Activity Log</div>
+    ${activityLog.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${activityLog.map(e => {
+      const ts = e.at ? new Date(e.at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+      const label = logTypeLabels[e.type] || e.type;
+      const statusBadge = e.emailStatus ? (e.emailStatus === 'sent' ? ' <span style="color:#4caf50;font-size:10px;font-family:Arial,sans-serif;">✓ sent</span>' : ' <span style="color:#c0392b;font-size:10px;font-family:Arial,sans-serif;">✗ failed</span>') : '';
+      return `<div style="padding:10px 12px;background:var(--bg-light,#f0ebe4);border-radius:4px;border-left:3px solid var(--teal,#86a2a6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:600;color:var(--stone,#3a3a2a);">${label}${statusBadge}</span>
+          <span style="font-size:10px;color:var(--mid,#88917d);">${ts}</span>
+        </div>
+        ${e.note ? `<div style="font-size:12px;color:var(--mid,#88917d);margin-top:4px;">${e.note}</div>` : ''}
+        ${e.to ? `<div style="font-size:11px;color:var(--mid,#88917d);margin-top:2px;">→ ${e.to}</div>` : ''}
+      </div>`;
+    }).join('')}</div>`
+    : '<div style="font-size:13px;color:var(--mid);">No activity logged yet.</div>'}
+  </div>`;
+
+  document.getElementById('profileModalBody').innerHTML = checklistHtml + portalHtml + contractSection + logSection + profileHtml + paymentsHtml;
 }
 
 function renderPayList() {
@@ -1335,6 +1393,19 @@ async function toggleOnboarding(id, field, value) {
 
 function copyPortalLink(url) {
   navigator.clipboard.writeText(url).then(() => alert('Guest portal link copied!')).catch(() => prompt('Copy this link:', url));
+}
+
+async function viewContract(id) {
+  try {
+    const r = await fetch(`/api/admin/contract?id=${id}`, { headers: { 'x-admin-secret': secret } });
+    if (!r.ok) { alert('Contract not found.'); return; }
+    const html = await r.text();
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+  } catch (e) {
+    alert('Failed to load contract: ' + e.message);
+  }
 }
 
 // ── Timeline ──────────────────────────────────────────────────────────────────
@@ -2321,7 +2392,91 @@ function blPopulateEnquiryDropdown() {
     pending.map(e => `<option value="${e.id}">${e.name} — ${(e.room||'').replace('The ','')} (${e.stayType||'monthly'})</option>`).join('');
 }
 
-async function createBookingLink() {
+let blMode = 'email';
+
+function blSetMode(mode) {
+  blMode = mode;
+  const isEmail = mode === 'email';
+  document.getElementById('blModeEmail').style.background  = isEmail ? 'var(--teal,#86a2a6)' : 'transparent';
+  document.getElementById('blModeEmail').style.color       = isEmail ? '#fff' : 'var(--mid,#88917d)';
+  document.getElementById('blModeEmail').style.borderColor = isEmail ? 'var(--teal,#86a2a6)' : 'var(--border,#ddd5c8)';
+  document.getElementById('blModeLink').style.background   = !isEmail ? 'var(--teal,#86a2a6)' : 'transparent';
+  document.getElementById('blModeLink').style.color        = !isEmail ? '#fff' : 'var(--mid,#88917d)';
+  document.getElementById('blModeLink').style.borderColor  = !isEmail ? 'var(--teal,#86a2a6)' : 'var(--border,#ddd5c8)';
+  document.getElementById('blFormTitle').textContent       = isEmail ? 'Send Booking Confirmation' : 'Create a Booking Link';
+  document.getElementById('blFormDesc').textContent        = isEmail
+    ? 'Fill in all guest details — a confirmation email + rental agreement will be sent instantly. The booking will appear as confirmed in your dashboard.'
+    : 'Generate a private link for the guest to complete their own details and pick dates. Share the link manually.';
+  document.getElementById('blDatesBlock').style.display    = isEmail ? 'grid' : 'none';
+  document.getElementById('blCreateBtn').textContent       = isEmail ? 'Send Booking Email →' : 'Generate Link →';
+  document.getElementById('blResult').style.display = 'none';
+  document.getElementById('blStatus').textContent = '';
+}
+
+async function blSubmit() {
+  if (blMode === 'email') { await blSendEmail(); } else { await blGenerateLink(); }
+}
+
+async function blSendEmail() {
+  const btn    = document.getElementById('blCreateBtn');
+  const status = document.getElementById('blStatus');
+  const result = document.getElementById('blResult');
+  result.style.display = 'none';
+
+  const guestName  = document.getElementById('bl-guestname').value.trim();
+  const guestEmail = document.getElementById('bl-guestemail').value.trim();
+  const checkIn    = document.getElementById('bl-checkin').value;
+  const room       = document.getElementById('bl-room').value;
+  if (!guestName || !guestEmail || !checkIn || !room) {
+    status.style.color = 'var(--red,#c0392b)';
+    status.textContent = 'Guest name, email, room, and check-in date are required.';
+    return;
+  }
+
+  status.style.color = 'var(--mid)';
+  status.textContent = 'Sending…';
+  btn.disabled = true;
+
+  const rentUsd = document.getElementById('bl-rentusd').value;
+  const rentVnd = document.getElementById('bl-rentvnd').value;
+  const deposit = document.getElementById('bl-deposit').value;
+  const payload = {
+    room,
+    stayType:      document.getElementById('bl-staytype').value,
+    guestName,
+    guestEmail,
+    guestPhone:    document.getElementById('bl-guestphone').value.trim(),
+    checkIn,
+    checkOut:      document.getElementById('bl-checkout').value || null,
+    stripeUrl:     document.getElementById('bl-stripe').value.trim(),
+    notes:         document.getElementById('bl-notes').value.trim(),
+    rentUsd:       rentUsd ? Number(rentUsd) : undefined,
+    rentVnd:       rentVnd ? Number(rentVnd) : undefined,
+    depositAmount: deposit ? Number(deposit) : undefined,
+  };
+
+  try {
+    const r = await fetch('/api/admin/direct-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Unknown error');
+
+    status.style.color = 'var(--teal)';
+    status.textContent = `Done! Booking confirmed and emails sent to ${guestEmail}.`;
+    result.style.display = 'none';
+    await loadCurrentProperty(currentProp.id);
+    renderStats();
+  } catch (err) {
+    status.style.color = 'var(--red,#c0392b)';
+    status.textContent = 'Error: ' + err.message;
+  }
+  btn.disabled = false;
+}
+
+async function blGenerateLink() {
   const btn    = document.getElementById('blCreateBtn');
   const status = document.getElementById('blStatus');
   const result = document.getElementById('blResult');
@@ -2354,13 +2509,14 @@ async function createBookingLink() {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Unknown error');
 
+    document.getElementById('blResultLabel').textContent = 'Booking Link Generated';
     document.getElementById('blResultUrl').value = d.url;
     result.style.display = 'block';
     status.style.color = 'var(--teal)';
     status.textContent = 'Link created!';
     loadBookingLinks();
   } catch (err) {
-    status.style.color = 'var(--red, #c0392b)';
+    status.style.color = 'var(--red,#c0392b)';
     status.textContent = 'Error: ' + err.message;
   }
   btn.disabled = false;

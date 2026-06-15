@@ -1630,6 +1630,27 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
         </tr>`).join('')}
       </table>
 
+      <!-- Location -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
+        <tr>
+          <td style="padding:16px 20px;border-bottom:1px solid rgba(136,145,125,0.15);">
+            <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;">How to Find Us</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 20px;">
+            <div style="font-size:13px;color:#1a1a18;font-family:Arial,sans-serif;line-height:1.7;margin-bottom:10px;">
+              <strong>K570/24</strong><br>
+              Thành phố Đà Nẵng, Phường Hội An<br>
+              Cam Nam Island, Vietnam
+            </div>
+            <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;margin-bottom:4px;">GPS coordinates (recommended — Google Maps cannot find the street address directly):</div>
+            <div style="font-size:13px;color:#1a1a18;font-family:Georgia,serif;margin-bottom:12px;">15.867740, 108.355771</div>
+            <a href="https://goo.gl/maps/78FMqsqrDY1dFiAE8" style="display:inline-block;padding:10px 20px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;">Open in Google Maps →</a>
+          </td>
+        </tr>
+      </table>
+
       <!-- Buttons -->
       ${guestPortalUrl ? `<a href="${guestPortalUrl}" class="btn" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;font-family:Arial,sans-serif;">Complete Guest Profile →</a>` : ''}
       ${(enq.stripeUrl || effectiveDeposit) ? `<a href="${enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02'}" class="btn" style="display:block;text-align:center;padding:16px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay Deposit${effectiveDeposit ? ` — $${effectiveDeposit}` : ''} via Stripe →</a>` : ''}
@@ -2004,7 +2025,7 @@ body{background:#e8e0d5;}
   </td></tr>` : ''}
 
   <!-- What's next -->
-  <tr><td style="padding:0 32px 28px;" class="pad">
+  <tr><td style="padding:0 32px 24px;" class="pad">
     <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">What happens next</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${[
@@ -2018,6 +2039,21 @@ body{background:#e8e0d5;}
         </td>
         <td style="padding-bottom:12px;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.6;vertical-align:top;">${t}</td>
       </tr>`).join('')}
+    </table>
+  </td></tr>
+
+  <!-- Location -->
+  <tr><td style="padding:0 32px 28px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;border:1px solid #ddd5c8;">
+      <tr><td style="padding:16px 20px;border-bottom:1px solid #ddd5c8;">
+        <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;">How to Find Us</p>
+      </td></tr>
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:13px;color:#3a3a2a;line-height:1.7;"><strong>K570/24</strong><br>Thành phố Đà Nẵng, Phường Hội An<br>Cam Nam Island, Vietnam</p>
+        <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:11px;color:#88917d;line-height:1.6;">Google Maps cannot find the street address — use the GPS coordinates below or the map link:</p>
+        <p style="margin:0 0 14px;font-family:Georgia,serif;font-size:14px;color:#3a3a2a;">15.867740, 108.355771</p>
+        <a href="https://goo.gl/maps/78FMqsqrDY1dFiAE8" style="display:inline-block;padding:10px 20px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Open in Google Maps →</a>
+      </td></tr>
     </table>
   </td></tr>
 

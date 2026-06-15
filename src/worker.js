@@ -932,172 +932,403 @@ function buildReviewRequestEmail(enq) {
 // ── Email builders ────────────────────────────────────────────────────────────
 
 function buildAdminEmail({ name, email, phone, room, stayType, stayLabel, dateInfo, checkIn, checkOut, message, price }) {
-  const priceBlock = price ? `
-  <div style="background:#1a1a18;padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-    <div>
-      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Estimated Value</div>
-      <div style="font-family:Georgia,serif;font-size:32px;font-weight:300;color:#ede0d1;">$${price.total.toLocaleString()}</div>
-      <div style="font-size:12px;color:rgba(237,224,209,0.5);margin-top:4px;">${price.breakdown} &nbsp;·&nbsp; ${price.duration}</div>
-    </div>
-    <div style="text-align:right;">
-      <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Rate</div>
-      <div style="font-size:16px;color:#ede0d1;">${price.rate}</div>
-    </div>
-  </div>` : '';
-
   const waBtn = phone
-    ? `<a href="https://wa.me/${phone.replace(/[^0-9]/g,'')}" style="display:inline-block;padding:12px 26px;background:#25D366;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;margin-right:8px;">WhatsApp ${name.split(' ')[0]}</a>`
+    ? `<a href="https://wa.me/${phone.replace(/[^0-9]/g,'')}" style="display:inline-block;padding:14px 24px;background:#25D366;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;margin-bottom:8px;">WhatsApp ${name.split(' ')[0]}</a>&nbsp;`
     : '';
 
-  return `
-<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
-  <div style="background:#1a1a18;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;">
-    <div>
-      <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
-      <div style="font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:#86a2a6;margin-top:3px;">New Booking Enquiry</div>
-    </div>
-    <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(237,224,209,0.35);">${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
-  </div>
-  <div style="padding:28px;background:#f5f0eb;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#1a1a18;margin-bottom:4px;">${room}</div>
-    <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#a0856c;margin-bottom:20px;">${stayLabel}</div>
-    ${priceBlock}
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-      <tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;width:120px;border-bottom:1px solid rgba(136,145,125,0.15);">Guest</td><td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);">${name}</td></tr>
-      <tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">Email</td><td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);"><a href="mailto:${email}" style="color:#a0856c;text-decoration:none;">${email}</a></td></tr>
-      ${phone ? `<tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">WhatsApp</td><td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);"><a href="https://wa.me/${phone.replace(/[^0-9]/g,'')}" style="color:#25D366;text-decoration:none;">${phone}</a></td></tr>` : ''}
-      <tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">Check-in</td><td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);">${fmt(checkIn)}</td></tr>
-      <tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);">Check-out</td><td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);">${checkOut ? fmt(checkOut) : '—'}</td></tr>
-      ${price ? `<tr><td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;">Duration</td><td style="padding:10px 0;font-size:14px;">${price.duration}</td></tr>` : ''}
+  const priceBlock = price ? `
+<tr>
+  <td style="background:#1a1a18;padding:0 0 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="padding:18px 24px;vertical-align:middle;">
+          <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;font-family:Arial,sans-serif;">Estimated Value</div>
+          <div style="font-family:Georgia,serif;font-size:28px;font-weight:300;color:#ede0d1;">$${price.total.toLocaleString()}</div>
+          <div style="font-size:12px;color:rgba(237,224,209,0.5);margin-top:4px;font-family:Arial,sans-serif;">${price.breakdown} &nbsp;·&nbsp; ${price.duration}</div>
+        </td>
+        <td style="padding:18px 24px;vertical-align:middle;text-align:right;">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;font-family:Arial,sans-serif;">Rate</div>
+          <div style="font-size:16px;color:#ede0d1;font-family:Arial,sans-serif;">${price.rate}</div>
+        </td>
+      </tr>
     </table>
-    <div style="background:#fff;border:1px solid rgba(160,133,108,0.3);border-left:4px solid #a0856c;padding:18px 20px;margin-bottom:20px;">
-      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;margin-bottom:10px;">Message from Guest</div>
-      <div style="font-size:15px;line-height:1.8;color:#1a1a18;font-style:${message ? 'normal' : 'italic'};">${message || 'No message provided.'}</div>
-    </div>
-    <div>${waBtn}<a href="mailto:${email}?subject=Re: ${encodeURIComponent(room)}" style="display:inline-block;padding:12px 26px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;">Email ${name.split(' ')[0]}</a></div>
-  </div>
-</div>`;
+  </td>
+</tr>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;font-family:Georgia,serif;}
+@media only screen and (max-width:600px){
+  .w600{width:100%!important;}
+  .pad{padding:20px!important;}
+  .price-right{display:none!important;}
+  .btn{width:100%!important;display:block!important;text-align:center!important;margin-bottom:8px!important;}
+}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e0d5;padding:20px 0;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+
+  <!-- Header -->
+  <tr>
+    <td style="background:#1a1a18;padding:20px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="vertical-align:middle;">
+            <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+            <div style="font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:#86a2a6;margin-top:3px;font-family:Arial,sans-serif;">New Booking Enquiry</div>
+          </td>
+          <td style="vertical-align:middle;text-align:right;">
+            <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(237,224,209,0.35);font-family:Arial,sans-serif;">${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  ${priceBlock}
+
+  <!-- Body -->
+  <tr>
+    <td class="pad" style="padding:28px;background:#f5f0eb;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#1a1a18;margin-bottom:4px;">${room}</div>
+      <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#a0856c;margin-bottom:20px;font-family:Arial,sans-serif;">${stayLabel}</div>
+
+      <!-- Guest details table -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+        <tr>
+          <td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;width:120px;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">Guest</td>
+          <td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">${name}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">Email</td>
+          <td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;"><a href="mailto:${email}" style="color:#a0856c;text-decoration:none;">${email}</a></td>
+        </tr>
+        ${phone ? `<tr>
+          <td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">WhatsApp</td>
+          <td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;"><a href="https://wa.me/${phone.replace(/[^0-9]/g,'')}" style="color:#25D366;text-decoration:none;">${phone}</a></td>
+        </tr>` : ''}
+        <tr>
+          <td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">Check-in</td>
+          <td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">${fmt(checkIn)}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">Check-out</td>
+          <td style="padding:10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.15);font-family:Arial,sans-serif;">${checkOut ? fmt(checkOut) : '—'}</td>
+        </tr>
+        ${price ? `<tr>
+          <td style="padding:10px 0;font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;">Duration</td>
+          <td style="padding:10px 0;font-size:14px;font-family:Arial,sans-serif;">${price.duration}</td>
+        </tr>` : ''}
+      </table>
+
+      <!-- Message block -->
+      <div style="background:#fff;border:1px solid rgba(160,133,108,0.3);border-left:4px solid #a0856c;padding:18px 20px;margin-bottom:20px;">
+        <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;margin-bottom:10px;font-family:Arial,sans-serif;">Message from Guest</div>
+        <div style="font-size:15px;line-height:1.8;color:#1a1a18;font-family:Arial,sans-serif;font-style:${message ? 'normal' : 'italic'};">${message || 'No message provided.'}</div>
+      </div>
+
+      <!-- CTA buttons -->
+      ${waBtn}<a href="mailto:${email}?subject=Re: ${encodeURIComponent(room)}" style="display:inline-block;padding:14px 24px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Email ${name.split(' ')[0]}</a>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#1a1a18;padding:16px 24px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);font-family:Arial,sans-serif;">Questions? hi@soulandlunawellness.com</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildConfirmEmail(enq, customMessage, origin, propertyId) {
   const guestPortalUrl = origin ? `${origin}/guest.html?id=${enq.id}&p=${propertyId || 'ta-garden'}` : null;
   const price = calcPrice(enq.room, enq.stayType, enq.checkIn, enq.checkOut);
-  return `
-<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
-  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
-    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Booking Confirmed</div>
-  </div>
-  <div style="padding:32px;background:#f5f0eb;">
-    <p style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;margin:0 0 20px;">Your booking is confirmed, ${enq.name.split(' ')[0]}.</p>
-    <div style="background:#fff;border:1px solid rgba(136,145,125,0.2);padding:20px;margin-bottom:24px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:4px;">Room</div>
-          <div style="font-size:16px;font-family:Georgia,serif;">${enq.room}</div>
-        </div>
-        ${price ? `<div style="text-align:right;">
-          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:4px;">Estimated Total</div>
-          <div style="font-size:24px;font-family:Georgia,serif;font-weight:300;">$${price.total.toLocaleString()}</div>
-          <div style="font-size:11px;color:#88917d;">${price.breakdown}</div>
-        </div>` : ''}
-      </div>
-      <div style="border-top:1px solid rgba(136,145,125,0.15);padding-top:12px;display:flex;gap:32px;">
-        <div><div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;">Check-in</div><div style="font-size:14px;">${fmt(enq.checkIn)}</div></div>
-        <div><div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;">Check-out</div><div style="font-size:14px;">${fmt(enq.checkOut)}</div></div>
-      </div>
-    </div>
-    ${customMessage ? `<div style="padding:16px;background:#fff;border-left:3px solid #86a2a6;margin-bottom:24px;font-size:14px;line-height:1.8;color:#1a1a18;">${customMessage.replace(/\n/g,'<br>')}</div>` : ''}
-    <div style="margin-bottom:24px;">
-      <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Next Steps</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">01</span><span>Complete your first month's payment to secure your room</span></div>
-        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">02</span><span>Review and sign the Ta.Garden House Agreement (sent separately)</span></div>
-        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">03</span><span>Complete your guest profile — upload passport photo and visa details via your personal link below</span></div>
-        <div style="display:flex;align-items:flex-start;gap:12px;font-size:14px;"><span style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:3px 8px;flex-shrink:0;">04</span><span>We'll confirm check-in details closer to your arrival date</span></div>
-      </div>
-    </div>
-    ${guestPortalUrl ? `<a href="${guestPortalUrl}" style="display:block;text-align:center;padding:15px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;">Complete Guest Profile →</a>` : ''}
-    <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" style="display:block;text-align:center;padding:15px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;">Complete Payment via Stripe →</a>
-  </div>
-  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
-    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Questions? hi@soulandlunawellness.com</div>
-  </div>
-</div>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;font-family:Georgia,serif;}
+@media only screen and (max-width:600px){
+  .w600{width:100%!important;}
+  .pad{padding:20px!important;}
+  .stack-cell{display:block!important;width:100%!important;text-align:left!important;}
+  .btn{display:block!important;text-align:center!important;margin-bottom:10px!important;}
+}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e0d5;padding:20px 0;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+
+  <!-- Header -->
+  <tr>
+    <td style="background:#1a1a18;padding:28px 32px;text-align:center;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+      <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;font-family:Arial,sans-serif;">Booking Confirmed</div>
+    </td>
+  </tr>
+
+  <!-- Body -->
+  <tr>
+    <td class="pad" style="padding:32px;background:#f5f0eb;">
+      <p style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;margin:0 0 20px;">Your booking is confirmed, ${enq.name.split(' ')[0]}.</p>
+
+      <!-- Room + price card -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
+        <tr>
+          <td class="stack-cell" style="padding:20px;vertical-align:top;">
+            <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:4px;font-family:Arial,sans-serif;">Room</div>
+            <div style="font-size:16px;font-family:Georgia,serif;">${enq.room}</div>
+          </td>
+          ${price ? `<td class="stack-cell" style="padding:20px;vertical-align:top;text-align:right;border-left:1px solid rgba(136,145,125,0.15);">
+            <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:4px;font-family:Arial,sans-serif;">Estimated Total</div>
+            <div style="font-size:24px;font-family:Georgia,serif;font-weight:300;">$${price.total.toLocaleString()}</div>
+            <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;">${price.breakdown}</div>
+          </td>` : ''}
+        </tr>
+        <tr>
+          <td colspan="2" style="border-top:1px solid rgba(136,145,125,0.15);padding:0;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding:14px 20px;vertical-align:top;">
+                  <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;font-family:Arial,sans-serif;">Check-in</div>
+                  <div style="font-size:14px;font-family:Arial,sans-serif;">${fmt(enq.checkIn)}</div>
+                </td>
+                <td style="padding:14px 20px;vertical-align:top;border-left:1px solid rgba(136,145,125,0.15);">
+                  <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;margin-bottom:3px;font-family:Arial,sans-serif;">Check-out</div>
+                  <div style="font-size:14px;font-family:Arial,sans-serif;">${fmt(enq.checkOut)}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      ${customMessage ? `<div style="padding:16px;background:#fff;border-left:3px solid #86a2a6;margin-bottom:24px;font-size:14px;line-height:1.8;color:#1a1a18;font-family:Arial,sans-serif;">${customMessage.replace(/\n/g,'<br>')}</div>` : ''}
+
+      <!-- Next steps -->
+      <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;font-family:Arial,sans-serif;">Next Steps</div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+        ${[
+          'Complete your first month\'s payment to secure your room',
+          'Review and sign the Ta.Garden House Agreement (sent separately)',
+          'Complete your guest profile — upload passport photo and visa details via your personal link below',
+          'We\'ll confirm check-in details closer to your arrival date',
+        ].map((step, i) => `<tr>
+          <td width="36" style="padding:0 12px 10px 0;vertical-align:top;">
+            <div style="background:#1a1a18;color:#ede0d1;font-size:10px;padding:4px 8px;font-family:Arial,sans-serif;white-space:nowrap;">0${i+1}</div>
+          </td>
+          <td style="padding-bottom:10px;font-size:14px;line-height:1.6;color:#1a1a18;font-family:Arial,sans-serif;vertical-align:top;">${step}</td>
+        </tr>`).join('')}
+      </table>
+
+      <!-- Buttons -->
+      ${guestPortalUrl ? `<a href="${guestPortalUrl}" class="btn" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;font-family:Arial,sans-serif;">Complete Guest Profile →</a>` : ''}
+      <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" class="btn" style="display:block;text-align:center;padding:16px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;font-family:Arial,sans-serif;">Complete Payment via Stripe →</a>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#1a1a18;padding:16px 32px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);font-family:Arial,sans-serif;">Questions? hi@soulandlunawellness.com</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildMagicLinkEmail(name, loginUrl) {
   const first = name ? name.split(' ')[0] : 'there';
-  return `
-<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
-  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
-    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Cam Nam Island · Hội An, Vietnam</div>
-  </div>
-  <div style="padding:32px;background:#f5f0eb;">
-    <p style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Hello, ${first}.</p>
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;">Here is your secure login link for your Ta.Garden guest portal. This link is valid for 1 hour.</p>
-    <a href="${loginUrl}" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:20px;">Access My Portal →</a>
-    <p style="font-size:12px;color:#88917d;line-height:1.7;border-top:1px solid rgba(136,145,125,0.2);padding-top:16px;">If the button doesn't work, copy this link:<br><span style="color:#86a2a6;word-break:break-all;">${loginUrl}</span></p>
-    <p style="font-size:12px;color:#88917d;margin-top:12px;">Didn't request this? You can safely ignore this email.</p>
-  </div>
-  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
-    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Questions? hi@soulandlunawellness.com</div>
-  </div>
-</div>`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e0d5;padding:20px 0;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+  <tr>
+    <td style="background:#1a1a18;padding:28px 32px;text-align:center;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+      <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;font-family:Arial,sans-serif;">Cam Nam Island · Hội An, Vietnam</div>
+    </td>
+  </tr>
+  <tr>
+    <td class="pad" style="padding:32px;background:#f5f0eb;">
+      <p style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Hello, ${first}.</p>
+      <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;font-family:Arial,sans-serif;">Here is your secure login link for your Ta.Garden guest portal. This link is valid for 1 hour.</p>
+      <a href="${loginUrl}" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:20px;font-family:Arial,sans-serif;">Access My Portal →</a>
+      <p style="font-size:12px;color:#88917d;line-height:1.7;border-top:1px solid rgba(136,145,125,0.2);padding-top:16px;font-family:Arial,sans-serif;">If the button doesn't work, copy this link:<br><span style="color:#86a2a6;word-break:break-all;">${loginUrl}</span></p>
+      <p style="font-size:12px;color:#88917d;margin-top:12px;font-family:Arial,sans-serif;">Didn't request this? You can safely ignore this email.</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#1a1a18;padding:16px 32px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);font-family:Arial,sans-serif;">Questions? hi@soulandlunawellness.com</div>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildDeclineEmail(enq, customMessage) {
-  return `
-<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
-  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
-    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Cam Nam Island · Hội An, Vietnam</div>
-  </div>
-  <div style="padding:32px;background:#f5f0eb;">
-    <p style="font-family:Georgia,serif;font-size:18px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Dear ${enq.name.split(' ')[0]},</p>
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 16px;">Thank you so much for your interest in <strong>${enq.room}</strong> at Ta.Garden. We truly appreciate you taking the time to reach out.</p>
-    ${customMessage
-      ? `<div style="padding:16px;background:#fff;border-left:3px solid #a0856c;margin-bottom:20px;font-size:14px;line-height:1.8;color:#1a1a18;">${customMessage.replace(/\n/g,'<br>')}</div>`
-      : `<p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 16px;">Unfortunately we're unable to accommodate your requested dates at this time.</p>`}
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;">We hope to welcome you to Ta.Garden at another time — please don't hesitate to reach out again.</p>
-    <p style="font-size:14px;color:#4a4a45;margin:0;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
-  </div>
-  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
-    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">hi@soulandlunawellness.com</div>
-  </div>
-</div>`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e0d5;padding:20px 0;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+  <tr>
+    <td style="background:#1a1a18;padding:28px 32px;text-align:center;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+      <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;font-family:Arial,sans-serif;">Cam Nam Island · Hội An, Vietnam</div>
+    </td>
+  </tr>
+  <tr>
+    <td class="pad" style="padding:32px;background:#f5f0eb;">
+      <p style="font-family:Georgia,serif;font-size:18px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Dear ${enq.name.split(' ')[0]},</p>
+      <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 16px;font-family:Arial,sans-serif;">Thank you so much for your interest in <strong>${enq.room}</strong> at Ta.Garden. We truly appreciate you taking the time to reach out.</p>
+      ${customMessage
+        ? `<div style="padding:16px;background:#fff;border-left:3px solid #a0856c;margin-bottom:20px;font-size:14px;line-height:1.8;color:#1a1a18;font-family:Arial,sans-serif;">${customMessage.replace(/\n/g,'<br>')}</div>`
+        : `<p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 16px;font-family:Arial,sans-serif;">Unfortunately we're unable to accommodate your requested dates at this time.</p>`}
+      <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 24px;font-family:Arial,sans-serif;">We hope to welcome you to Ta.Garden at another time — please don't hesitate to reach out again.</p>
+      <p style="font-size:14px;color:#4a4a45;margin:0;font-family:Arial,sans-serif;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#1a1a18;padding:16px 32px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);font-family:Arial,sans-serif;">hi@soulandlunawellness.com</div>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildGuestEmail({ name, room, stayLabel, dateInfo, message }) {
-  return `
-<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;color:#1a1a18;">
-  <div style="background:#1a1a18;padding:28px 32px;text-align:center;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
-    <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;">Cam Nam Island · Hội An, Vietnam</div>
-  </div>
-  <div style="padding:32px;background:#f5f0eb;">
-    <p style="font-family:Georgia,serif;font-size:18px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Dear ${name.split(' ')[0]},</p>
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 14px;">Thank you for reaching out about <strong>${room}</strong> at Ta.Garden. We've received your enquiry and will be in touch within 24 hours via email or WhatsApp.</p>
-    <div style="background:#fff;padding:20px;border:1px solid rgba(136,145,125,0.2);margin:20px 0;">
-      <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Your Enquiry Summary</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;width:100px;border-bottom:1px solid rgba(136,145,125,0.12);">Room</td><td style="padding:7px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);">${room}</td></tr>
-        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.12);">Stay Type</td><td style="padding:7px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);">${stayLabel}</td></tr>
-        <tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;${message?'border-bottom:1px solid rgba(136,145,125,0.12);':''}">Dates</td><td style="padding:7px 0;font-size:14px;${message?'border-bottom:1px solid rgba(136,145,125,0.12);':''}">${dateInfo}</td></tr>
-        ${message ? `<tr><td style="padding:7px 0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;vertical-align:top;">Message</td><td style="padding:7px 0;font-size:14px;line-height:1.7;">${message}</td></tr>` : ''}
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;font-family:Georgia,serif;}
+@media only screen and (max-width:600px){
+  .w600{width:100%!important;}
+  .pad{padding:20px!important;}
+}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e0d5;padding:20px 0;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+
+  <!-- Header -->
+  <tr>
+    <td style="background:#1a1a18;padding:28px 32px;text-align:center;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;letter-spacing:0.08em;">Ta.Garden</div>
+      <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#86a2a6;margin-top:4px;font-family:Arial,sans-serif;">Cam Nam Island · Hội An, Vietnam</div>
+    </td>
+  </tr>
+
+  <!-- Body -->
+  <tr>
+    <td class="pad" style="padding:32px;background:#f5f0eb;">
+      <p style="font-family:Georgia,serif;font-size:18px;font-weight:300;color:#1a1a18;margin:0 0 16px;">Dear ${name.split(' ')[0]},</p>
+      <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 14px;font-family:Arial,sans-serif;">Thank you for reaching out about <strong>${room}</strong> at Ta.Garden. We've received your enquiry and will be in touch within 24 hours via email or WhatsApp.</p>
+
+      <!-- Summary card -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin:20px 0;">
+        <tr>
+          <td style="padding:16px 20px;border-bottom:1px solid rgba(136,145,125,0.12);">
+            <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#88917d;margin-bottom:12px;font-family:Arial,sans-serif;">Your Enquiry Summary</div>
+          </td>
+        </tr>
+        <tr>
+          <td width="110" style="padding:10px 0 10px 20px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.12);font-family:Arial,sans-serif;vertical-align:top;">Room</td>
+          <td style="padding:10px 20px 10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);font-family:Arial,sans-serif;">${room}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0 10px 20px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;border-bottom:1px solid rgba(136,145,125,0.12);font-family:Arial,sans-serif;vertical-align:top;">Stay Type</td>
+          <td style="padding:10px 20px 10px 0;font-size:14px;border-bottom:1px solid rgba(136,145,125,0.12);font-family:Arial,sans-serif;">${stayLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0 ${message ? '10px' : '10px'} 20px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;${message ? 'border-bottom:1px solid rgba(136,145,125,0.12);' : ''}font-family:Arial,sans-serif;vertical-align:top;">Dates</td>
+          <td style="padding:10px 20px 10px 0;font-size:14px;${message ? 'border-bottom:1px solid rgba(136,145,125,0.12);' : ''}font-family:Arial,sans-serif;">${dateInfo}</td>
+        </tr>
+        ${message ? `<tr>
+          <td style="padding:10px 0 10px 20px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;vertical-align:top;">Message</td>
+          <td style="padding:10px 20px 10px 0;font-size:14px;line-height:1.7;font-family:Arial,sans-serif;">${message}</td>
+        </tr>` : ''}
       </table>
-    </div>
-    <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 8px;">We look forward to welcoming you.</p>
-    <p style="font-size:14px;color:#4a4a45;margin:0 0 24px;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
-    <div style="border-top:1px solid rgba(136,145,125,0.2);padding-top:16px;font-size:12px;color:#88917d;line-height:1.7;">
-      Questions? Reply to this email or reach us at <a href="mailto:hi@soulandlunawellness.com" style="color:#a0856c;">hi@soulandlunawellness.com</a>
-    </div>
-  </div>
-  <div style="padding:16px 32px;background:#1a1a18;text-align:center;">
-    <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);">Soul &amp; Luna Wellness · Ta.Garden · Hội An, Vietnam</div>
-  </div>
-</div>`;
+
+      <p style="font-size:14px;line-height:1.8;color:#4a4a45;margin:0 0 8px;font-family:Arial,sans-serif;">We look forward to welcoming you.</p>
+      <p style="font-size:14px;color:#4a4a45;margin:0 0 24px;font-family:Arial,sans-serif;">With warmth,<br><span style="font-family:Georgia,serif;font-size:20px;font-weight:300;color:#1a1a18;">Ta.Garden</span></p>
+      <div style="border-top:1px solid rgba(136,145,125,0.2);padding-top:16px;font-size:12px;color:#88917d;line-height:1.7;font-family:Arial,sans-serif;">
+        Questions? Reply to this email or reach us at <a href="mailto:hi@soulandlunawellness.com" style="color:#a0856c;">hi@soulandlunawellness.com</a>
+      </div>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#1a1a18;padding:16px 32px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(237,224,209,0.4);font-family:Arial,sans-serif;">Soul &amp; Luna Wellness · Ta.Garden · Hội An, Vietnam</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

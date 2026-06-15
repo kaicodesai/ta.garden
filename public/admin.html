@@ -1298,7 +1298,9 @@ async function openProfileModal(id) {
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span style="font-size:13px;color:var(--stone);">Contract on file ✓</span>
           <button onclick="viewContract('${id}')" style="padding:6px 14px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Contract</button>
+          <button onclick="sendContract('${id}')" style="padding:6px 14px;background:#3a3a2a;color:#c8b89a;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Send Contract to Guest</button>
         </div>
+        <p style="margin:8px 0 0;font-size:11px;color:var(--stone);">Only send after deposit is received.</p>
       </div>`
     : `<div class="profile-section">
         <div class="profile-section-title">Rental Agreement</div>
@@ -1421,6 +1423,26 @@ async function viewContract(id) {
     win.document.close();
   } catch (e) {
     alert('Failed to load contract: ' + e.message);
+  }
+}
+
+async function sendContract(id) {
+  if (!confirm('Send the rental agreement to this guest now?\n\nOnly do this after the deposit has been received.')) return;
+  try {
+    const r = await fetch('/api/admin/send-contract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      alert('Contract sent successfully.');
+      openGuestProfile(id);
+    } else {
+      alert('Failed to send contract: ' + (d.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
   }
 }
 

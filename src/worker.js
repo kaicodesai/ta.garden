@@ -104,6 +104,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/direct-booking'  && m === 'POST')   return safeCall(() => adminDirectBooking(request, env, cors, ctx), cors);
     if (p === '/api/admin/activity-log'    && m === 'GET')    return safeCall(() => adminGetActivityLog(request, env, cors), cors);
     if (p === '/api/admin/contract'        && m === 'GET')    return safeCall(() => adminGetContract(request, env, cors), cors);
+    if (p === '/api/admin/send-contract'   && m === 'POST')   return safeCall(() => adminSendContract(request, env, cors), cors);
     if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return safeCall(() => handleBookingLinkConfirm(request, env, cors, ctx), cors);
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
 
@@ -665,6 +666,28 @@ async function adminGetContract(request, env, cors) {
   const html = await env.BOOKINGS.get(`contract_${id}`);
   if (!html) return new Response('Contract not found', { status: 404, headers: cors });
   return new Response(html, { status: 200, headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+async function adminSendContract(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { id } = await request.json().catch(() => ({}));
+  if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
+
+  const [contractHtml, enqIdxRaw] = await Promise.all([
+    env.BOOKINGS.get(`contract_${id}`),
+    env.BOOKINGS.get(`enq_idx_${id}`),
+  ]);
+  if (!contractHtml) return Response.json({ error: 'Contract not found. Create a booking first.' }, { status: 404, headers: cors });
+
+  const propertyId = enqIdxRaw || 'ta-garden';
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(enquiriesKey(propertyId)));
+  const enq = enquiries.find(e => e.id === id);
+  if (!enq) return Response.json({ error: 'Enquiry not found' }, { status: 404, headers: cors });
+
+  const res = await sendAndLog(env, id, 'contract_email', enq.email, `Your Ta.Garden Rental Agreement — ${enq.room}`, contractHtml, null);
+  if (!res?.ok) return Response.json({ success: false, error: 'Email send failed' }, { status: 500, headers: cors });
+
+  return Response.json({ success: true, message: `Contract sent to ${enq.email}.` }, { headers: cors });
 }
 
 // ── Guest: magic link login ───────────────────────────────────────────────────
@@ -1518,14 +1541,13 @@ async function adminDirectBooking(request, env, cors, ctx) {
 
   const emailWork = (async () => {
     await env.BOOKINGS.put(`contract_${enqId}`, contractHtml);
-    await appendLog(env, enqId, { type: 'booking_confirmed', note: 'Direct booking created by admin (email-first flow).' });
+    await appendLog(env, enqId, { type: 'booking_confirmed', note: 'Direct booking created by admin (email-first flow). Contract saved — not yet sent.' });
     await sendAndLog(env, enqId, 'confirmation_email', guestEmail, `Booking Confirmed — ${room} at Ta.Garden`, guestHtml, null);
-    await sendAndLog(env, enqId, 'contract_email', guestEmail, `Your Ta.Garden Rental Agreement — ${room}`, contractHtml, null);
     await Promise.all(TO_EMAILS.map(to => resend(FROM, to, `New Direct Booking — ${room} (${guestName})`, adminHtml, guestEmail, env)));
   })().catch(err => console.error('Direct booking email error:', err));
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
-  return Response.json({ success: true, enqId, message: `Booking confirmed and emails sent to ${guestEmail}.` }, { headers: cors });
+  return Response.json({ success: true, enqId, message: `Booking confirmed. Confirmation sent to ${guestEmail}. Send the contract manually once deposit is received.` }, { headers: cors });
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────

@@ -96,6 +96,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/reset-test'      && m === 'POST')   return safeCall(() => adminResetTest(request, env, cors), cors);
     if (p === '/api/admin/kv-inspect'      && m === 'GET')    return safeCall(() => adminKvInspect(request, env, cors), cors);
     if (p === '/api/admin/kv-repair'       && m === 'POST')   return safeCall(() => adminKvRepair(request, env, cors), cors);
+    if (p === '/api/admin/test-email'      && m === 'POST')   return safeCall(() => adminTestEmail(request, env, cors), cors);
 
     // Direct booking links
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
@@ -1191,6 +1192,32 @@ async function adminCreateTestInquiry(request, env, cors, ctx) {
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
   return Response.json({ success: true, enqId, message: `Test inquiry created for ${email}` }, { headers: cors });
+}
+
+async function adminTestEmail(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const key = env?.RESEND_API_KEY;
+  if (!key) return Response.json({ success: false, error: 'RESEND_API_KEY secret is not set in this Worker environment.', fix: 'Go to Cloudflare Dashboard → Workers & Pages → ta-garden-landing → Settings → Variables & Secrets → add RESEND_API_KEY' }, { status: 500, headers: cors });
+
+  const { to = 'lightofkai777@gmail.com' } = await request.json().catch(() => ({}));
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: FROM,
+      to: [to],
+      subject: '[DIAGNOSTIC] Ta.Garden email test',
+      html: `<p style="font-family:Arial,sans-serif;font-size:14px;">This is a diagnostic test email from Ta.Garden. If you received this, the Resend API key is working correctly.</p><p style="font-family:Arial,sans-serif;font-size:12px;color:#888;">Sent at ${new Date().toISOString()}</p>`,
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  return Response.json({
+    success: res.ok,
+    status: res.status,
+    resendResponse: body,
+    keyPresent: true,
+    keyPrefix: key.slice(0, 6) + '...',
+  }, { headers: cors });
 }
 
 async function adminKvInspect(request, env, cors) {

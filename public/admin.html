@@ -606,6 +606,13 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <button class="btn-confirm-send" onclick="createTestInquiry()" id="testInqBtn" style="background:var(--mid,#88917d);">Create Test Inquiry →</button>
         </div>
         <span id="testInqStatus" style="font-size:12px;color:var(--mid);display:block;margin-bottom:12px;"></span>
+        <div style="padding-top:12px;border-top:1px solid var(--border,#ddd5c8);margin-bottom:12px;">
+          <p style="font-size:11px;color:var(--mid);margin-bottom:8px;letter-spacing:0.05em;">Email Diagnostic — sends a real test email and shows the Resend API response:</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button onclick="testEmailSend()" id="testEmailBtn" style="padding:7px 14px;border:1px solid var(--teal,#86a2a6);background:transparent;color:var(--teal,#86a2a6);border-radius:4px;font-size:11px;cursor:pointer;">Send Test Email →</button>
+          </div>
+          <pre id="testEmailResult" style="display:none;margin-top:10px;padding:10px;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--stone);white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto;"></pre>
+        </div>
         <div style="padding-top:12px;border-top:1px solid var(--border,#ddd5c8);">
           <p style="font-size:11px;color:var(--mid);margin-bottom:8px;letter-spacing:0.05em;">KV Data Repair — use if the enquiries list shows errors or won't load:</p>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -2580,6 +2587,29 @@ function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function testEmailSend() {
+  const btn = document.getElementById('testEmailBtn');
+  const pre = document.getElementById('testEmailResult');
+  pre.style.display = 'block';
+  pre.textContent = 'Sending test email to lightofkai777@gmail.com…';
+  pre.style.color = 'var(--stone)';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/admin/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ to: 'lightofkai777@gmail.com' }),
+    });
+    const d = await r.json();
+    pre.textContent = JSON.stringify(d, null, 2);
+    pre.style.color = d.success ? '#2ecc71' : '#c0392b';
+  } catch (e) {
+    pre.textContent = 'Network error: ' + e.message;
+    pre.style.color = '#c0392b';
+  }
+  btn.disabled = false;
 }
 
 async function kvInspect() {

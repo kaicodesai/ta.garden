@@ -516,6 +516,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
             <option value="The River Room">The River Room (8,500,000 VND · $340/mo)</option>
             <option value="The Balcony Room">The Balcony Room (10,000,000 VND · $400/mo)</option>
             <option value="The Sky Suite">The Sky Suite (17,000,000 VND · $680/mo)</option>
+            <option value="First Floor Room">First Floor Room — Staff (5,000,000 VND/mo)</option>
           </select>
         </div>
         <div class="fg" style="margin-bottom:12px;">
@@ -595,6 +596,28 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <div class="card">
         <div class="card-title">Recent Links</div>
         <div id="blListContainer"><div class="loading">Loading…</div></div>
+      </div>
+
+      <!-- Colt setup -->
+      <div class="card" style="background:rgba(45,90,39,0.04);border:1px solid rgba(45,90,39,0.18);margin-bottom:16px;">
+        <div class="card-title" style="color:#2d5a27;">House Manager Profile — Colt</div>
+        <p style="font-size:13px;color:var(--mid);margin:0 0 14px;line-height:1.6;">Create Colt's First Floor Room profile. Once created, just send him the confirmation email — he'll be able to view his custom contract, e-sign it, and pay from his guest portal.</p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+          <div style="flex:1;min-width:180px;">
+            <label class="modal-lbl">Colt's Full Name</label>
+            <input class="fc" id="colt-name" placeholder="Colt (full name)" style="margin-bottom:0;">
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <label class="modal-lbl">Colt's Email</label>
+            <input class="fc" id="colt-email" type="email" value="Coltcrisp611@gmail.com" style="margin-bottom:0;">
+          </div>
+          <div style="flex:0 0 auto;">
+            <label class="modal-lbl">Move-in Date</label>
+            <input class="fc" id="colt-checkin" type="date" style="margin-bottom:0;">
+          </div>
+        </div>
+        <button class="btn-confirm-send" onclick="setupColt()" id="setupColtBtn" style="background:#2d5a27;">Create Colt's Profile →</button>
+        <span id="coltStatus" style="font-size:12px;color:var(--mid);display:block;margin-top:10px;"></span>
       </div>
 
       <!-- Test utility -->
@@ -2383,6 +2406,7 @@ const BL_ROOM_VND = {
   'The River Room':   { vnd: 8500000,  usd: 340 },
   'The Balcony Room': { vnd: 10000000, usd: 400 },
   'The Sky Suite':    { vnd: 17000000, usd: 680 },
+  'First Floor Room': { vnd: 5000000,  usd: 200 },
 };
 const VND_RATE = 25000;
 
@@ -2694,6 +2718,37 @@ async function kvRepair() {
     pre.style.color = '#c0392b';
   }
   btn.disabled = false;
+}
+
+async function setupColt() {
+  const name     = (document.getElementById('colt-name')?.value || '').trim();
+  const email    = (document.getElementById('colt-email')?.value || '').trim();
+  const checkIn  = document.getElementById('colt-checkin')?.value || '';
+  const st       = document.getElementById('coltStatus');
+  const btn      = document.getElementById('setupColtBtn');
+  if (!name || !email) { st.style.color = '#c0392b'; st.textContent = 'Please enter Colt\'s name and email.'; return; }
+  btn.disabled = true; btn.textContent = 'Creating…'; st.textContent = '';
+  try {
+    const r = await fetch('/api/admin/setup-colt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ name, email, checkIn }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      st.style.color = '#2d5a27';
+      st.textContent = `✓ Profile created (ID: ${d.enqId}). Find Colt in the dashboard — click Confirm when you're ready to send his confirmation email.`;
+      await loadCurrentProperty(currentProp.id);
+      renderStats();
+    } else {
+      st.style.color = '#c0392b';
+      st.textContent = 'Error: ' + (d.error || 'Unknown');
+    }
+  } catch (err) {
+    st.style.color = '#c0392b';
+    st.textContent = 'Network error: ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'Create Colt\'s Profile →';
 }
 
 async function deleteEnquiry(id) {

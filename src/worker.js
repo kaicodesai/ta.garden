@@ -97,6 +97,7 @@ async function handleFetch(request, env, ctx) {
     // Test inquiry (admin only)
     if (p === '/api/admin/test-inquiry'    && m === 'POST')   return safeCall(() => adminCreateTestInquiry(request, env, cors, ctx), cors);
     if (p === '/api/admin/reset-test'      && m === 'POST')   return safeCall(() => adminResetTest(request, env, cors), cors);
+    if (p === '/api/admin/setup-colt'      && m === 'POST')   return safeCall(() => adminSetupColt(request, env, cors), cors);
     if (p === '/api/admin/kv-inspect'      && m === 'GET')    return safeCall(() => adminKvInspect(request, env, cors), cors);
     if (p === '/api/admin/kv-repair'       && m === 'POST')   return safeCall(() => adminKvRepair(request, env, cors), cors);
     if (p === '/api/admin/export'          && m === 'GET')    return safeCall(() => adminExportData(request, env, cors), cors);
@@ -1419,6 +1420,50 @@ async function adminExportData(request, env, cors) {
       'Content-Disposition': `attachment; filename="ta-garden-backup-${new Date().toISOString().slice(0,10)}.json"`,
     },
   });
+}
+
+async function adminSetupColt(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { name, email, checkIn } = await request.json();
+  if (!name || !email) return Response.json({ error: 'name and email required' }, { status: 400, headers: cors });
+
+  // Check if a First Floor Room booking already exists for this email
+  const key = enquiriesKey('ta-garden');
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
+  const existing = enquiries.find(e => e.email?.toLowerCase() === email.toLowerCase() && e.room === 'First Floor Room' && e.status !== 'cancelled');
+  if (existing) return Response.json({ error: 'A First Floor Room profile already exists for this email.' }, { status: 409, headers: cors });
+
+  const enqId = `enq_${Date.now()}`;
+  const enq = {
+    id: enqId, propertyId: 'ta-garden',
+    name, email, phone: '',
+    room: 'First Floor Room',
+    stayType: 'monthly',
+    checkIn: checkIn || null,
+    checkOut: null,
+    message: 'House manager profile — created by admin.',
+    price: 200,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    onboarding: { paymentReceived: false, contractSigned: false, passportUploaded: false, visaUploaded: false },
+    rentUsd: 200,
+    rentVnd: 5000000,
+    depositAmount: 200,
+    directBooking: true,
+  };
+
+  enquiries.unshift(enq);
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
+  await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
+
+  // Pre-build and save Colt's contract to KV (no email sent)
+  const contractHtml = buildColtContractEmail(enq);
+  await env.BOOKINGS.put(`contract_${enqId}`, contractHtml);
+  await appendLog(env, enqId, { type: 'profile_created', note: 'House manager profile created by admin. No emails sent yet.' });
+
+  return Response.json({ success: true, enqId, message: `Profile created for ${name}. Send confirmation when ready.` }, { headers: cors });
 }
 
 async function adminResetTest(request, env, cors) {

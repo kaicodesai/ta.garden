@@ -1876,7 +1876,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
         </tr>
       </table>
 
-      ${effectiveRentUsd ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
+      ${effectiveRentUsd ? (() => { const firstMonthTotal = (effectiveRentUsd || 0) + (effectiveDeposit || 0); return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
   <tr>
     <td style="padding:14px 20px;border-bottom:1px solid rgba(136,145,125,0.15);">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -1886,14 +1886,23 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
     </td>
   </tr>
   <tr>
-    <td style="padding:14px 20px;">
+    <td style="padding:14px 20px;border-bottom:1px solid rgba(136,145,125,0.15);">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;">Deposit Due</td>
-        <td style="text-align:right;font-size:14px;font-family:Georgia,serif;">$${effectiveDeposit} <span style="font-size:11px;color:#88917d;">(1 month)</span></td>
+        <td style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;">Security Deposit</td>
+        <td style="text-align:right;font-size:14px;font-family:Georgia,serif;">$${effectiveDeposit} <span style="font-size:11px;color:#88917d;">(fully refunded on departure)</span></td>
       </tr></table>
     </td>
   </tr>
-</table>` : ''}
+  <tr>
+    <td style="padding:14px 20px;background:#f5f0eb;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#1a1a18;font-family:Arial,sans-serif;font-weight:bold;">Total Due to Move In</td>
+        <td style="text-align:right;font-size:18px;font-family:Georgia,serif;color:#1a1a18;">$${firstMonthTotal.toLocaleString()}</td>
+      </tr></table>
+      <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;text-align:right;margin-top:3px;">First month's rent + security deposit</div>
+    </td>
+  </tr>
+</table>`; })() : ''}
 
       ${customMessage ? `<div style="padding:16px;background:#fff;border-left:3px solid #86a2a6;margin-bottom:24px;font-size:14px;line-height:1.8;color:#1a1a18;font-family:Arial,sans-serif;">${customMessage.replace(/\n/g,'<br>')}</div>` : ''}
 
@@ -1901,8 +1910,8 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;font-family:Arial,sans-serif;">Next Steps</div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
         ${[
-          'Complete your first month\'s payment to secure your room',
-          'Review and sign the Ta.Garden House Agreement (sent separately)',
+          effectiveRentUsd ? `Pay your first month's rent ($${effectiveRentUsd}) + security deposit ($${effectiveDeposit}) to secure your room. Your deposit is fully refunded when you leave.` : 'Complete your first month\'s payment to secure your room.',
+          'Review and sign the Ta.Garden House Agreement (sent separately once your payment is confirmed)',
           'Complete your guest profile — upload passport photo and visa details via your personal link below',
           'We\'ll confirm check-in details closer to your arrival date',
         ].map((step, i) => `<tr>
@@ -2530,18 +2539,24 @@ body{background:#e8e0d5;}
   <!-- Booking summary -->
   <tr><td style="padding:0 32px 24px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
-      ${[
-        ['Room', room],
-        ['Stay Type', stayLabel],
-        ['Dates', dateRange],
-        ['Monthly Rent', totalStr !== 'Monthly' ? totalStr : depositStr],
-        ['Deposit Due', `${depositStr} <span style="font-size:11px;color:#88917d;">(1 month's rent)</span>`],
-      ].map(([k, v], i, a) => `<tr><td style="padding:16px 20px;${i < a.length-1 ? 'border-bottom:1px solid #e0d9d0;' : ''}">
+      ${(() => {
+        const rentAmt = typeof deposit === 'number' ? deposit : 0;
+        const firstMonthTotal = deposit && price?.total ? deposit + (price.total - deposit) : (deposit ? deposit * 2 : null);
+        const rows = [
+          ['Room', room],
+          ['Stay Type', stayLabel],
+          ['Dates', dateRange],
+          ['Monthly Rent', depositStr],
+          ['Security Deposit', `${depositStr} <span style="font-size:11px;color:#88917d;">(fully refunded on departure)</span>`],
+        ];
+        if (deposit) rows.push(['Total Due to Move In', `<strong style="font-size:17px;color:#3a3a2a;">$${(deposit * 2).toLocaleString()}</strong> <span style="font-size:11px;color:#88917d;">first month + deposit</span>`]);
+        return rows.map(([k, v], i, a) => `<tr><td style="padding:16px 20px;${i < a.length-1 ? 'border-bottom:1px solid #e0d9d0;' : ''}${i === a.length-1 ? 'background:rgba(0,0,0,0.04);border-radius:0 0 6px 6px;' : ''}">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">${k}</p></td>
           <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:15px;color:#3a3a2a;">${v}</p></td>
         </tr></table>
-      </td></tr>`).join('')}
+      </td></tr>`).join('');
+      })()}
     </table>
   </td></tr>
 
@@ -2549,10 +2564,14 @@ body{background:#e8e0d5;}
   <tr><td style="padding:0 32px 24px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#3a3a2a;border-radius:6px;padding:20px 24px;">
       <tr><td>
-        <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#c8b89a;letter-spacing:0.1em;text-transform:uppercase;">Step 1 — Pay Your Deposit</p>
-        <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">Your deposit of <strong style="color:#fff;">${depositStr}</strong> is due within 48 hours to fully secure your room.</p>
+        <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#c8b89a;letter-spacing:0.1em;text-transform:uppercase;">Step 1 — Secure Your Room</p>
+        <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">To move in, your first payment covers:</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${depositStr}</strong></td></tr>
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit — <strong style="color:#fff;">${depositStr}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(fully refunded when you leave)</span></td></tr>
+        </table>
         <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-          <a href="${stripeUrl}" style="display:inline-block;padding:14px 36px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Deposit — ${depositStr}</a>
+          <a href="${stripeUrl}" style="display:inline-block;padding:14px 36px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Now — ${deposit ? '$'+(deposit*2).toLocaleString() : depositStr}</a>
         </td></tr></table>
         <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Secure payment via Stripe</p>
       </td></tr>
@@ -2587,7 +2606,7 @@ body{background:#e8e0d5;}
     <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">What happens next</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${[
-        ['01', 'Pay your deposit via Stripe to secure your room'],
+        ['01', `Pay your first month's rent + security deposit via Stripe to secure your room. Your deposit is fully refunded when you leave.`],
         ['02', 'Open your Guest Portal to sign your contract and upload your documents'],
         ['03', 'We\'ll send you a payment reminder a few days before each monthly due date'],
         ['04', 'We\'ll reach out closer to your move-in date with arrival details'],

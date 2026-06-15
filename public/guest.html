@@ -424,7 +424,7 @@ function renderProfileSection() {
         <div class="profile-field"><span class="profile-key">Visa Document</span><span class="profile-val" style="color:${p.visaUploaded?'var(--green)':'var(--mid)'};">${p.visaUploaded ? 'Uploaded ✓' : 'Not uploaded'}</span></div>
         ${p.son && p.son.fullName ? `
         <div style="grid-column:1/-1;padding-top:12px;border-top:1px solid var(--border,#ddd5c8);margin-top:4px;">
-          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);margin-bottom:8px;">Dependent / Son</div>
+          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);margin-bottom:8px;">Additional Party</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <div class="profile-field"><span class="profile-key">Full Name</span><span class="profile-val">${p.son.fullName || '—'}</span></div>
             <div class="profile-field"><span class="profile-key">Date of Birth</span><span class="profile-val">${fmt(p.son.dateOfBirth)}</span></div>
@@ -456,9 +456,9 @@ function renderProfileSection() {
         <div class="fg full"><label class="fl">Relationship</label><input type="text" class="fc" id="pf-emRel" placeholder="e.g. Partner, Parent"></div>
       </div>
           <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border,#ddd5c8);">
-            <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--mid);margin-bottom:14px;">Dependent / Son (if applicable)</div>
+            <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--mid);margin-bottom:14px;">Additional Party (if applicable)</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <div class="form-group"><label class="form-label">Full Name</label><input id="pf-sonName" class="form-input" type="text" placeholder="Son's full name"></div>
+              <div class="form-group"><label class="form-label">Full Name</label><input id="pf-sonName" class="form-input" type="text" placeholder="Full name"></div>
               <div class="form-group"><label class="form-label">Date of Birth</label><input id="pf-sonDob" class="form-input" type="date"></div>
               <div class="form-group"><label class="form-label">Nationality</label><input id="pf-sonNationality" class="form-input" type="text" placeholder="Nationality"></div>
               <div class="form-group"><label class="form-label">Passport Number</label><input id="pf-sonPassport" class="form-input" type="text" placeholder="Passport number"></div>

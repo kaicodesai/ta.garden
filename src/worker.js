@@ -94,6 +94,8 @@ async function handleFetch(request, env, ctx) {
     // Test inquiry (admin only)
     if (p === '/api/admin/test-inquiry'    && m === 'POST')   return safeCall(() => adminCreateTestInquiry(request, env, cors, ctx), cors);
     if (p === '/api/admin/reset-test'      && m === 'POST')   return safeCall(() => adminResetTest(request, env, cors), cors);
+    if (p === '/api/admin/kv-inspect'      && m === 'GET')    return safeCall(() => adminKvInspect(request, env, cors), cors);
+    if (p === '/api/admin/kv-repair'       && m === 'POST')   return safeCall(() => adminKvRepair(request, env, cors), cors);
 
     // Direct booking links
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
@@ -151,6 +153,18 @@ async function safeCall(fn, cors) {
   } catch (err) {
     console.error('Admin route error:', err);
     return Response.json({ error: String(err), stack: err?.stack }, { status: 500, headers: cors });
+  }
+}
+
+// ── Safe JSON parse ───────────────────────────────────────────────────────────
+
+function safeJsonParse(raw, fallback = []) {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('safeJsonParse failed:', e.message, '| raw preview:', String(raw).slice(0, 200));
+    return fallback;
   }
 }
 
@@ -307,7 +321,7 @@ async function adminUpdateEnquiry(request, env, cors) {
   const { id, status, propertyId = 'ta-garden' } = await request.json();
   const key = enquiriesKey(propertyId);
   const val = await env.BOOKINGS.get(key);
-  const enquiries = val ? JSON.parse(val) : [];
+  const enquiries = safeJsonParse(val);
   const idx = enquiries.findIndex(e => e.id === id);
   if (idx === -1) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
   enquiries[idx].status = status;
@@ -365,7 +379,7 @@ async function adminNotify(request, env, cors) {
   const { enquiryId, propertyId = 'ta-garden', action, customMessage, rentUsd, rentVnd, depositAmount } = await request.json();
   const key = enquiriesKey(propertyId);
   const val = await env.BOOKINGS.get(key);
-  const enquiries = val ? JSON.parse(val) : [];
+  const enquiries = safeJsonParse(val);
   const idx = enquiries.findIndex(e => e.id === enquiryId);
   if (idx === -1) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
 
@@ -408,7 +422,7 @@ async function adminSaveNote(request, env, cors) {
   const { id, note, propertyId = 'ta-garden' } = await request.json();
   const key = enquiriesKey(propertyId);
   const val = await env.BOOKINGS.get(key);
-  const enquiries = val ? JSON.parse(val) : [];
+  const enquiries = safeJsonParse(val);
   const idx = enquiries.findIndex(e => e.id === id);
   if (idx >= 0) {
     enquiries[idx].note = note;
@@ -426,7 +440,7 @@ async function adminBlock(request, env, cors) {
   const { start, end, reason, roomId, propertyId = 'ta-garden' } = await request.json();
   const key    = blockedKey(propertyId);
   const val    = await env.BOOKINGS.get(key);
-  const ranges = val ? JSON.parse(val) : [];
+  const ranges = safeJsonParse(val);
   const id     = `block_${Date.now()}`;
   ranges.push({ id, start, end, reason: reason || 'Blocked', roomId: roomId || 'all' });
   await env.BOOKINGS.put(key, JSON.stringify(ranges));
@@ -440,7 +454,7 @@ async function adminUnblock(request, env, cors) {
   const { id, propertyId = 'ta-garden' } = await request.json();
   const key    = blockedKey(propertyId);
   const val    = await env.BOOKINGS.get(key);
-  const ranges = val ? JSON.parse(val) : [];
+  const ranges = safeJsonParse(val);
   await env.BOOKINGS.put(key, JSON.stringify(ranges.filter(r => r.id !== id)));
   return Response.json({ success: true }, { headers: cors });
 }
@@ -508,7 +522,7 @@ async function handleGuestGet(request, env, cors) {
 
 async function guestPortalData(enquiryId, propId, env, cors) {
   const val = await env.BOOKINGS.get(enquiriesKey(propId));
-  const list = val ? JSON.parse(val) : [];
+  const list = safeJsonParse(val);
   const enq = list.find(e => e.id === enquiryId);
   if (!enq) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
 
@@ -555,7 +569,7 @@ async function handleGuestSubmit(request, env, cors, ctx) {
     // Update onboarding flags on the enquiry
     const key = enquiriesKey(propertyId);
     const val = await env.BOOKINGS.get(key);
-    const enquiries = val ? JSON.parse(val) : [];
+    const enquiries = safeJsonParse(val);
     const idx = enquiries.findIndex(e => e.id === id);
     if (idx >= 0) {
       enquiries[idx].onboarding = {
@@ -605,7 +619,7 @@ async function adminUpdateOnboarding(request, env, cors) {
 
   const key = enquiriesKey(propertyId);
   const val = await env.BOOKINGS.get(key);
-  const enquiries = val ? JSON.parse(val) : [];
+  const enquiries = safeJsonParse(val);
   const idx = enquiries.findIndex(e => e.id === id);
   if (idx === -1) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
 
@@ -665,7 +679,7 @@ async function handleGuestRequestLogin(request, env, cors, ctx) {
   let foundEnq = null, foundPropId = null;
   for (const prop of props) {
     const val = await env.BOOKINGS.get(enquiriesKey(prop.id));
-    const enquiries = val ? JSON.parse(val) : [];
+    const enquiries = safeJsonParse(val);
     const match = enquiries.find(e => e.email?.toLowerCase() === email.toLowerCase() && e.status !== 'cancelled');
     if (match) { foundEnq = match; foundPropId = prop.id; break; }
   }
@@ -714,7 +728,7 @@ async function adminRecordPayment(request, env, cors) {
 
   const key = `payments__${enquiryId}`;
   const raw = await env.BOOKINGS.get(key);
-  const payments = raw ? JSON.parse(raw) : [];
+  const payments = safeJsonParse(raw);
   const id = `pay_${Date.now()}`;
   const payDate = date || new Date().toISOString().split('T')[0];
   payments.unshift({ id, amount: Number(amount), currency, date: payDate, note: note || '', recordedAt: new Date().toISOString() });
@@ -732,7 +746,7 @@ async function adminDeletePayment(request, env, cors) {
 
   const key = `payments__${enquiryId}`;
   const raw = await env.BOOKINGS.get(key);
-  const payments = raw ? JSON.parse(raw) : [];
+  const payments = safeJsonParse(raw);
   await env.BOOKINGS.put(key, JSON.stringify(payments.filter(p => p.id !== id)));
   return Response.json({ success: true }, { headers: cors });
 }
@@ -743,7 +757,7 @@ async function handleGalleryGet(request, env, cors) {
   const room = new URL(request.url).searchParams.get('room') || 'river-room';
   if (!env.BOOKINGS) return Response.json({ images: [] }, { headers: cors });
   const raw = await env.BOOKINGS.get(`gallery__${room}`);
-  const images = raw ? JSON.parse(raw) : [];
+  const images = safeJsonParse(raw);
   return Response.json({ images }, { headers: cors });
 }
 
@@ -758,7 +772,7 @@ async function adminGalleryAdd(request, env, cors) {
 
   const key = `gallery__${room}`;
   const raw = await env.BOOKINGS.get(key);
-  const images = raw ? JSON.parse(raw) : [];
+  const images = safeJsonParse(raw);
   const id = `img_${Date.now()}`;
   images.push({ id, data, alt: alt || '' });
   await env.BOOKINGS.put(key, JSON.stringify(images));
@@ -774,7 +788,7 @@ async function adminGalleryDelete(request, env, cors) {
 
   const key = `gallery__${room}`;
   const raw = await env.BOOKINGS.get(key);
-  const images = raw ? JSON.parse(raw) : [];
+  const images = safeJsonParse(raw);
   await env.BOOKINGS.put(key, JSON.stringify(images.filter(img => img.id !== id)));
   return Response.json({ success: true }, { headers: cors });
 }
@@ -873,7 +887,7 @@ async function runEmailAutomation(env) {
     const raw = await env.BOOKINGS.get(key);
     if (!raw) continue;
 
-    const enquiries = JSON.parse(raw);
+    const enquiries = safeJsonParse(raw);
     let changed = false;
 
     for (const enq of enquiries) {
@@ -1143,7 +1157,7 @@ async function adminCreateTestInquiry(request, env, cors, ctx) {
 
   const enqId = `enq_test_${Date.now()}`;
   const key   = enquiriesKey('ta-garden');
-  const existing = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+  const existing = safeJsonParse(await env.BOOKINGS.get(key));
 
   // Remove any previous test inquiry with the same email to keep it clean
   const filtered = existing.filter(e => !(e.email === email && e.id.startsWith('enq_test_')));
@@ -1179,13 +1193,63 @@ async function adminCreateTestInquiry(request, env, cors, ctx) {
   return Response.json({ success: true, enqId, message: `Test inquiry created for ${email}` }, { headers: cors });
 }
 
+async function adminKvInspect(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const key = new URL(request.url).searchParams.get('key') || 'enquiries';
+  const raw = await env.BOOKINGS.get(key);
+  if (!raw) return Response.json({ key, status: 'empty', length: 0 }, { headers: cors });
+  let parsed = null, parseError = null;
+  try { parsed = JSON.parse(raw); } catch (e) { parseError = e.message; }
+  return Response.json({
+    key,
+    status: parseError ? 'corrupted' : 'ok',
+    length: raw.length,
+    preview: raw.slice(0, 500),
+    parseError,
+    count: Array.isArray(parsed) ? parsed.length : null,
+  }, { headers: cors });
+}
+
+async function adminKvRepair(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { key = 'enquiries' } = await request.json().catch(() => ({}));
+  const raw = await env.BOOKINGS.get(key);
+  if (!raw) return Response.json({ key, status: 'empty — nothing to repair' }, { headers: cors });
+
+  // Try to parse as-is
+  try {
+    JSON.parse(raw);
+    return Response.json({ key, status: 'already valid JSON — no repair needed' }, { headers: cors });
+  } catch {}
+
+  // Try to salvage individual objects from a truncated array
+  const salvaged = [];
+  const objPattern = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
+  let match;
+  while ((match = objPattern.exec(raw)) !== null) {
+    try {
+      const obj = JSON.parse(match[0]);
+      if (obj.id && obj.email) salvaged.push(obj);
+    } catch {}
+  }
+
+  if (salvaged.length > 0) {
+    await env.BOOKINGS.put(key, JSON.stringify(salvaged));
+    return Response.json({ key, status: 'repaired', salvaged: salvaged.length, ids: salvaged.map(e => e.id) }, { headers: cors });
+  }
+
+  // Nothing salvageable — reset to empty array
+  await env.BOOKINGS.put(key, '[]');
+  return Response.json({ key, status: 'reset to empty — no valid entries could be salvaged', originalLength: raw.length }, { headers: cors });
+}
+
 async function adminResetTest(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const TEST_EMAIL = 'lightofkai777@gmail.com';
   const key = enquiriesKey('ta-garden');
-  const existing = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+  const existing = safeJsonParse(await env.BOOKINGS.get(key));
 
   // Find all enquiries for the test email
   const toRemove = existing.filter(e => e.email === TEST_EMAIL);
@@ -1207,7 +1271,7 @@ async function adminResetTest(request, env, cors) {
 
   // Remove from blocked ranges if any enqId matches
   const removedIds = new Set(toRemove.map(e => e.id));
-  const blocked = JSON.parse(await env.BOOKINGS.get(blockedKey('ta-garden')) || '[]');
+  const blocked = safeJsonParse(await env.BOOKINGS.get(blockedKey('ta-garden')));
   const cleanedBlocked = blocked.filter(b => !removedIds.has(b.enqId));
   await env.BOOKINGS.put(blockedKey('ta-garden'), JSON.stringify(cleanedBlocked));
 
@@ -1232,7 +1296,7 @@ async function adminCreateBookingLink(request, env, cors) {
   await env.BOOKINGS.put(`booking_link_${token}`, JSON.stringify(link), { expirationTtl: expiryDays * 86400 });
 
   // Keep an index of all links for admin listing
-  const idx = JSON.parse(await env.BOOKINGS.get('booking_links_idx') || '[]');
+  const idx = safeJsonParse(await env.BOOKINGS.get('booking_links_idx'));
   idx.unshift({ token, room, guestName, guestEmail, createdAt: link.createdAt, status: 'pending' });
   await env.BOOKINGS.put('booking_links_idx', JSON.stringify(idx.slice(0, 100)));
 
@@ -1242,7 +1306,7 @@ async function adminCreateBookingLink(request, env, cors) {
 
 async function adminListBookingLinks(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
-  const idx = JSON.parse(await env.BOOKINGS.get('booking_links_idx') || '[]');
+  const idx = safeJsonParse(await env.BOOKINGS.get('booking_links_idx'));
   return Response.json({ links: idx }, { headers: cors });
 }
 
@@ -1294,7 +1358,7 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   // Save as a confirmed enquiry
   const enqId = `enq_${Date.now()}`;
   const key = enquiriesKey('ta-garden');
-  const enquiries = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
   const effectiveRentUsd = link.rentUsd || rates.monthly || null;
   enquiries.unshift({
     id: enqId, propertyId: 'ta-garden',
@@ -1317,7 +1381,7 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
 
   // Block the dates
-  const blocked = JSON.parse(await env.BOOKINGS.get(blockedKey('ta-garden')) || '[]');
+  const blocked = safeJsonParse(await env.BOOKINGS.get(blockedKey('ta-garden')));
   blocked.push({ start: checkIn, end: checkOut, label: `${name} — ${link.room}`, enqId });
   await env.BOOKINGS.put(blockedKey('ta-garden'), JSON.stringify(blocked));
 
@@ -1328,7 +1392,7 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   await env.BOOKINGS.put(`booking_link_${token}`, JSON.stringify(link));
 
   // Update index
-  const idx = JSON.parse(await env.BOOKINGS.get('booking_links_idx') || '[]');
+  const idx = safeJsonParse(await env.BOOKINGS.get('booking_links_idx'));
   const li = idx.find(l => l.token === token);
   if (li) { li.status = 'confirmed'; li.confirmedAt = link.confirmedAt; }
   await env.BOOKINGS.put('booking_links_idx', JSON.stringify(idx));
@@ -1385,7 +1449,7 @@ async function adminDirectBooking(request, env, cors, ctx) {
 
   const enqId = `enq_${Date.now()}`;
   const key   = enquiriesKey('ta-garden');
-  const enquiries = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
 
   const enq = {
     id: enqId, propertyId: 'ta-garden',
@@ -1408,7 +1472,7 @@ async function adminDirectBooking(request, env, cors, ctx) {
   await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
 
   // Block calendar dates
-  const blocked = JSON.parse(await env.BOOKINGS.get(blockedKey('ta-garden')) || '[]');
+  const blocked = safeJsonParse(await env.BOOKINGS.get(blockedKey('ta-garden')));
   blocked.push({ start: checkIn, end: checkOut || null, label: `${guestName} — ${room}`, enqId });
   await env.BOOKINGS.put(blockedKey('ta-garden'), JSON.stringify(blocked));
 

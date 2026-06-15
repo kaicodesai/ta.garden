@@ -605,7 +605,15 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <button class="btn-confirm-send" onclick="resetTestGuest()" id="resetTestBtn" style="background:#c0392b;">Reset Test Guest →</button>
           <button class="btn-confirm-send" onclick="createTestInquiry()" id="testInqBtn" style="background:var(--mid,#88917d);">Create Test Inquiry →</button>
         </div>
-        <span id="testInqStatus" style="font-size:12px;color:var(--mid);"></span>
+        <span id="testInqStatus" style="font-size:12px;color:var(--mid);display:block;margin-bottom:12px;"></span>
+        <div style="padding-top:12px;border-top:1px solid var(--border,#ddd5c8);">
+          <p style="font-size:11px;color:var(--mid);margin-bottom:8px;letter-spacing:0.05em;">KV Data Repair — use if the enquiries list shows errors or won't load:</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button onclick="kvInspect()" style="padding:7px 14px;border:1px solid var(--border,#ddd5c8);background:transparent;color:var(--mid);border-radius:4px;font-size:11px;cursor:pointer;">Inspect KV →</button>
+            <button onclick="kvRepair()" id="kvRepairBtn" style="padding:7px 14px;border:1px solid #c0392b;background:transparent;color:#c0392b;border-radius:4px;font-size:11px;cursor:pointer;">Repair &amp; Fix KV →</button>
+          </div>
+          <pre id="kvInspectResult" style="display:none;margin-top:10px;padding:10px;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--stone);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow:auto;"></pre>
+        </div>
       </div>
     </div>
 
@@ -2572,6 +2580,46 @@ function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function kvInspect() {
+  const pre = document.getElementById('kvInspectResult');
+  pre.style.display = 'block';
+  pre.textContent = 'Inspecting…';
+  try {
+    const r = await fetch('/api/admin/kv-inspect?key=enquiries', { headers: { 'x-admin-secret': secret } });
+    const d = await r.json();
+    pre.textContent = JSON.stringify(d, null, 2);
+    pre.style.color = d.status === 'corrupted' ? '#c0392b' : 'var(--stone)';
+  } catch (e) {
+    pre.textContent = 'Error: ' + e.message;
+    pre.style.color = '#c0392b';
+  }
+}
+
+async function kvRepair() {
+  const pre = document.getElementById('kvInspectResult');
+  const btn = document.getElementById('kvRepairBtn');
+  if (!confirm('This will attempt to repair the enquiries KV. Corrupted entries will be lost. Continue?')) return;
+  pre.style.display = 'block';
+  pre.textContent = 'Repairing…';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/admin/kv-repair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ key: 'enquiries' }),
+    });
+    const d = await r.json();
+    pre.textContent = JSON.stringify(d, null, 2);
+    pre.style.color = 'var(--stone)';
+    await loadCurrentProperty(currentProp.id);
+    renderStats();
+  } catch (e) {
+    pre.textContent = 'Error: ' + e.message;
+    pre.style.color = '#c0392b';
+  }
+  btn.disabled = false;
 }
 
 async function resetTestGuest() {

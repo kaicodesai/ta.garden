@@ -422,6 +422,18 @@ function renderProfileSection() {
         <div class="profile-field"><span class="profile-key">Emergency Contact</span><span class="profile-val">${p.emergencyName || '—'}${p.emergencyPhone ? ' · ' + p.emergencyPhone : ''}</span></div>
         <div class="profile-field"><span class="profile-key">Passport Photo</span><span class="profile-val" style="color:${p.passportUploaded?'var(--green)':'var(--mid)'};">${p.passportUploaded ? 'Uploaded ✓' : 'Not uploaded'}</span></div>
         <div class="profile-field"><span class="profile-key">Visa Document</span><span class="profile-val" style="color:${p.visaUploaded?'var(--green)':'var(--mid)'};">${p.visaUploaded ? 'Uploaded ✓' : 'Not uploaded'}</span></div>
+        ${p.son && p.son.fullName ? `
+        <div style="grid-column:1/-1;padding-top:12px;border-top:1px solid var(--border,#ddd5c8);margin-top:4px;">
+          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);margin-bottom:8px;">Dependent / Son</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div class="profile-field"><span class="profile-key">Full Name</span><span class="profile-val">${p.son.fullName || '—'}</span></div>
+            <div class="profile-field"><span class="profile-key">Date of Birth</span><span class="profile-val">${fmt(p.son.dateOfBirth)}</span></div>
+            <div class="profile-field"><span class="profile-key">Nationality</span><span class="profile-val">${p.son.nationality || '—'}</span></div>
+            <div class="profile-field"><span class="profile-key">Passport No.</span><span class="profile-val">${p.son.passportNumber || '—'}</span></div>
+            <div class="profile-field"><span class="profile-key">Passport Expiry</span><span class="profile-val">${fmt(p.son.passportExpiry)}</span></div>
+            <div class="profile-field"><span class="profile-key">Visa</span><span class="profile-val">${p.son.visa || '—'}</span></div>
+          </div>
+        </div>` : ''}
       </div>`;
   }
 
@@ -443,6 +455,17 @@ function renderProfileSection() {
         <div class="fg"><label class="fl">Emergency Phone</label><input type="tel" class="fc" id="pf-emPhone" placeholder="+1 555 000 0000" required></div>
         <div class="fg full"><label class="fl">Relationship</label><input type="text" class="fc" id="pf-emRel" placeholder="e.g. Partner, Parent"></div>
       </div>
+          <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border,#ddd5c8);">
+            <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--mid);margin-bottom:14px;">Dependent / Son (if applicable)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group"><label class="form-label">Full Name</label><input id="pf-sonName" class="form-input" type="text" placeholder="Son's full name"></div>
+              <div class="form-group"><label class="form-label">Date of Birth</label><input id="pf-sonDob" class="form-input" type="date"></div>
+              <div class="form-group"><label class="form-label">Nationality</label><input id="pf-sonNationality" class="form-input" type="text" placeholder="Nationality"></div>
+              <div class="form-group"><label class="form-label">Passport Number</label><input id="pf-sonPassport" class="form-input" type="text" placeholder="Passport number"></div>
+              <div class="form-group"><label class="form-label">Passport Expiry</label><input id="pf-sonExpiry" class="form-input" type="date"></div>
+              <div class="form-group"><label class="form-label">Visa Type / Number</label><input id="pf-sonVisa" class="form-input" type="text" placeholder="Visa type or number"></div>
+            </div>
+          </div>
       <div style="margin-top:20px;">
         <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--mid);margin-bottom:12px;">Documents</div>
         <div class="form-grid">
@@ -556,6 +579,12 @@ async function submitProfile() {
     emergencyRelation: document.getElementById('pf-emRel').value.trim(),
     passport: passportData,
     visa:     visaData,
+    sonFullName:      document.getElementById('pf-sonName')?.value.trim() || null,
+    sonDateOfBirth:   document.getElementById('pf-sonDob')?.value || null,
+    sonNationality:   document.getElementById('pf-sonNationality')?.value.trim() || null,
+    sonPassportNumber: document.getElementById('pf-sonPassport')?.value.trim() || null,
+    sonPassportExpiry: document.getElementById('pf-sonExpiry')?.value || null,
+    sonVisa:          document.getElementById('pf-sonVisa')?.value.trim() || null,
   };
 
   if (!body.fullName || !body.dateOfBirth || !body.nationality || !body.passportNumber || !body.homeAddress || !body.emergencyName || !body.emergencyPhone) {

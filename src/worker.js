@@ -7,6 +7,7 @@ const ROOM_RATES = {
   'The River Room':   { monthly: 340, nightly: 25 },
   'The Balcony Room': { monthly: 400, nightly: 30 },
   'The Sky Suite':    { monthly: 680, nightly: 50 },
+  'First Floor Room': { monthly: 200, nightly: 0, vndOnly: true, internal: true },
 };
 
 const DEFAULT_PROPERTIES = [
@@ -16,7 +17,7 @@ const DEFAULT_PROPERTIES = [
     location: 'Cam Nam Island, Hội An, Vietnam',
     type: 'coliving',
     color: '#86a2a6',
-    rooms: ['The River Room', 'The Balcony Room', 'The Sky Suite'],
+    rooms: ['The River Room', 'The Balcony Room', 'The Sky Suite', 'First Floor Room'],
     icalUrl: null,
     active: true,
   },
@@ -55,7 +56,8 @@ async function handleFetch(request, env, ctx) {
     // Admin routes
     if (p === '/api/admin/debug'            && m === 'GET')   return adminDebug(request, env, cors);
     if (p === '/api/admin/enquiries'        && m === 'GET')   return safeCall(() => adminListEnquiries(request, env, cors), cors);
-    if (p === '/api/admin/enquiry'          && m === 'PATCH') return safeCall(() => adminUpdateEnquiry(request, env, cors), cors);
+    if (p === '/api/admin/enquiry'          && m === 'PATCH')  return safeCall(() => adminUpdateEnquiry(request, env, cors), cors);
+    if (p === '/api/admin/enquiry'          && m === 'DELETE') return safeCall(() => adminDeleteEnquiry(request, env, cors), cors);
     if (p === '/api/admin/properties'       && m === 'GET')   return adminListProperties(request, env, cors);
     if (p === '/api/admin/property'         && m === 'POST')  return safeCall(() => adminSaveProperty(request, env, cors), cors);
     if (p === '/api/admin/property'         && m === 'DELETE')return safeCall(() => adminDeleteProperty(request, env, cors), cors);
@@ -97,6 +99,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/reset-test'      && m === 'POST')   return safeCall(() => adminResetTest(request, env, cors), cors);
     if (p === '/api/admin/kv-inspect'      && m === 'GET')    return safeCall(() => adminKvInspect(request, env, cors), cors);
     if (p === '/api/admin/kv-repair'       && m === 'POST')   return safeCall(() => adminKvRepair(request, env, cors), cors);
+    if (p === '/api/admin/export'          && m === 'GET')    return safeCall(() => adminExportData(request, env, cors), cors);
     if (p === '/api/admin/test-email'      && m === 'POST')   return safeCall(() => adminTestEmail(request, env, cors), cors);
 
     // Direct booking links
@@ -332,6 +335,38 @@ async function adminUpdateEnquiry(request, env, cors) {
   return Response.json({ success: true }, { headers: cors });
 }
 
+async function adminDeleteEnquiry(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { id, propertyId = 'ta-garden' } = await request.json();
+  if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
+
+  const key = enquiriesKey(propertyId);
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
+  const enq = enquiries.find(e => e.id === id);
+  if (!enq) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+
+  const kept = enquiries.filter(e => e.id !== id);
+  await env.BOOKINGS.put(key, JSON.stringify(kept));
+
+  // Clean up all associated KV keys
+  await Promise.all([
+    env.BOOKINGS.delete(`enq_idx_${id}`),
+    env.BOOKINGS.delete(`log_${id}`),
+    env.BOOKINGS.delete(`contract_${id}`),
+    env.BOOKINGS.delete(`payments__${id}`),
+    env.BOOKINGS.delete(`guest__${id}`),
+  ]);
+
+  // Remove from blocked ranges if this enquiry blocked calendar dates
+  const blocked = safeJsonParse(await env.BOOKINGS.get(blockedKey(propertyId)));
+  const cleanedBlocked = blocked.filter(b => b.enqId !== id);
+  await env.BOOKINGS.put(blockedKey(propertyId), JSON.stringify(cleanedBlocked));
+
+  return Response.json({ success: true, message: `Enquiry ${id} and all associated data deleted.` }, { headers: cors });
+}
+
 // ── Admin: properties CRUD ────────────────────────────────────────────────────
 
 async function adminListProperties(request, env, cors) {
@@ -405,11 +440,10 @@ async function adminNotify(request, env, cors) {
 
   await sendAndLog(env, enquiryId, action === 'confirm' ? 'confirmation_email' : 'decline_email', enq.email, subject, html, null);
   if (action === 'confirm') {
-    const contractHtml = buildContractEmail(enq, customRates);
-    const contractSubject = `Your Ta.Garden Rental Agreement — ${enq.room}`;
-    await sendAndLog(env, enquiryId, 'contract_email', enq.email, contractSubject, contractHtml, null);
+    const isColt = enq.room === 'First Floor Room';
+    const contractHtml = isColt ? buildColtContractEmail(enq) : buildContractEmail(enq, customRates);
     await env.BOOKINGS.put(`contract_${enquiryId}`, contractHtml);
-    await appendLog(env, enquiryId, { type: 'booking_confirmed', note: 'Booking confirmed by admin. Status → confirmed.' });
+    await appendLog(env, enquiryId, { type: 'booking_confirmed', note: 'Booking confirmed — confirmation email sent. Contract saved to portal, not yet emailed.' });
   } else {
     await appendLog(env, enquiryId, { type: 'booking_declined', note: 'Booking declined by admin.' });
   }
@@ -558,6 +592,7 @@ async function guestPortalData(enquiryId, propId, env, cors) {
       emergencyPhone: profile.emergencyPhone, emergencyRelation: profile.emergencyRelation,
       passportUploaded: !!profile.passport, visaUploaded: !!profile.visa,
       submittedAt: profile.submittedAt,
+      son: profile.son || null,
     } : null,
     payments,
   }, { headers: cors });
@@ -565,11 +600,11 @@ async function guestPortalData(enquiryId, propId, env, cors) {
 
 async function handleGuestSubmit(request, env, cors, ctx) {
   try {
-    const { id, propertyId = 'ta-garden', fullName, dateOfBirth, nationality, passportNumber, homeAddress, emergencyName, emergencyPhone, passport, visa } = await request.json();
+    const { id, propertyId = 'ta-garden', fullName, dateOfBirth, nationality, passportNumber, homeAddress, emergencyName, emergencyPhone, passport, visa, sonFullName, sonDateOfBirth, sonNationality, sonPassportNumber, sonPassportExpiry, sonVisa } = await request.json();
     if (!id || !fullName) return Response.json({ error: 'Missing required fields' }, { status: 400, headers: cors });
     if (!env.BOOKINGS) return Response.json({ error: 'Storage unavailable' }, { status: 503, headers: cors });
 
-    const profile = { fullName, dateOfBirth, nationality, passportNumber, homeAddress, emergencyName, emergencyPhone, passport: passport || null, visa: visa || null, submittedAt: new Date().toISOString() };
+    const profile = { fullName, dateOfBirth, nationality, passportNumber, homeAddress, emergencyName, emergencyPhone, passport: passport || null, visa: visa || null, submittedAt: new Date().toISOString(), son: (sonFullName || sonDateOfBirth) ? { fullName: sonFullName || null, dateOfBirth: sonDateOfBirth || null, nationality: sonNationality || null, passportNumber: sonPassportNumber || null, passportExpiry: sonPassportExpiry || null, visa: sonVisa || null } : null };
     await env.BOOKINGS.put(`guest__${id}`, JSON.stringify(profile));
 
     // Update onboarding flags on the enquiry
@@ -639,7 +674,9 @@ async function handleGuestSignContract(request, env, cors) {
 
   // Rebuild contract with actual signature and send
   const rates = { rentUsd: enq.rentUsd, rentVnd: enq.rentVnd, depositAmount: enq.depositAmount };
-  const contractHtml = buildContractEmail({ ...enq, signature, signedAt }, rates);
+  const contractHtml = enq.room === 'First Floor Room'
+    ? buildColtContractEmail({ ...enq, signature, signedAt })
+    : buildContractEmail({ ...enq, signature, signedAt }, rates);
   await env.BOOKINGS.put(`contract_${id}`, contractHtml);
 
   await sendAndLog(env, id, 'contract_email', enq.email, `Your Ta.Garden Rental Agreement — ${enq.room}`, contractHtml, null);
@@ -1341,6 +1378,49 @@ async function adminKvRepair(request, env, cors) {
   return Response.json({ key, status: 'reset to empty — no valid entries could be salvaged', originalLength: raw.length }, { headers: cors });
 }
 
+async function adminExportData(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const propertyId = 'ta-garden';
+  const [enquiriesRaw, blockedRaw] = await Promise.all([
+    env.BOOKINGS.get(enquiriesKey(propertyId)),
+    env.BOOKINGS.get(blockedKey(propertyId)),
+  ]);
+
+  const enquiries = safeJsonParse(enquiriesRaw);
+
+  // For each enquiry, fetch associated data
+  const enriched = await Promise.all(enquiries.map(async enq => {
+    const [profileRaw, paymentsRaw, logRaw] = await Promise.all([
+      env.BOOKINGS.get(`guest__${enq.id}`),
+      env.BOOKINGS.get(`payments__${enq.id}`),
+      env.BOOKINGS.get(`log_${enq.id}`),
+    ]);
+    return {
+      ...enq,
+      guestProfile: profileRaw ? JSON.parse(profileRaw) : null,
+      payments: paymentsRaw ? JSON.parse(paymentsRaw) : [],
+      activityLog: logRaw ? JSON.parse(logRaw) : [],
+    };
+  }));
+
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    propertyId,
+    enquiries: enriched,
+    blockedDates: safeJsonParse(blockedRaw),
+  };
+
+  return new Response(JSON.stringify(exportData, null, 2), {
+    headers: {
+      ...cors,
+      'Content-Type': 'application/json',
+      'Content-Disposition': `attachment; filename="ta-garden-backup-${new Date().toISOString().slice(0,10)}.json"`,
+    },
+  });
+}
+
 async function adminResetTest(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
@@ -1585,7 +1665,9 @@ async function adminDirectBooking(request, env, cors, ctx) {
   const guestHtml  = buildDirectBookingGuestEmail({ name: guestName, room, stayType, checkIn, checkOut, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml  = buildDirectBookingAdminEmail({ name: guestName, email: guestEmail, phone: guestPhone, room, stayType, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, signature: guestName, enqId });
   const contractRates = { rentUsd: effectiveRentUsd, rentVnd: effectiveRentVnd, depositAmount: effectiveDeposit };
-  const contractHtml  = buildContractEmail({ ...enq, signature: guestName }, contractRates);
+  const contractHtml  = room === 'First Floor Room'
+    ? buildColtContractEmail({ ...enq, signature: guestName })
+    : buildContractEmail({ ...enq, signature: guestName }, contractRates);
 
   const emailWork = (async () => {
     await env.BOOKINGS.put(`contract_${enqId}`, contractHtml);
@@ -1875,6 +1957,251 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 function ordinal(n) {
   const s = ['th','st','nd','rd'], v = n % 100;
   return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
+function buildColtContractEmail(enq, effectiveDate) {
+  const today = effectiveDate || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const sig = enq.signature || enq.name || 'Colt';
+  const li = (text) => `<li style="margin-bottom:6px;">${text}</li>`;
+  const h2 = (text) => `<h2 style="font-size:16px;color:#2d5a27;margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid #2d5a27;font-family:Arial,sans-serif;">${text}</h2>`;
+  const p = (text, style='') => `<p style="font-size:13px;color:#3a3a2a;line-height:1.7;margin:0 0 10px;font-family:Arial,sans-serif;${style}">${text}</p>`;
+  const ul = (items) => `<ul style="font-size:13px;color:#3a3a2a;line-height:1.7;margin:0 0 14px;padding-left:20px;font-family:Arial,sans-serif;">${items.map(li).join('')}</ul>`;
+  const note = (text) => `<p style="font-size:12px;color:#88917d;line-height:1.6;margin:0 0 14px;font-style:italic;font-family:Arial,sans-serif;">${text}</p>`;
+  const tableRow = (col1, col2) => `<tr><td style="padding:8px 12px;border:1px solid #c8d5c8;font-size:13px;color:#3a3a2a;font-family:Arial,sans-serif;background:#f5fbf5;">${col1}</td><td style="padding:8px 12px;border:1px solid #c8d5c8;font-size:13px;color:#3a3a2a;font-family:Arial,sans-serif;">${col2}</td></tr>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;font-family:Arial,sans-serif;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
+<tr><td align="center">
+<table class="w600" width="640" cellpadding="0" cellspacing="0" style="background:#fafafa;border-radius:8px;overflow:hidden;">
+
+  <!-- Header -->
+  <tr><td style="background:#2d5a27;padding:28px 36px;text-align:center;" class="pad">
+    <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:22px;color:#fff;letter-spacing:0.05em;">CONTRACT 1: GARDEN &amp; LANDSCAPING SERVICES</p>
+    <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.7);font-style:italic;">Independent Contractor Agreement</p>
+    <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">Effective Date: ${today}</p>
+    <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">Between: Soul &amp; Luna Wellness ("Employers") and Colt ("Contractor/Resident")</p>
+  </td></tr>
+
+  <tr><td style="padding:32px 36px;" class="pad">
+
+    ${h2('1. Scope of Work')}
+    ${p('The garden design and plan has been created by the Employers (Soul &amp; Luna Wellness). Colt\'s role is to execute that design as directed. Colt must not deviate from the Employers\' brief without written approval. The design has been developed with the following principles in mind: low maintenance, easy to clean, durable, cost-effective over time, incorporating existing trees and natural elements, and using materials such as bricks where appropriate. Execution responsibilities include:')}
+    ${ul([
+      'Receive and review the Employers\' garden brief before any work begins',
+      'Confirm garden area measurements on-site and report to Employers within 3 days of contract signing',
+      'Source and purchase all plants, seeds, soil, bricks, and materials as specified in the brief — no substitutions without written Employer approval',
+      'Plant and establish the garden strictly according to the Employers\' design and layout — working around existing trees and incorporating specified materials',
+      'Build any hardscape elements (paths, borders, brick edging) as directed by the Employers\' brief',
+      'Ongoing watering, weeding, pruning, and general garden maintenance throughout the contract period',
+      'Watering all plants in the common areas (living room, staircase, shelves) and the front yard on a regular basis — plants must be kept healthy and presentable at all times',
+      'Keep all garden areas tidy and presentable at all times — guest-ready standard applies',
+      'Send a weekly video update every Sunday, and immediately if any issue or concern arises',
+    ])}
+
+    ${h2('2. Timeline &amp; Completion')}
+    ${p('The Employers will be absent from the property for approximately 2 months. The following milestones apply:')}
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:16px;">
+      ${tableRow('Employer garden brief shared with Colt', 'Before contract signing')}
+      ${tableRow('Garden measurements confirmed on-site', 'Within 3 days of contract signing')}
+      ${tableRow('Materials sourced', 'Within 1 week of contract signing')}
+      ${tableRow('Garden planted &amp; established', 'By end of Month 1 of absence')}
+      ${tableRow('Weekly video update sent to Employers', 'Every Sunday (or immediately if issue arises)')}
+      ${tableRow('Full deep clean coordinated with cleaning crew', 'No later than 1 week before Employers\' return')}
+      ${tableRow('Final garden handover &amp; review', 'Upon Employers\' return (approx. 2 months)')}
+    </table>
+
+    ${h2('3. Compensation')}
+    ${p('Payment terms for this contract are as follows:')}
+    ${ul([
+      'Residency Rate: 5,000,000 VND per month, paid on the 1st of each month by cash or bank transfer. This discounted rate reflects the 3,000,000 VND monthly subsidy extended by the Employers (market rate: 8,000,000 VND) as compensation for standard caretaking duties including cleaning coordination, guest check-ins, and day-to-day property oversight.',
+      'Electricity: Not included in the monthly rent. Colt is responsible for his own electricity usage. A separate meter will be installed in Colt\'s room prior to the Employers\' departure. Colt will pay for his electricity usage directly based on meter readings.',
+      'Garden Completion Bonus: 1,500,000 VND, paid upon the Employers\' return and satisfactory sign-off on the completed garden. This bonus is conditional on the garden being fully planted, maintained, and presented to Employers\' standard at time of review. It will not be paid if the garden is incomplete or below standard.',
+      'Material Expenses: Garden materials and minor repair supplies will be reimbursed with receipts. Maximum 200,000 VND per individual purchase without prior written Employer approval. Any expense above this amount requires approval via text before purchase.',
+    ])}
+    ${note('Note: If garden work is not commenced or milestones are missed without communication, the garden completion bonus may be withheld in full or in part at the Employers\' discretion.')}
+
+    ${h2('4. Standards &amp; Expectations')}
+    ${ul([
+      'All garden work must be completed to the standard described in the Employers\' brief — built to last, easy to maintain, and aesthetically aligned with the property',
+      'Do not begin additional purchases or scope changes without written Employer approval',
+      'Weekly video updates to be sent every Sunday. Additional photo or video updates required immediately if anything is out of the ordinary',
+      'Any issues must be reported to Employers promptly — do not attempt to resolve problems silently or without communication',
+    ])}
+
+    ${h2('4b. Property Management &amp; Repairs')}
+    ${p('In addition to garden duties, Colt is responsible for general property management during the Employers\' absence. This is a guest-facing boutique property and business — the property must be guest-ready at all times. Responsibilities include:')}
+    ${ul([
+      'Keeping all common areas, kitchen, bathrooms, staircase, entrance, and outdoor spaces clean and presentable at all times',
+      'Coordinating with the professional cleaning crew for all standardised cleans — Colt is not expected to perform deep or standardised cleans himself, but must arrange and be present for them',
+      'Identifying and managing minor repairs promptly — photograph and document before and after',
+      'Reporting any major repairs or damage to Employers immediately with photos — no major work to be authorised without explicit Employer approval',
+      'Welcoming guests on arrival, ensuring their room is clean and ready, and communicating any guest concerns to Employers within 2 hours',
+      'Coordinating a full professional deep clean no later than one week before the Employers\' return',
+    ])}
+    ${note('Note: Standardised and deep cleans are carried out by the professional cleaning crew. Colt\'s role is to coordinate, facilitate access, and maintain the property at a guest-ready standard between cleans.')}
+
+    ${h2('5. Termination')}
+    ${p('Either party may terminate this contract with 7 days written notice. If Colt fails to perform duties without communication for more than 5 consecutive days, the contract is considered abandoned and the garden completion bonus will be forfeited.')}
+
+    <!-- Contract 1 Signatures -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #2d5a27;padding-top:20px;margin:20px 0 40px;">
+      <tr>
+        <td style="width:50%;padding-right:16px;vertical-align:top;">
+          <p style="margin:0 0 6px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;font-family:Arial,sans-serif;">Employer Signature — Soul &amp; Luna Wellness</p>
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-style:italic;color:#3a3a2a;">Kai Edwards</p>
+          <p style="margin:0;font-size:11px;color:#88917d;font-family:Arial,sans-serif;">Date: ${today}</p>
+        </td>
+        <td style="width:50%;padding-left:16px;vertical-align:top;border-left:1px solid #ddd5c8;">
+          <p style="margin:0 0 6px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;font-family:Arial,sans-serif;">Colt — Resident / Contractor Signature</p>
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-style:italic;color:#3a3a2a;">${sig}</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#88917d;font-family:Arial,sans-serif;">Electronically signed · Date: ${today}</p>
+        </td>
+      </tr>
+    </table>
+
+    <!-- CONTRACT 2 HEADER -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 -36px;width:calc(100% + 72px);">
+      <tr><td style="background:#2d5a27;padding:24px 36px;text-align:center;">
+        <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:20px;color:#fff;letter-spacing:0.05em;">CONTRACT 2: HOUSE RESIDENCY AGREEMENT</p>
+        <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.7);font-style:italic;">Rules of Conduct &amp; Standards of Living</p>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">Effective Date: ${today} &nbsp;·&nbsp; Between: Soul &amp; Luna Wellness ("Employers") and Colt ("Contractor/Resident")</p>
+      </td></tr>
+    </table>
+    <br>
+
+    ${p('This agreement outlines the conditions under which Colt is permitted to reside at Ta.Garden. Residency is a privilege, not a right, and is contingent on continued compliance with all terms below.')}
+
+    ${h2('1. Appearance &amp; Personal Standards')}
+    ${ul([
+      'Professional or neat clothing must be worn at all times within shared areas of the house',
+      'Deodorant must be used daily — this is a non-negotiable condition of residency',
+      'Personal hygiene standards appropriate to a shared living and guest-hosting environment must be maintained at all times',
+    ])}
+
+    ${h2('2. Smoking Policy')}
+    ${ul([
+      'Smoking is strictly prohibited inside the house at all times',
+      'Smoking is prohibited in the front of the property or any area visible to guests or neighbours',
+      'Smoking is only permitted in the designated backyard area',
+      'Cigarette butts must be disposed of properly — no littering in the garden or yard',
+    ])}
+
+    ${h2('3. Cleanliness &amp; House Standards')}
+    ${ul([
+      'The house must be kept clean at all times, including common areas, kitchen, bathrooms, and any areas used by guests',
+      'Dishes must be washed and put away within 24 hours of use',
+      'Floors, surfaces, and bathrooms must be cleaned at minimum once per week between professional cleans',
+      'Rubbish must be taken out the night before each collection day and must not be allowed to build up inside the property. Collection days are Tuesday, Thursday, Saturday, and Sunday — bins should be put out Monday, Wednesday, Friday, and Saturday evenings respectively',
+      'Personal belongings must be kept tidy and contained to agreed personal space — no personal items left in guest or common areas',
+      'All indoor plants in common areas (living room, staircase, shelves) and plants in the front yard must be watered regularly — plants must remain healthy and well-presented at all times. Wilting or neglected plants are considered a failure of property standards',
+      'Standardised cleans are carried out by the professional cleaning crew on a set schedule — Colt must coordinate with the crew and facilitate access',
+    ])}
+    ${note('Note: Failure to maintain cleanliness standards between professional cleans, or failure to coordinate the cleaning crew, is grounds for termination of this agreement.')}
+
+    ${h2('4. Guest Relations')}
+    ${ul([
+      'Guests staying at the property are to be treated with warmth, courtesy, and professionalism at all times',
+      'Colt is expected to check in on guests periodically to ensure they have everything they need — politely, not intrusively',
+      'Any guest complaints or issues must be communicated to the Employers immediately, within 2 hours of becoming aware',
+      'Colt\'s personal conduct around guests must reflect positively on the property and the Soul &amp; Luna Wellness brand at all times',
+    ])}
+
+    ${h2('5. Wellness Requirement')}
+    ${ul([
+      'Colt is required to attend at least one (1) breathwork session per week for the duration of this agreement',
+      'The Employers will arrange for a breathwork practitioner to come to the property and will cover the cost of these sessions — Colt\'s responsibility is to attend consistently',
+      'Confirmation of attendance must be shared with Employers as part of the weekly Sunday video update',
+      'If sessions are cancelled or unavailable in any given week, Colt must notify Employers and seek an alternative arrangement',
+    ])}
+    ${p('This requirement exists in support of Colt\'s wellbeing and is a condition of continued residency.')}
+
+    ${h2('6. Communication')}
+    ${ul([
+      'Colt must be reachable by phone and text and must respond to Employer messages within 12 hours',
+      'A weekly video update must be sent to Employers every Sunday covering: garden status, house cleanliness, guest updates, breathwork attendance, and any issues or concerns',
+      'Additional photo or video updates are required immediately if anything is out of the ordinary — do not wait for Sunday if something needs attention',
+      'Any issues with the property, guests, or personal circumstances must be communicated promptly — no surprises',
+    ])}
+
+    ${h2('7. Term &amp; Termination — Trial Period')}
+    ${p('This agreement is in effect for the duration of the Employers\' absence (approximately 2 months).')}
+    ${p('<strong>This is a formal trial period.</strong> Upon the Employers\' return, performance across all areas of this agreement will be reviewed. Renewal is not automatic — it is contingent on the Employers\' satisfaction with Colt\'s conduct, cleanliness, garden completion, property management, guest relations, son\'s conduct, and overall suitability as a resident and caretaker. Both parties acknowledge and accept this trial structure.')}
+    ${p('Colt\'s residency may be terminated immediately, without notice, for any of the following:')}
+    ${ul([
+      'Smoking inside the house or in any area visible to guests or neighbours',
+      'Failure to maintain cleanliness standards or coordinate professional cleans after one written warning',
+      'Failure to attend breathwork sessions for 2 or more consecutive weeks without communication',
+      'Misconduct toward guests or failure to maintain professionalism in a guest-facing context',
+      'Failure to maintain personal hygiene or appearance standards after one written warning',
+      'Any conduct toward guests or neighbours that is disrespectful, disruptive, or results in a formal complaint',
+      'Using Ta.Garden as a social venue or gathering space, including allowing underage groups to congregate at the property',
+      'Any conduct by Colt or his son that deters guests, damages the property\'s reputation, or results in a negative guest review attributable to Colt\'s actions or negligence',
+      'Failure to fulfil property management, garden, or communication duties without reasonable explanation',
+    ])}
+    ${p('Upon termination, Colt will have 48 hours to vacate the property unless otherwise agreed.')}
+
+    ${h2('8. Conduct, Neighbour Relations &amp; Guest Experience')}
+    ${p('Ta.Garden is a guest-facing wellness property and a business. Colt\'s conduct at all times must reflect this:')}
+    ${ul([
+      'Colt must conduct himself in a respectful, professional, and courteous manner at all times — inside the home, in the yard, on the street, and in any interaction visible to guests or neighbours',
+      'Colt must not engage in any behaviour that would make a guest feel uncomfortable, unsafe, or unwelcome — including loud arguments, aggressive conduct, or any behaviour unbecoming of a caretaker',
+      'Colt must not engage in any activity that disturbs or creates conflict with neighbouring households — noise complaints or disputes are grounds for immediate termination',
+      'Nothing in or around the property may be stored, displayed, or left in a state that deters guests or reflects poorly on the brand — this includes personal items, vehicles, tools, and outdoor spaces',
+      'Quiet hours are 10:00pm to 7:00am — music, loud conversation, and audible activities must cease by 10:00pm without exception',
+    ])}
+
+    ${h2('9. Colt\'s Son — Conduct &amp; Visitor Policy')}
+    ${p('Colt\'s son is permitted to reside at the property under the following conditions. Colt is fully responsible for his son\'s conduct at all times:')}
+    ${ul([
+      'Colt\'s son must be respectful and courteous to all guests and neighbours — rude, disruptive, or inappropriate behaviour is a serious breach of this agreement',
+      'Quiet hours apply equally to Colt\'s son — no noise, running, shouting, or activity in shared or external areas after 10:00pm',
+      'Ta.Garden is not to be used as a social venue for underage visitors. Colt\'s son may have one friend visit at a time with prior notice — groups, sleepovers, and regular underage gatherings are not permitted',
+      'Colt\'s son\'s visitors are not permitted in guest areas or rooms without explicit Employer permission',
+      'Any guest or neighbour complaint regarding Colt\'s son\'s conduct must be addressed immediately. A second complaint is grounds for review and may result in termination',
+    ])}
+    ${note('Note: Colt\'s son\'s presence at Ta.Garden is a privilege extended in good faith. Any pattern of disrespect, nuisance to guests, or use of the property as a social hangout will result in this privilege being reviewed or withdrawn.')}
+
+    ${p('By signing below, Colt acknowledges having read, understood, and agreed to all conditions of residency at Ta.Garden.', 'font-style:italic;')}
+
+    <!-- Contract 2 Signatures -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #2d5a27;padding-top:20px;margin-top:16px;">
+      <tr>
+        <td style="width:50%;padding-right:16px;vertical-align:top;">
+          <p style="margin:0 0 6px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;font-family:Arial,sans-serif;">Employer Signature — Soul &amp; Luna Wellness</p>
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-style:italic;color:#3a3a2a;">Kai Edwards</p>
+          <p style="margin:0;font-size:11px;color:#88917d;font-family:Arial,sans-serif;">Date: ${today}</p>
+        </td>
+        <td style="width:50%;padding-left:16px;vertical-align:top;border-left:1px solid #ddd5c8;">
+          <p style="margin:0 0 6px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;font-family:Arial,sans-serif;">Colt — Resident / Contractor Signature</p>
+          <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-style:italic;color:#3a3a2a;">${sig}</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#88917d;font-family:Arial,sans-serif;">Electronically signed · Date: ${today}</p>
+        </td>
+      </tr>
+    </table>
+
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#2d5a27;padding:16px 32px;text-align:center;">
+    <p style="margin:0;font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:0.1em;font-family:Arial,sans-serif;">Ta.Garden · Cam Nam Island · Hội An, Vietnam · ta-garden.soulandlunawellness.com</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildContractEmail(enq, rates = {}) {

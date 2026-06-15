@@ -500,7 +500,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <!-- Create form -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-title" id="blFormTitle">Send Booking Confirmation</div>
-        <p id="blFormDesc" style="font-size:12px;color:var(--mid);margin-bottom:16px;line-height:1.6;">Fill in all guest details — a confirmation email + rental agreement will be sent instantly. The booking will appear as confirmed in your dashboard.</p>
+        <p id="blFormDesc" style="font-size:12px;color:var(--mid);margin-bottom:16px;line-height:1.6;">Fill in all guest details — a confirmation email will be sent instantly. The booking will appear as confirmed. Send the rental agreement separately from the guest's profile once their deposit is received.</p>
 
         <!-- Enquiry selector -->
         <div class="fg" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border,#ddd5c8);">
@@ -600,6 +600,11 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <!-- Test utility -->
       <div class="card" style="background:rgba(136,145,125,0.05);border:1px dashed var(--border,#ddd5c8);">
         <div class="card-title" style="color:var(--mid,#88917d);">Developer Tools</div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--stone,#88917d);margin-bottom:10px;">Data Backup</div>
+          <p style="font-size:13px;color:var(--mid);margin:0 0 10px;line-height:1.6;">Download a complete backup of all guest data, bookings, payments, and activity logs.</p>
+          <button onclick="exportData()" style="padding:10px 20px;background:var(--dark,#3a3a2a);color:#c8b89a;border:none;border-radius:4px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Download Data Backup</button>
+        </div>
         <p style="font-size:12px;color:var(--mid);margin-bottom:12px;line-height:1.6;">Test email: <strong>lightofkai777@gmail.com</strong> — reset first to wipe all existing data, then create a fresh test inquiry or send a direct booking.</p>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
           <button class="btn-confirm-send" onclick="resetTestGuest()" id="resetTestBtn" style="background:#c0392b;">Reset Test Guest →</button>
@@ -1006,6 +1011,7 @@ function renderEnquiries() {
       const declineBtn = e.status !== 'cancelled' ? `<button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">Decline</button>` : '';
       const noteBtn = `<button class="act-btn act-note" onclick="openNoteModal('${e.id}')">Note</button>`;
       const profileBtn = `<button class="act-btn act-profile" onclick="openProfileModal('${e.id}')">Profile</button>`;
+      const deleteBtn = `<button class="act-btn act-decline" onclick="deleteEnquiry('${e.id}')" title="Permanently delete this enquiry" style="opacity:0.6;">Delete</button>`;
       const ob = e.onboarding || {};
       const obDots = ['paymentReceived','contractSigned','passportUploaded','visaUploaded'].map(k => `<div class="ob-dot${ob[k]?' done':''}" title="${k}"></div>`).join('');
       const noteBubble = e.note ? `<div class="note-bubble">${e.note.replace(/</g,'&lt;')}</div>` : '';
@@ -1036,7 +1042,7 @@ function renderEnquiries() {
         <span class="status-badge ${e.status}">${e.status}</span>
         <div class="onboarding-mini" title="Payment · Contract · Passport · Visa">${obDots}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">
-          ${confirmBtn}${declineBtn}${noteBtn}${profileBtn}${waLink}
+          ${confirmBtn}${declineBtn}${noteBtn}${profileBtn}${waLink}${deleteBtn}
         </div>
       </td>
     </tr>`;
@@ -1064,8 +1070,8 @@ function openConfirmModal(id) {
   document.getElementById('modalGuestSub').innerHTML = `${e.room} &nbsp;·&nbsp; ${checkOutLabel}`;
   document.getElementById('modalLbl').textContent = 'Personal message to guest (optional)';
   document.getElementById('modalMsg').value = `Hi ${e.name.split(' ')[0]}, your booking at Ta.Garden is confirmed. We're excited to welcome you!`;
-  document.getElementById('modalHint').textContent = 'Guest receives a confirmation email + signed rental agreement.';
-  document.getElementById('modalSendBtn').textContent = 'Send Confirmation + Contract →';
+  document.getElementById('modalHint').textContent = 'Guest receives a confirmation email only. Send the contract separately from their profile once the deposit is confirmed.';
+  document.getElementById('modalSendBtn').textContent = 'Send Confirmation Email →';
   document.getElementById('modalSendBtn').className = 'btn-confirm-send';
   document.getElementById('modalSendBtn').onclick = () => doNotify('confirm');
   // Show and pre-fill rates
@@ -2634,6 +2640,22 @@ async function testEmailSend() {
   btn.disabled = false;
 }
 
+async function exportData() {
+  try {
+    const r = await fetch('/api/admin/export', { headers: { 'x-admin-secret': secret } });
+    if (!r.ok) { alert('Export failed: ' + r.status); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ta-garden-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Export failed: ' + e.message);
+  }
+}
+
 async function kvInspect() {
   const pre = document.getElementById('kvInspectResult');
   pre.style.display = 'block';
@@ -2672,6 +2694,26 @@ async function kvRepair() {
     pre.style.color = '#c0392b';
   }
   btn.disabled = false;
+}
+
+async function deleteEnquiry(id) {
+  if (!confirm('Permanently delete this enquiry and all associated data (profile, payments, logs)? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/admin/enquiry', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id, propertyId: currentProp.id }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      await loadCurrentProperty(currentProp.id);
+      renderStats();
+    } else {
+      alert('Delete failed: ' + (d.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Network error: ' + err.message);
+  }
 }
 
 async function resetTestGuest() {

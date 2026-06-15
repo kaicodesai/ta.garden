@@ -93,6 +93,7 @@ async function handleFetch(request, env, ctx) {
 
     // Test inquiry (admin only)
     if (p === '/api/admin/test-inquiry'    && m === 'POST')   return safeCall(() => adminCreateTestInquiry(request, env, cors, ctx), cors);
+    if (p === '/api/admin/reset-test'      && m === 'POST')   return safeCall(() => adminResetTest(request, env, cors), cors);
 
     // Direct booking links
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
@@ -1176,6 +1177,45 @@ async function adminCreateTestInquiry(request, env, cors, ctx) {
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
   return Response.json({ success: true, enqId, message: `Test inquiry created for ${email}` }, { headers: cors });
+}
+
+async function adminResetTest(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const TEST_EMAIL = 'lightofkai777@gmail.com';
+  const key = enquiriesKey('ta-garden');
+  const existing = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+
+  // Find all enquiries for the test email
+  const toRemove = existing.filter(e => e.email === TEST_EMAIL);
+  const kept     = existing.filter(e => e.email !== TEST_EMAIL);
+
+  await env.BOOKINGS.put(key, JSON.stringify(kept));
+
+  // Delete all associated KV keys for each removed enquiry
+  await Promise.all(toRemove.flatMap(e => [
+    env.BOOKINGS.delete(`enq_idx_${e.id}`),
+    env.BOOKINGS.delete(`log_${e.id}`),
+    env.BOOKINGS.delete(`contract_${e.id}`),
+    env.BOOKINGS.delete(`payments__${e.id}`),
+    env.BOOKINGS.delete(`guest__${e.id}`),
+  ]));
+
+  // Also clear the guest profile stored by email lookup
+  await env.BOOKINGS.delete(`guest_email__${TEST_EMAIL}`);
+
+  // Remove from blocked ranges if any enqId matches
+  const removedIds = new Set(toRemove.map(e => e.id));
+  const blocked = JSON.parse(await env.BOOKINGS.get(blockedKey('ta-garden')) || '[]');
+  const cleanedBlocked = blocked.filter(b => !removedIds.has(b.enqId));
+  await env.BOOKINGS.put(blockedKey('ta-garden'), JSON.stringify(cleanedBlocked));
+
+  return Response.json({
+    success: true,
+    removed: toRemove.length,
+    message: `Cleared ${toRemove.length} enquiry(ies) and all associated data for ${TEST_EMAIL}.`,
+  }, { headers: cors });
 }
 
 // ── Direct booking links ──────────────────────────────────────────────────────

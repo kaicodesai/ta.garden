@@ -600,11 +600,12 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <!-- Test utility -->
       <div class="card" style="background:rgba(136,145,125,0.05);border:1px dashed var(--border,#ddd5c8);">
         <div class="card-title" style="color:var(--mid,#88917d);">Developer Tools</div>
-        <p style="font-size:12px;color:var(--mid);margin-bottom:12px;line-height:1.6;">Create a test inquiry with <strong>lightofkai777@gmail.com</strong> to test the full email + confirmation flow. Replaces any existing test entry to keep the list clean.</p>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <p style="font-size:12px;color:var(--mid);margin-bottom:12px;line-height:1.6;">Test email: <strong>lightofkai777@gmail.com</strong> — reset first to wipe all existing data, then create a fresh test inquiry or send a direct booking.</p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <button class="btn-confirm-send" onclick="resetTestGuest()" id="resetTestBtn" style="background:#c0392b;">Reset Test Guest →</button>
           <button class="btn-confirm-send" onclick="createTestInquiry()" id="testInqBtn" style="background:var(--mid,#88917d);">Create Test Inquiry →</button>
-          <span id="testInqStatus" style="font-size:12px;color:var(--mid);"></span>
         </div>
+        <span id="testInqStatus" style="font-size:12px;color:var(--mid);"></span>
       </div>
     </div>
 
@@ -2571,6 +2572,33 @@ function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function resetTestGuest() {
+  const btn = document.getElementById('resetTestBtn');
+  const st  = document.getElementById('testInqStatus');
+  btn.disabled = true; btn.textContent = 'Resetting…'; st.textContent = '';
+  try {
+    const r = await fetch('/api/admin/reset-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({}),
+    });
+    const d = await r.json();
+    if (d.success) {
+      st.style.color = 'var(--teal,#86a2a6)';
+      st.textContent = d.message;
+      await loadCurrentProperty(currentProp.id);
+      renderStats();
+    } else {
+      st.style.color = 'var(--red,#c0392b)';
+      st.textContent = 'Error: ' + (d.error || 'Unknown');
+    }
+  } catch (err) {
+    st.style.color = 'var(--red,#c0392b)';
+    st.textContent = 'Network error: ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'Reset Test Guest →';
 }
 
 async function createTestInquiry() {

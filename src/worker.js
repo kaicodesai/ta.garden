@@ -91,6 +91,9 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/rooms'           && m === 'GET')    return safeCall(() => adminGetRooms(request, env, cors), cors);
     if (p === '/api/admin/room'            && m === 'POST')   return safeCall(() => adminSaveRoom(request, env, cors), cors);
 
+    // Test inquiry (admin only)
+    if (p === '/api/admin/test-inquiry'    && m === 'POST')   return safeCall(() => adminCreateTestInquiry(request, env, cors, ctx), cors);
+
     // Direct booking links
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
     if (p === '/api/admin/booking-links'   && m === 'GET')    return safeCall(() => adminListBookingLinks(request, env, cors), cors);
@@ -1074,6 +1077,52 @@ function buildReviewRequestEmail(enq) {
 </body></html>`;
 }
 
+// ── Test inquiry ──────────────────────────────────────────────────────────────
+
+async function adminCreateTestInquiry(request, env, cors, ctx) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const { email = 'lightofkai777@gmail.com', name = 'Kai (Test)', room = 'The River Room', stayType = 'monthly' } = await request.json().catch(() => ({}));
+
+  const enqId = `enq_test_${Date.now()}`;
+  const key   = enquiriesKey('ta-garden');
+  const existing = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+
+  // Remove any previous test inquiry with the same email to keep it clean
+  const filtered = existing.filter(e => !(e.email === email && e.id.startsWith('enq_test_')));
+
+  const enq = {
+    id: enqId, propertyId: 'ta-garden',
+    name, email, phone: '+1 555 000 0000', room, stayType,
+    checkIn: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    checkOut: null,
+    message: 'This is a test inquiry for development and testing purposes.',
+    price: ROOM_RATES[room]?.monthly || null,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    onboarding: { paymentReceived: false, contractSigned: false, passportUploaded: false, visaUploaded: false },
+    isTest: true,
+  };
+  filtered.unshift(enq);
+  await env.BOOKINGS.put(key, JSON.stringify(filtered.slice(0, 200)));
+  await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
+
+  // Send the standard enquiry emails so you can test the full flow
+  const price    = calcPrice(room, stayType, enq.checkIn, enq.checkOut);
+  const dateInfo = `Move-in: ${fmt(enq.checkIn)} → Ongoing`;
+  const stayLabel = 'Monthly Stay';
+  const adminHtml = buildAdminEmail({ name, email, phone: enq.phone, room, stayType, stayLabel, dateInfo, checkIn: enq.checkIn, checkOut: null, message: enq.message, price });
+  const guestHtml = buildGuestEmail({ name, room, stayLabel, dateInfo, message: enq.message });
+  const emailWork = Promise.all([
+    ...TO_EMAILS.map(to => resend(FROM, to, `[TEST] New Enquiry — ${room} (${name})`, adminHtml, email, env)),
+    resend(FROM, email, '[TEST] We received your enquiry — Ta.Garden', guestHtml, null, env),
+  ]).catch(err => console.error('Test inquiry email error:', err));
+  if (ctx?.waitUntil) ctx.waitUntil(emailWork);
+
+  return Response.json({ success: true, enqId, message: `Test inquiry created for ${email}` }, { headers: cors });
+}
+
 // ── Direct booking links ──────────────────────────────────────────────────────
 
 async function adminCreateBookingLink(request, env, cors) {
@@ -1151,10 +1200,11 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   const enqId = `enq_${Date.now()}`;
   const key = enquiriesKey('ta-garden');
   const enquiries = JSON.parse(await env.BOOKINGS.get(key) || '[]');
+  const effectiveRentUsd = link.rentUsd || rates.monthly || null;
   enquiries.unshift({
     id: enqId, propertyId: 'ta-garden',
     name, email, phone: phone || '', room: link.room,
-    stayType: link.stayType, checkIn, checkOut,
+    stayType: link.stayType, checkIn, checkOut: checkOut || null,
     message: `Direct booking (link: ${token})`,
     price: price ? price.total : null,
     status: 'confirmed',
@@ -1163,6 +1213,10 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
     bookingLinkToken: token,
     signature,
     signedAt: new Date().toISOString(),
+    rentUsd: effectiveRentUsd,
+    rentVnd: link.rentVnd || null,
+    depositAmount: link.depositAmount || deposit || null,
+    stripeUrl: link.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02',
   });
   await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
   await env.BOOKINGS.put(`enq_idx_${enqId}`, 'ta-garden');
@@ -1185,13 +1239,16 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   await env.BOOKINGS.put('booking_links_idx', JSON.stringify(idx));
 
   // Send emails
-  const dateRange = `${fmt(checkIn)} → ${fmt(checkOut)}`;
-  const nights = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+  const origin = new URL(request.url).origin;
+  const guestPortalUrl = `${origin}/guest.html?id=${enqId}&p=ta-garden`;
+  const dateRange = checkIn && checkOut ? `${fmt(checkIn)} → ${fmt(checkOut)}` : (checkIn ? `From ${fmt(checkIn)} (ongoing)` : 'TBD');
+  const nights = (checkIn && checkOut) ? Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000) : 0;
   const months = link.stayType === 'monthly' ? (Math.round((nights / 30) * 10) / 10) : null;
-  const totalStr = price ? `$${price.total}` : 'TBD';
+  const totalStr = price ? `$${price.total}` : 'Monthly';
   const depositStr = `$${deposit}`;
+  const effectiveStripe = link.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
 
-  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl: link.stripeUrl });
+  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml = buildDirectBookingAdminEmail({ name, email, phone, room: link.room, stayType: link.stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId });
 
   const contractRates = { rentUsd: link.rentUsd || rates?.monthly, rentVnd: link.rentVnd, depositAmount: link.depositAmount || deposit };
@@ -1722,20 +1779,9 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 </html>`;
 }
 
-function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl }) {
+function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl, guestPortalUrl }) {
   const firstName = name.split(' ')[0];
   const stayLabel = stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
-  const paySection = stripeUrl
-    ? `<tr><td style="padding:24px 32px;">
-        <p style="margin:0 0 16px 0;font-family:Arial,sans-serif;font-size:15px;color:#4a4a3a;">To complete your reservation, please pay your <strong>1 month deposit of ${depositStr}</strong>:</p>
-        <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-          <a href="${stripeUrl}" style="display:inline-block;padding:16px 36px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay Deposit — ${depositStr}</a>
-        </td></tr></table>
-        <p style="margin:16px 0 0 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;text-align:center;">Secure payment powered by Stripe</p>
-      </td></tr>`
-    : `<tr><td style="padding:24px 32px;">
-        <p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:#4a4a3a;">Your deposit of <strong>${depositStr}</strong> will be collected shortly. We'll be in touch with payment details.</p>
-      </td></tr>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1745,82 +1791,108 @@ function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut,
 <style>
 body,table,td{margin:0;padding:0;}
 body{background:#e8e0d5;}
-@media only screen and (max-width:600px){
-  .w600{width:100%!important;}
-  .pad{padding:20px!important;}
-}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:20px!important;}}
 </style>
 </head>
 <body>
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:40px 16px;">
 <tr><td align="center">
 <table class="w600" width="600" cellpadding="0" cellspacing="0" style="background:#faf8f5;border-radius:8px;overflow:hidden;">
-  <tr><td style="background:#86a2a6;padding:32px;" class="pad">
+
+  <!-- Header -->
+  <tr><td style="background:#86a2a6;padding:28px 32px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td><p style="margin:0;font-family:Georgia,serif;font-size:22px;color:#fff;letter-spacing:0.05em;">Ta.Garden</p></td>
-      <td align="right"><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.8);letter-spacing:0.1em;text-transform:uppercase;">Booking Confirmed</p></td>
+      <td align="right"><p style="margin:0;font-family:Arial,sans-serif;font-size:10px;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;">Booking Confirmed</p></td>
     </tr></table>
   </td></tr>
-  <tr><td style="padding:32px;" class="pad">
-    <p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Dear ${firstName},</p>
-    <h2 style="margin:0 0 16px 0;font-family:Georgia,serif;font-size:26px;color:#3a3a2a;font-weight:normal;">Your booking is confirmed.</h2>
-    <p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:#4a4a3a;line-height:1.6;">We're delighted to welcome you to Ta.Garden. Here are your reservation details:</p>
+
+  <!-- Greeting -->
+  <tr><td style="padding:28px 32px 16px;" class="pad">
+    <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Dear ${firstName},</p>
+    <p style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#3a3a2a;font-weight:normal;">Your booking is confirmed.</p>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.7;">We're delighted to welcome you to Ta.Garden. Here are your reservation details:</p>
   </td></tr>
+
+  <!-- Booking summary -->
   <tr><td style="padding:0 32px 24px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
-      <tr>
-        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Room</p></td>
-            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${room}</p></td>
-          </tr></table>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Stay Type</p></td>
-            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${stayLabel}</p></td>
-          </tr></table>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Dates</p></td>
-            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:15px;color:#3a3a2a;">${dateRange}</p></td>
-          </tr></table>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 24px;border-bottom:1px solid #e0d9d0;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Total</p></td>
-            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${totalStr}</p></td>
-          </tr></table>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr>
-            <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Deposit Due</p></td>
-            <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:16px;color:#3a3a2a;">${depositStr} <span style="font-size:12px;color:#88917d;">(1 month)</span></p></td>
-          </tr></table>
-        </td>
-      </tr>
+      ${[
+        ['Room', room],
+        ['Stay Type', stayLabel],
+        ['Dates', dateRange],
+        ['Monthly Rent', totalStr !== 'Monthly' ? totalStr : depositStr],
+        ['Deposit Due', `${depositStr} <span style="font-size:11px;color:#88917d;">(1 month's rent)</span>`],
+      ].map(([k, v], i, a) => `<tr><td style="padding:16px 20px;${i < a.length-1 ? 'border-bottom:1px solid #e0d9d0;' : ''}">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">${k}</p></td>
+          <td align="right"><p style="margin:0;font-family:Georgia,serif;font-size:15px;color:#3a3a2a;">${v}</p></td>
+        </tr></table>
+      </td></tr>`).join('')}
     </table>
   </td></tr>
-  ${paySection}
-  <tr><td style="padding:24px 32px;border-top:1px solid #e8e0d5;" class="pad">
-    <p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.6;"><strong>What's next?</strong></p>
-    <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;">1. Pay your deposit using the link above</p>
-    <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;">2. Your contract will be sent to you separately</p>
-    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;">3. We'll reach out to confirm arrival details</p>
+
+  <!-- Pay deposit -->
+  <tr><td style="padding:0 32px 24px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#3a3a2a;border-radius:6px;padding:20px 24px;">
+      <tr><td>
+        <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#c8b89a;letter-spacing:0.1em;text-transform:uppercase;">Step 1 — Pay Your Deposit</p>
+        <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">Your deposit of <strong style="color:#fff;">${depositStr}</strong> is due within 48 hours to fully secure your room.</p>
+        <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+          <a href="${stripeUrl}" style="display:inline-block;padding:14px 36px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Deposit — ${depositStr}</a>
+        </td></tr></table>
+        <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Secure payment via Stripe</p>
+      </td></tr>
+    </table>
   </td></tr>
-  <tr><td style="background:#3a3a2a;padding:24px 32px;text-align:center;" class="pad">
-    <p style="margin:0 0 4px 0;font-family:Georgia,serif;font-size:14px;color:#c8b89a;">Ta.Garden</p>
-    <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;">Cam Nam Island · Hội An, Vietnam</p>
+
+  <!-- Guest portal -->
+  ${guestPortalUrl ? `<tr><td style="padding:0 32px 24px;" class="pad">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;border:1px solid #ddd5c8;">
+      <tr><td style="padding:20px 24px;">
+        <p style="margin:0 0 10px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">Step 2 — Your Guest Portal</p>
+        <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:14px;color:#3a3a2a;line-height:1.7;">Your personal guest portal is where you manage everything about your stay:</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+          ${[
+            ['✓', 'Sign your rental contract'],
+            ['✓', 'Upload your passport &amp; visa copy (required within 24h of move-in)'],
+            ['✓', 'View and track monthly payments'],
+            ['✓', 'Update your profile and contact details'],
+            ['✓', 'Message the team for any questions'],
+          ].map(([icon, text]) => `<tr><td width="20" style="padding:4px 8px 4px 0;font-size:14px;color:#86a2a6;vertical-align:top;">${icon}</td><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.5;">${text}</td></tr>`).join('')}
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+          <a href="${guestPortalUrl}" style="display:inline-block;padding:14px 32px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Open Your Guest Portal →</a>
+        </td></tr></table>
+        <p style="margin:10px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;text-align:center;">Bookmark this link — it's your home base for your stay at Ta.Garden</p>
+      </td></tr>
+    </table>
+  </td></tr>` : ''}
+
+  <!-- What's next -->
+  <tr><td style="padding:0 32px 28px;" class="pad">
+    <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">What happens next</p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${[
+        ['01', 'Pay your deposit via Stripe to secure your room'],
+        ['02', 'Open your Guest Portal to sign your contract and upload your documents'],
+        ['03', 'We\'ll send you a payment reminder before each monthly due date (1st of the month)'],
+        ['04', 'We\'ll reach out closer to your move-in date with arrival details'],
+      ].map(([n, t]) => `<tr>
+        <td width="32" style="padding:0 10px 12px 0;vertical-align:top;">
+          <span style="display:inline-block;background:#3a3a2a;color:#c8b89a;font-size:9px;padding:3px 7px;font-family:Arial,sans-serif;letter-spacing:0.1em;">${n}</span>
+        </td>
+        <td style="padding-bottom:12px;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.6;vertical-align:top;">${t}</td>
+      </tr>`).join('')}
+    </table>
   </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#3a3a2a;padding:20px 32px;text-align:center;" class="pad">
+    <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:13px;color:#c8b89a;">Ta.Garden</p>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;color:#88917d;">Cam Nam Island · Hội An, Vietnam · <a href="https://ta-garden.soulandlunawellness.com" style="color:#88917d;">ta-garden.soulandlunawellness.com</a></p>
+  </td></tr>
+
 </table>
 </td></tr>
 </table>

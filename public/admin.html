@@ -354,27 +354,40 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .sg-thumb-del:hover { background: var(--red); }
 
 /* ── Financial tab ── */
-.fin-overview { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+.fin-overview { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
 .fin-card { background: var(--white); border: 1px solid rgba(136,145,125,0.14); padding: 18px 20px; }
 .fin-card-lbl { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); margin-bottom: 6px; }
 .fin-card-n { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; }
 .fin-card-sub { font-size: 11px; color: var(--mid); margin-top: 3px; }
-.fin-section { background: var(--white); border: 1px solid rgba(136,145,125,0.14); margin-bottom: 16px; }
-.fin-section-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid rgba(136,145,125,0.12); cursor: pointer; user-select: none; }
-.fin-section-title { font-size: 12px; font-weight: 400; letter-spacing: 0.05em; }
-.fin-section-amt { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; color: var(--stone,#3a3a2a); }
-.fin-section-body { padding: 14px 18px; }
-.fin-exp-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(136,145,125,0.08); font-size: 13px; }
-.fin-exp-row:last-child { border-bottom: none; }
-.fin-exp-date { font-size: 10px; color: var(--mid); flex-shrink: 0; min-width: 76px; }
-.fin-exp-desc { flex: 1; }
-.fin-exp-note { font-size: 11px; color: var(--mid); }
-.fin-exp-amt { font-family: 'Cormorant Garamond', serif; font-size: 16px; white-space: nowrap; flex-shrink: 0; }
-.fin-exp-del { padding: 2px 7px; background: none; border: 1px solid rgba(184,92,92,0.3); color: var(--red); font-size: 9px; cursor: pointer; flex-shrink: 0; }
-.fin-exp-del:hover { background: rgba(184,92,92,0.07); }
-.fin-add-form { margin-top: 12px; background: var(--light); padding: 14px; border: 1px solid rgba(136,145,125,0.14); }
-.fin-add-grid { display: grid; grid-template-columns: 1fr 1fr 100px 120px; gap: 8px; align-items: end; margin-bottom: 10px; }
-.fin-cat-pill { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; background: rgba(134,162,166,0.14); color: var(--teal); margin-right: 4px; }
+.fin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.fin-toolbar-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fin-tbl-wrap { overflow-x: auto; background: var(--white); border: 1px solid rgba(136,145,125,0.16); border-radius: 0; }
+.fin-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fin-tbl thead th { padding: 10px 12px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); text-align: left; border-bottom: 1px solid rgba(136,145,125,0.16); background: var(--light); font-weight: 400; white-space: nowrap; }
+.fin-tbl thead th.fin-th-sort { cursor: pointer; }
+.fin-tbl thead th.fin-th-sort:hover { color: var(--dark); }
+.fin-tbl thead th.fin-th-r { text-align: right; }
+.fin-tbl tbody tr { border-bottom: 1px solid rgba(136,145,125,0.09); transition: background 0.1s; }
+.fin-tbl tbody tr:last-child { border-bottom: none; }
+.fin-tbl tbody tr:hover:not(.fin-total-row):not(.fin-add-row) { background: rgba(136,145,125,0.04); }
+.fin-tbl tbody tr.fin-row-editing { background: rgba(200,185,165,0.1) !important; }
+.fin-tbl tbody td { padding: 9px 12px; vertical-align: middle; }
+.fin-tbl tbody td.fin-td-r { text-align: right; }
+.fin-tbl tbody td.fin-td-c { text-align: center; }
+.fin-tbl tbody td.fin-td-actions { text-align: right; white-space: nowrap; }
+.fin-tbl input[type=text],.fin-tbl input[type=number],.fin-tbl input[type=date],.fin-tbl select { width: 100%; box-sizing: border-box; border: 1px solid rgba(136,145,125,0.3); border-radius: 3px; padding: 4px 7px; font-size: 12px; background: var(--white); font-family: 'Jost', sans-serif; color: var(--dark); }
+.fin-tbl input[type=number] { text-align: right; }
+.fin-paid-badge { display: inline-block; padding: 3px 9px; border-radius: 2px; font-size: 9px; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; user-select: none; }
+.fin-paid-badge.paid   { background: rgba(76,175,125,0.12); color: var(--green); border: 1px solid rgba(76,175,125,0.25); }
+.fin-paid-badge.pending { background: rgba(200,146,42,0.10); color: var(--amber); border: 1px solid rgba(200,146,42,0.25); }
+.fin-cat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; flex-shrink: 0; }
+.fin-row-btn { padding: 3px 7px; background: none; border: 1px solid rgba(136,145,125,0.25); color: var(--mid); font-size: 11px; cursor: pointer; border-radius: 2px; margin-left: 3px; transition: all 0.15s; }
+.fin-row-btn:hover { border-color: var(--dark); color: var(--dark); }
+.fin-row-btn.fin-row-del:hover { border-color: var(--red); color: var(--red); }
+.fin-row-btn.fin-row-save { border-color: var(--green); color: var(--green); }
+.fin-total-row td { font-size: 11px; font-weight: 400; color: var(--mid); letter-spacing: 0.05em; background: rgba(136,145,125,0.05); border-top: 1px solid rgba(136,145,125,0.16) !important; }
+.fin-total-row td.fin-td-r { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 300; color: var(--dark); }
+.fin-add-row td { background: rgba(200,185,165,0.07); border-top: 2px dashed rgba(136,145,125,0.2) !important; }
 
 /* ── Mobile responsive ── */
 @media (max-width: 768px) {
@@ -404,6 +417,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
   .topbar-brand { display: none; }
   .signout-btn { font-size: 8px; padding: 5px 8px; }
   .fin-overview { grid-template-columns: 1fr 1fr; }
+  .fin-toolbar { flex-direction: column; align-items: stretch; }
 }
 </style>
 </head>
@@ -708,58 +722,74 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 
     <!-- FINANCIALS -->
     <div id="pane-financials" style="display:none">
-      <div class="ph"><div class="ph-title serif">Financial Overview — Ta.Garden</div></div>
+      <div class="ph"><div class="ph-title serif">Financial Tracker — Ta.Garden</div></div>
+
+      <!-- Summary cards -->
       <div class="fin-overview" id="finOverview">
-        <div class="fin-card"><div class="fin-card-lbl">Total Revenue</div><div class="fin-card-n" id="fin-revenue">—</div><div class="fin-card-sub">from confirmed bookings</div></div>
-        <div class="fin-card"><div class="fin-card-lbl">Total Expenses</div><div class="fin-card-n" id="fin-expenses">—</div><div class="fin-card-sub">startup + recurring</div></div>
-        <div class="fin-card"><div class="fin-card-lbl">Net Position</div><div class="fin-card-n" id="fin-net" style="color:var(--red);">—</div><div class="fin-card-sub" id="fin-net-sub"></div></div>
-        <div class="fin-card"><div class="fin-card-lbl">Break-even</div><div class="fin-card-n" id="fin-breakeven" style="font-size:18px;">—</div><div class="fin-card-sub" id="fin-breakeven-sub">at current monthly revenue</div></div>
-      </div>
-
-      <!-- Add Expense -->
-      <div class="fin-section" style="margin-bottom:20px;">
-        <div class="fin-section-hd" onclick="toggleFinForm()">
-          <div class="fin-section-title">+ Add Expense</div>
-          <span style="font-size:18px;color:var(--mid);" id="finFormArrow">▸</span>
+        <div class="fin-card">
+          <div class="fin-card-lbl">Total Revenue</div>
+          <div class="fin-card-n" id="fin-revenue">—</div>
+          <div class="fin-card-sub">confirmed bookings</div>
         </div>
-        <div id="finAddForm" style="display:none;padding:16px 18px;">
-          <div class="fin-add-grid">
-            <div><label class="fl">Description</label><input type="text" class="fc" id="fin-desc" placeholder="e.g. Monthly rent to Thao"></div>
-            <div><label class="fl">Category</label>
-              <select class="fc" id="fin-cat">
-                <option value="lease">Lease / Rent Payments</option>
-                <option value="deposit">Deposit to Homeowner</option>
-                <option value="furniture">Furniture &amp; Decor</option>
-                <option value="labor">Labor &amp; Services</option>
-                <option value="supplies">Linens &amp; Supplies</option>
-                <option value="security">Security &amp; Tech</option>
-                <option value="utilities">Utilities</option>
-                <option value="cleaning">Cleaning &amp; Maintenance</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div><label class="fl">Amount (USD)</label><input type="number" class="fc" id="fin-usd" placeholder="0" min="0" step="0.01"></div>
-            <div><label class="fl">Date</label><input type="date" class="fc" id="fin-date"></div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;margin-bottom:12px;">
-            <div><label class="fl">Note (optional)</label><input type="text" class="fc" id="fin-note" placeholder="e.g. Month of July"></div>
-            <div><label class="fl">Amount (VND)</label><input type="number" class="fc" id="fin-vnd" placeholder="0" min="0"></div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mid);cursor:pointer;">
-              <input type="checkbox" id="fin-startup" checked> One-time startup cost
-            </label>
-          </div>
-          <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
-            <button class="btn-dark" onclick="doAddExpense()">Add Expense →</button>
-            <button class="btn-sm" onclick="toggleFinForm()">Cancel</button>
-            <span class="status-msg" id="finAddStatus" style="margin:0;"></span>
-          </div>
+        <div class="fin-card">
+          <div class="fin-card-lbl">Total Expenses</div>
+          <div class="fin-card-n" id="fin-expenses">—</div>
+          <div class="fin-card-sub" id="fin-exp-sub">all logged costs</div>
+        </div>
+        <div class="fin-card">
+          <div class="fin-card-lbl">Paid Out</div>
+          <div class="fin-card-n" id="fin-paid">—</div>
+          <div class="fin-card-sub" id="fin-pending-sub">— pending</div>
+        </div>
+        <div class="fin-card">
+          <div class="fin-card-lbl">Net Position</div>
+          <div class="fin-card-n" id="fin-net">—</div>
+          <div class="fin-card-sub" id="fin-net-sub"></div>
         </div>
       </div>
 
-      <!-- Expenses by category -->
-      <div id="finExpensesList"><div class="loading">Loading…</div></div>
+      <!-- Toolbar -->
+      <div class="fin-toolbar">
+        <div class="fin-toolbar-left">
+          <select class="fc" id="fin-filter-cat" onchange="renderFinancials()" style="width:auto;font-size:12px;padding:6px 10px;">
+            <option value="">All Categories</option>
+            <option value="lease">Lease / Rent</option>
+            <option value="deposit">Deposit</option>
+            <option value="furniture">Furniture &amp; Decor</option>
+            <option value="labor">Labor &amp; Services</option>
+            <option value="supplies">Linens &amp; Supplies</option>
+            <option value="security">Security &amp; Tech</option>
+            <option value="utilities">Utilities</option>
+            <option value="cleaning">Cleaning</option>
+            <option value="other">Other</option>
+          </select>
+          <select class="fc" id="fin-filter-status" onchange="renderFinancials()" style="width:auto;font-size:12px;padding:6px 10px;">
+            <option value="">All Statuses</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+        <button class="btn-dark" onclick="finStartAddRow()" style="font-size:11px;padding:8px 16px;">+ Add Expense</button>
+      </div>
+
+      <!-- Spreadsheet table -->
+      <div class="fin-tbl-wrap">
+        <table class="fin-tbl">
+          <thead>
+            <tr>
+              <th class="fin-th-sort" onclick="finSortBy('date')" style="width:98px;">Date <span id="fin-sort-date">↓</span></th>
+              <th style="width:150px;">Category</th>
+              <th>Description</th>
+              <th style="width:160px;">Note</th>
+              <th class="fin-th-sort fin-th-r" onclick="finSortBy('amountUsd')" style="width:90px;">USD <span id="fin-sort-amt"></span></th>
+              <th class="fin-th-r" style="width:110px;">VND</th>
+              <th class="fin-th-sort" onclick="finSortBy('paid')" style="width:86px;text-align:center;">Status <span id="fin-sort-paid"></span></th>
+              <th style="width:70px;"></th>
+            </tr>
+          </thead>
+          <tbody id="finTbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- PROPERTIES -->
@@ -3320,31 +3350,30 @@ async function createTestInquiry() {
 // ── Financials ────────────────────────────────────────────────────────────────
 
 const FIN_CATS = {
-  lease:     { label: 'Lease / Rent Payments',    color: '#86a2a6' },
-  deposit:   { label: 'Deposit to Homeowner',     color: '#a0856c' },
-  furniture: { label: 'Furniture & Decor',        color: '#6a8f7a' },
-  labor:     { label: 'Labor & Services',         color: '#8a7a6a' },
-  supplies:  { label: 'Linens & Supplies',        color: '#9a8a7a' },
-  security:  { label: 'Security & Tech',          color: '#7a8a9a' },
-  utilities: { label: 'Utilities',                color: '#7a9a8a' },
-  cleaning:  { label: 'Cleaning & Maintenance',   color: '#8a9a7a' },
-  other:     { label: 'Other',                    color: '#88917d' },
+  lease:     { label: 'Lease / Rent',        color: '#86a2a6' },
+  deposit:   { label: 'Deposit',             color: '#a0856c' },
+  furniture: { label: 'Furniture & Decor',   color: '#6a8f7a' },
+  labor:     { label: 'Labor & Services',    color: '#8a7a6a' },
+  supplies:  { label: 'Linens & Supplies',   color: '#9a8a7a' },
+  security:  { label: 'Security & Tech',     color: '#7a8a9a' },
+  utilities: { label: 'Utilities',           color: '#7a9a8a' },
+  cleaning:  { label: 'Cleaning',            color: '#8a9a7a' },
+  other:     { label: 'Other',               color: '#88917d' },
 };
 
-let allExpenses = [];
+let allExpenses  = [];
+let finSortField = 'date';
+let finSortDir   = -1;
+let finAddingRow = false;
 
-function toggleFinForm() {
-  const f = document.getElementById('finAddForm');
-  const arrow = document.getElementById('finFormArrow');
-  const open = f.style.display !== 'none';
-  f.style.display = open ? 'none' : 'block';
-  arrow.textContent = open ? '▸' : '▾';
-  if (!open) document.getElementById('fin-date').value = new Date().toISOString().slice(0,10);
-  else document.getElementById('fin-date').value = new Date().toISOString().slice(0,10);
+function finSortBy(field) {
+  if (finSortField === field) finSortDir *= -1;
+  else { finSortField = field; finSortDir = -1; }
+  renderFinancials();
 }
 
 async function loadFinancials() {
-  document.getElementById('finExpensesList').innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('finTbody').innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mid);">Loading…</td></tr>';
   try {
     const r = await fetch(`/api/admin/financials?propertyId=${currentProp?.id||'ta-garden'}`, { headers: { 'x-admin-secret': secret } });
     const d = await r.json();
@@ -3354,118 +3383,194 @@ async function loadFinancials() {
 }
 
 function renderFinancials() {
-  // Revenue from confirmed bookings
-  const confirmed = allEnquiries.filter(e => !e.archived && e.status === 'confirmed');
+  // ── Summary cards ──
+  const confirmed    = allEnquiries.filter(e => !e.archived && e.status === 'confirmed');
   const totalRevenue = confirmed.reduce((s,e) => s + calcEnqRevenue(e), 0);
+  const totalExp     = allExpenses.reduce((s,e) => s + (e.amountUsd || 0), 0);
+  const paidExp      = allExpenses.filter(e => e.paid).reduce((s,e) => s + (e.amountUsd||0), 0);
+  const pendingExp   = allExpenses.filter(e => !e.paid).reduce((s,e) => s + (e.amountUsd||0), 0);
+  const net          = totalRevenue - totalExp;
 
-  // Expenses
-  const totalExpenses = allExpenses.reduce((s,e) => s + (e.amountUsd || 0), 0);
-  const netPosition = totalRevenue - totalExpenses;
-  const monthlyRev = confirmed.reduce((s,e) => {
-    const rate = e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0;
-    return s + rate;
-  }, 0);
-
-  // Break-even
-  let breakEvenHtml = '—', breakEvenSub = 'no confirmed revenue yet';
-  if (monthlyRev > 0 && netPosition < 0) {
-    const months = Math.ceil(Math.abs(netPosition) / monthlyRev);
-    breakEvenHtml = `${months} mo`;
-    breakEvenSub = `at $${monthlyRev}/mo current revenue`;
-  } else if (netPosition >= 0) {
-    breakEvenHtml = '✓';
-    breakEvenSub = 'expenses covered';
-  }
-
-  document.getElementById('fin-revenue').textContent = totalRevenue ? '$' + totalRevenue.toLocaleString() : '—';
-  document.getElementById('fin-expenses').textContent = totalExpenses ? '$' + Math.round(totalExpenses).toLocaleString() : '—';
+  document.getElementById('fin-revenue').textContent  = totalRevenue ? '$' + totalRevenue.toLocaleString() : '—';
+  document.getElementById('fin-expenses').textContent  = totalExp ? '$' + Math.round(totalExp).toLocaleString() : '—';
+  document.getElementById('fin-paid').textContent      = paidExp ? '$' + Math.round(paidExp).toLocaleString() : '—';
+  document.getElementById('fin-pending-sub').textContent = pendingExp ? `$${Math.round(pendingExp).toLocaleString()} pending` : 'all paid';
   const netEl = document.getElementById('fin-net');
-  netEl.textContent = netPosition >= 0 ? '+$' + netPosition.toLocaleString() : '-$' + Math.abs(Math.round(netPosition)).toLocaleString();
-  netEl.style.color = netPosition >= 0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('fin-net-sub').textContent = netPosition >= 0 ? 'profitable' : 'startup deficit';
-  document.getElementById('fin-breakeven').textContent = breakEvenHtml;
-  document.getElementById('fin-breakeven-sub').textContent = breakEvenSub;
+  netEl.textContent   = net >= 0 ? '+$' + net.toLocaleString() : '-$' + Math.abs(Math.round(net)).toLocaleString();
+  netEl.style.color   = net >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('fin-net-sub').textContent   = net >= 0 ? 'profitable' : 'startup deficit';
 
-  // Group by category
-  const grouped = {};
-  for (const exp of allExpenses) {
-    const cat = exp.category || 'other';
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(exp);
+  // ── Filter ──
+  const catF    = document.getElementById('fin-filter-cat')?.value    || '';
+  const statusF = document.getElementById('fin-filter-status')?.value || '';
+  let rows = allExpenses.filter(e => {
+    if (catF    && e.category !== catF)                     return false;
+    if (statusF === 'paid'    && !e.paid)                   return false;
+    if (statusF === 'pending' &&  e.paid)                   return false;
+    return true;
+  });
+
+  // ── Sort ──
+  rows = [...rows].sort((a, b) => {
+    let av = a[finSortField], bv = b[finSortField];
+    if (finSortField === 'paid') { av = a.paid ? 1 : 0; bv = b.paid ? 1 : 0; }
+    if (av == null) av = finSortDir === -1 ? '' : '￿';
+    if (bv == null) bv = finSortDir === -1 ? '' : '￿';
+    return av < bv ? finSortDir : av > bv ? -finSortDir : 0;
+  });
+
+  // Update sort indicators
+  ['date','amt','paid'].forEach(f => {
+    const el = document.getElementById(`fin-sort-${f}`);
+    if (!el) return;
+    const field = f === 'amt' ? 'amountUsd' : f;
+    el.textContent = finSortField === field ? (finSortDir === -1 ? '↓' : '↑') : '';
+  });
+
+  // ── Render rows ──
+  const catOpts = Object.entries(FIN_CATS).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('');
+  const filteredTotal = rows.reduce((s,e) => s + (e.amountUsd||0), 0);
+
+  let html = rows.map(exp => {
+    const info = FIN_CATS[exp.category] || FIN_CATS.other;
+    const isPaid = !!exp.paid;
+    const vndCell = exp.amountVnd ? `<span style="font-size:11px;color:var(--mid);">${Number(exp.amountVnd).toLocaleString()}</span>` : '';
+    return `<tr data-id="${exp.id}">
+      <td style="color:var(--mid);font-size:12px;white-space:nowrap;">${exp.date || '—'}</td>
+      <td><span class="fin-cat-dot" style="background:${info.color}"></span><span style="font-size:12px;color:var(--mid);">${info.label}</span></td>
+      <td>${exp.description || ''}</td>
+      <td style="color:var(--mid);font-size:12px;">${exp.note || ''}</td>
+      <td class="fin-td-r" style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:300;">$${Number(exp.amountUsd||0).toLocaleString()}</td>
+      <td class="fin-td-r">${vndCell}</td>
+      <td class="fin-td-c"><span class="fin-paid-badge ${isPaid?'paid':'pending'}" onclick="doTogglePaid('${exp.id}')">${isPaid?'PAID':'PENDING'}</span></td>
+      <td class="fin-td-actions">
+        <button class="fin-row-btn" onclick="finStartEditRow('${exp.id}')" title="Edit">✎</button>
+        <button class="fin-row-btn fin-row-del" onclick="doDeleteExpense('${exp.id}')" title="Remove">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Total row
+  if (rows.length > 0) {
+    html += `<tr class="fin-total-row">
+      <td colspan="4" style="text-align:right;padding-right:16px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;">${rows.length} item${rows.length===1?'':'s'}</td>
+      <td class="fin-td-r">$${Math.round(filteredTotal).toLocaleString()}</td>
+      <td colspan="3"></td>
+    </tr>`;
+  } else {
+    html = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mid);font-size:13px;">No expenses match the current filter.</td></tr>';
   }
 
-  let html = '';
-  for (const [cat, items] of Object.entries(grouped).sort()) {
-    const info = FIN_CATS[cat] || FIN_CATS.other;
-    const catTotal = items.reduce((s,e) => s + (e.amountUsd || 0), 0);
-    const rows = items.sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(exp => `
-      <div class="fin-exp-row">
-        <div class="fin-exp-date">${exp.date || '—'}</div>
-        <div class="fin-exp-desc">
-          ${exp.description}
-          ${exp.isStartup ? '<span class="fin-cat-pill">startup</span>' : '<span class="fin-cat-pill" style="background:rgba(200,146,42,0.12);color:var(--amber);">recurring</span>'}
-          ${exp.note ? `<div class="fin-exp-note">${exp.note}</div>` : ''}
-        </div>
-        <div class="fin-exp-amt">$${Number(exp.amountUsd).toLocaleString()}${exp.amountVnd ? `<div style="font-size:11px;color:var(--mid);">${Number(exp.amountVnd).toLocaleString()} VND</div>` : ''}</div>
-        <button class="fin-exp-del" onclick="doDeleteExpense('${exp.id}')">✕</button>
-      </div>`).join('');
-    html += `
-      <div class="fin-section">
-        <div class="fin-section-hd" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
-          <div class="fin-section-title"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${info.color};margin-right:8px;vertical-align:middle;"></span>${info.label}</div>
-          <div class="fin-section-amt">$${Math.round(catTotal).toLocaleString()}</div>
-        </div>
-        <div class="fin-section-body">${rows}</div>
-      </div>`;
+  // Add-row (if active)
+  if (finAddingRow) {
+    html += `<tr class="fin-add-row">
+      <td><input type="date" id="fnew-date" value="${new Date().toISOString().slice(0,10)}"></td>
+      <td><select id="fnew-cat">${catOpts}</select></td>
+      <td><input type="text" id="fnew-desc" placeholder="Description"></td>
+      <td><input type="text" id="fnew-note" placeholder="Note (optional)"></td>
+      <td><input type="number" id="fnew-usd" placeholder="0" min="0" step="0.01"></td>
+      <td><input type="number" id="fnew-vnd" placeholder="0" min="0"></td>
+      <td class="fin-td-c"><span class="fin-paid-badge pending" style="cursor:default;">PENDING</span></td>
+      <td class="fin-td-actions">
+        <button class="fin-row-btn fin-row-save" onclick="finSaveNewRow()">✓</button>
+        <button class="fin-row-btn" onclick="finCancelAdd()">✕</button>
+      </td>
+    </tr>`;
   }
 
-  if (!html) html = `<div style="padding:24px;color:var(--mid);font-size:13px;background:var(--white);border:1px solid rgba(136,145,125,0.14);">No expenses recorded yet. Use the form above to add your first expense.</div>`;
-
-  // Monthly recurring summary
-  const recurring = allExpenses.filter(e => !e.isStartup);
-  const startupTotal = allExpenses.filter(e => e.isStartup).reduce((s,e) => s+(e.amountUsd||0), 0);
-  const recurringTotal = recurring.reduce((s,e) => s+(e.amountUsd||0), 0);
-  const summary = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-      <div class="fin-card"><div class="fin-card-lbl">Startup Investment</div><div class="fin-card-n">$${Math.round(startupTotal).toLocaleString()}</div><div class="fin-card-sub">one-time costs</div></div>
-      <div class="fin-card"><div class="fin-card-lbl">Recurring Expenses</div><div class="fin-card-n">$${Math.round(recurringTotal).toLocaleString()}</div><div class="fin-card-sub">ongoing costs logged</div></div>
-    </div>`;
-
-  document.getElementById('finExpensesList').innerHTML = summary + html;
+  document.getElementById('finTbody').innerHTML = html;
+  if (finAddingRow) document.getElementById('fnew-desc')?.focus();
 }
 
-async function doAddExpense() {
-  const desc   = document.getElementById('fin-desc').value.trim();
-  const cat    = document.getElementById('fin-cat').value;
-  const usd    = parseFloat(document.getElementById('fin-usd').value) || 0;
-  const vnd    = parseFloat(document.getElementById('fin-vnd').value) || null;
-  const date   = document.getElementById('fin-date').value;
-  const note   = document.getElementById('fin-note').value.trim();
-  const startup = document.getElementById('fin-startup').checked;
-  const status = document.getElementById('finAddStatus');
+function finStartAddRow() {
+  finAddingRow = true;
+  renderFinancials();
+  document.getElementById('fnew-desc')?.focus();
+}
 
-  if (!desc) { status.textContent = 'Description required.'; status.style.color = 'var(--red)'; return; }
-  if (!usd)  { status.textContent = 'Amount required.'; status.style.color = 'var(--red)'; return; }
-  status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
+function finCancelAdd() {
+  finAddingRow = false;
+  renderFinancials();
+}
 
+async function finSaveNewRow() {
+  const desc = document.getElementById('fnew-desc')?.value.trim();
+  const cat  = document.getElementById('fnew-cat')?.value;
+  const usd  = parseFloat(document.getElementById('fnew-usd')?.value) || 0;
+  const vnd  = parseFloat(document.getElementById('fnew-vnd')?.value) || null;
+  const date = document.getElementById('fnew-date')?.value;
+  const note = document.getElementById('fnew-note')?.value.trim();
+  if (!desc) { document.getElementById('fnew-desc').style.borderColor='var(--red)'; return; }
+  if (!usd)  { document.getElementById('fnew-usd').style.borderColor='var(--red)'; return; }
   try {
     const r = await fetch('/api/admin/financials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
-      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', description: desc, category: cat, amountUsd: usd, amountVnd: vnd, date, note, isStartup: startup }),
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', description: desc, category: cat, amountUsd: usd, amountVnd: vnd, date, note, isStartup: false }),
     });
     const d = await r.json();
-    if (d.success) {
-      allExpenses = d.expenses;
-      document.getElementById('fin-desc').value = '';
-      document.getElementById('fin-usd').value = '';
-      document.getElementById('fin-vnd').value = '';
-      document.getElementById('fin-note').value = '';
-      status.textContent = 'Added ✓'; status.style.color = 'var(--green)';
-      renderFinancials();
-      setTimeout(() => { status.textContent = ''; }, 1500);
-    } else { status.textContent = d.error || 'Error'; status.style.color = 'var(--red)'; }
-  } catch { status.textContent = 'Network error.'; status.style.color = 'var(--red)'; }
+    if (d.success) { allExpenses = d.expenses; finAddingRow = false; renderFinancials(); }
+  } catch {}
+}
+
+function finStartEditRow(id) {
+  const exp = allExpenses.find(e => e.id === id);
+  if (!exp) return;
+  const tr = document.querySelector(`#finTbody tr[data-id="${id}"]`);
+  if (!tr) return;
+  tr.classList.add('fin-row-editing');
+  const catOpts = Object.entries(FIN_CATS).map(([k,v]) => `<option value="${k}" ${exp.category===k?'selected':''}>${v.label}</option>`).join('');
+  const isPaid = !!exp.paid;
+  tr.innerHTML = `
+    <td><input type="date" id="fedit-date-${id}" value="${exp.date||''}"></td>
+    <td><select id="fedit-cat-${id}">${catOpts}</select></td>
+    <td><input type="text" id="fedit-desc-${id}" value="${(exp.description||'').replace(/"/g,'&quot;')}"></td>
+    <td><input type="text" id="fedit-note-${id}" value="${(exp.note||'').replace(/"/g,'&quot;')}" placeholder="note"></td>
+    <td><input type="number" id="fedit-usd-${id}" value="${exp.amountUsd||''}"></td>
+    <td><input type="number" id="fedit-vnd-${id}" value="${exp.amountVnd||''}"></td>
+    <td class="fin-td-c"><span class="fin-paid-badge ${isPaid?'paid':'pending'}" onclick="doTogglePaid('${id}')">${isPaid?'PAID':'PENDING'}</span></td>
+    <td class="fin-td-actions">
+      <button class="fin-row-btn fin-row-save" onclick="finSaveEditRow('${id}')">✓</button>
+      <button class="fin-row-btn" onclick="renderFinancials()">✕</button>
+    </td>`;
+  tr.querySelector(`#fedit-desc-${id}`)?.focus();
+}
+
+async function finSaveEditRow(id) {
+  const usd = parseFloat(document.getElementById(`fedit-usd-${id}`)?.value) || 0;
+  const vnd = parseFloat(document.getElementById(`fedit-vnd-${id}`)?.value) || null;
+  const updates = {
+    date:        document.getElementById(`fedit-date-${id}`)?.value,
+    category:    document.getElementById(`fedit-cat-${id}`)?.value,
+    description: document.getElementById(`fedit-desc-${id}`)?.value.trim(),
+    note:        document.getElementById(`fedit-note-${id}`)?.value.trim(),
+    amountUsd:   usd,
+    amountVnd:   vnd,
+  };
+  if (!updates.description) return;
+  try {
+    const r = await fetch('/api/admin/financials', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', expenseId: id, updates }),
+    });
+    const d = await r.json();
+    if (d.success) { allExpenses = d.expenses; renderFinancials(); }
+  } catch {}
+}
+
+async function doTogglePaid(id) {
+  const exp = allExpenses.find(e => e.id === id);
+  if (!exp) return;
+  try {
+    const r = await fetch('/api/admin/financials', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', expenseId: id, updates: { paid: !exp.paid } }),
+    });
+    const d = await r.json();
+    if (d.success) { allExpenses = d.expenses; renderFinancials(); }
+  } catch {}
 }
 
 async function doDeleteExpense(expId) {

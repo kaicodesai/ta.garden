@@ -125,6 +125,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/financials'      && m === 'GET')    return safeCall(() => adminGetFinancials(request, env, cors), cors);
     if (p === '/api/admin/financials'      && m === 'POST')   return safeCall(() => adminAddExpense(request, env, cors), cors);
     if (p === '/api/admin/financials'      && m === 'DELETE') return safeCall(() => adminDeleteExpense(request, env, cors), cors);
+    if (p === '/api/admin/financials'      && m === 'PATCH')  return safeCall(() => adminUpdateExpense(request, env, cors), cors);
     if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return safeCall(() => handleBookingLinkConfirm(request, env, cors, ctx), cors);
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
 
@@ -936,9 +937,9 @@ const RIVERHOUSE_STARTUP_EXPENSES = [
   {"id": "seed_064", "description": "House Cleaning", "category": "labor", "amountUsd": 63, "amountVnd": 1600000, "date": "2025-12-01", "note": "", "isStartup": true},
   {"id": "seed_065", "description": "Colt & Materials", "category": "labor", "amountUsd": 70, "amountVnd": null, "date": "2025-12-01", "note": "USD only on receipt", "isStartup": true},
   {"id": "seed_066", "description": "Kitchen Decal / Bathroom Walls (bulk)", "category": "labor", "amountUsd": 33, "amountVnd": 854100, "date": "2025-12-01", "note": "Bathroom", "isStartup": true},
-  {"id": "seed_067", "description": "DEPOSIT - Paid to Thao (Owner)", "category": "deposit", "amountUsd": 836, "amountVnd": 22000000, "date": "2026-01-01", "note": "Security deposit - already paid", "isStartup": false},
-  {"id": "seed_068", "description": "Rent - 1st Floor Room (Kai)", "category": "lease", "amountUsd": 114, "amountVnd": 3000000, "date": "2026-01-01", "note": "Discounted rate while in development", "isStartup": false},
-  {"id": "seed_069", "description": "2 MONTHS RENT - DUE ON 1ST TENANT (UPCOMING)", "category": "lease", "amountUsd": 1671, "amountVnd": 44000000, "date": "2026-01-01", "note": "UPCOMING: Pay Thao upon securing 1st tenant", "isStartup": false},
+  {"id": "seed_067", "description": "DEPOSIT - Paid to Thao (Owner)", "category": "deposit", "amountUsd": 836, "amountVnd": 22000000, "date": "2026-01-01", "note": "Security deposit - already paid", "isStartup": true, "paid": true},
+  {"id": "seed_068", "description": "Rent - 1st Floor Room (Kai)", "category": "lease", "amountUsd": 114, "amountVnd": 3000000, "date": "2026-01-01", "note": "Discounted rate while in development", "isStartup": false, "paid": true},
+  {"id": "seed_069", "description": "2 MONTHS RENT - DUE ON 1ST TENANT (UPCOMING)", "category": "lease", "amountUsd": 1671, "amountVnd": 44000000, "date": "2026-01-01", "note": "UPCOMING: Pay Thao upon securing 1st tenant", "isStartup": false, "paid": false},
 ];
 
 async function adminGetFinancials(request, env, cors) {
@@ -971,6 +972,18 @@ async function adminDeleteExpense(request, env, cors) {
   const filtered = expenses.filter(e => e.id !== expenseId);
   await env.BOOKINGS.put(finKey(propertyId), JSON.stringify(filtered));
   return Response.json({ success: true, expenses: filtered }, { headers: cors });
+}
+
+async function adminUpdateExpense(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { propertyId = 'ta-garden', expenseId, updates } = await request.json();
+  if (!expenseId) return Response.json({ error: 'expenseId required' }, { status: 400, headers: cors });
+  const expenses = safeJsonParse(await env.BOOKINGS.get(finKey(propertyId)));
+  const idx = expenses.findIndex(e => e.id === expenseId);
+  if (idx < 0) return Response.json({ error: 'not found' }, { status: 404, headers: cors });
+  expenses[idx] = { ...expenses[idx], ...updates };
+  await env.BOOKINGS.put(finKey(propertyId), JSON.stringify(expenses));
+  return Response.json({ success: true, expenses }, { headers: cors });
 }
 
 // ── Guest: magic link login ───────────────────────────────────────────────────

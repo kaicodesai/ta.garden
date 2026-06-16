@@ -121,6 +121,9 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/activity-log'    && m === 'GET')    return safeCall(() => adminGetActivityLog(request, env, cors), cors);
     if (p === '/api/admin/contract'        && m === 'GET')    return safeCall(() => adminGetContract(request, env, cors), cors);
     if (p === '/api/admin/send-contract'   && m === 'POST')   return safeCall(() => adminSendContract(request, env, cors), cors);
+    if (p === '/api/admin/financials'      && m === 'GET')    return safeCall(() => adminGetFinancials(request, env, cors), cors);
+    if (p === '/api/admin/financials'      && m === 'POST')   return safeCall(() => adminAddExpense(request, env, cors), cors);
+    if (p === '/api/admin/financials'      && m === 'DELETE') return safeCall(() => adminDeleteExpense(request, env, cors), cors);
     if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return safeCall(() => handleBookingLinkConfirm(request, env, cors, ctx), cors);
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
 
@@ -845,6 +848,38 @@ async function adminSendContract(request, env, cors) {
   if (!res?.ok) return Response.json({ success: false, error: 'Email send failed' }, { status: 500, headers: cors });
 
   return Response.json({ success: true, message: `Contract sent to ${enq.email}.` }, { headers: cors });
+}
+
+// ── Admin: financials (expenses P&L) ─────────────────────────────────────────
+
+function finKey(propId) { return `financials__${propId || 'ta-garden'}`; }
+
+async function adminGetFinancials(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const propId = new URL(request.url).searchParams.get('propertyId') || 'ta-garden';
+  const expenses = safeJsonParse(await env.BOOKINGS.get(finKey(propId)));
+  return Response.json({ expenses }, { headers: cors });
+}
+
+async function adminAddExpense(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { propertyId = 'ta-garden', description, category, amountUsd, amountVnd, date, note, isStartup } = await request.json();
+  if (!description || !amountUsd) return Response.json({ error: 'description and amountUsd required' }, { status: 400, headers: cors });
+  const expenses = safeJsonParse(await env.BOOKINGS.get(finKey(propertyId)));
+  const exp = { id: `exp_${Date.now()}`, description, category: category || 'other', amountUsd: Number(amountUsd), amountVnd: amountVnd ? Number(amountVnd) : null, date: date || new Date().toISOString().slice(0,10), note: note || '', isStartup: !!isStartup };
+  expenses.push(exp);
+  await env.BOOKINGS.put(finKey(propertyId), JSON.stringify(expenses));
+  return Response.json({ success: true, expenses }, { headers: cors });
+}
+
+async function adminDeleteExpense(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { propertyId = 'ta-garden', expenseId } = await request.json();
+  if (!expenseId) return Response.json({ error: 'expenseId required' }, { status: 400, headers: cors });
+  const expenses = safeJsonParse(await env.BOOKINGS.get(finKey(propertyId)));
+  const filtered = expenses.filter(e => e.id !== expenseId);
+  await env.BOOKINGS.put(finKey(propertyId), JSON.stringify(filtered));
+  return Response.json({ success: true, expenses: filtered }, { headers: cors });
 }
 
 // ── Guest: magic link login ───────────────────────────────────────────────────

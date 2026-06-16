@@ -352,6 +352,59 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .sg-thumb-caption { padding: 5px 8px; font-size: 10px; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-thumb-del { position: absolute; top: 4px; right: 4px; background: rgba(26,26,24,0.65); border: none; color: #fff; width: 22px; height: 22px; font-size: 14px; cursor: pointer; border-radius: 2px; line-height: 22px; text-align: center; }
 .sg-thumb-del:hover { background: var(--red); }
+
+/* ── Financial tab ── */
+.fin-overview { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+.fin-card { background: var(--white); border: 1px solid rgba(136,145,125,0.14); padding: 18px 20px; }
+.fin-card-lbl { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); margin-bottom: 6px; }
+.fin-card-n { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; }
+.fin-card-sub { font-size: 11px; color: var(--mid); margin-top: 3px; }
+.fin-section { background: var(--white); border: 1px solid rgba(136,145,125,0.14); margin-bottom: 16px; }
+.fin-section-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid rgba(136,145,125,0.12); cursor: pointer; user-select: none; }
+.fin-section-title { font-size: 12px; font-weight: 400; letter-spacing: 0.05em; }
+.fin-section-amt { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 300; color: var(--stone,#3a3a2a); }
+.fin-section-body { padding: 14px 18px; }
+.fin-exp-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(136,145,125,0.08); font-size: 13px; }
+.fin-exp-row:last-child { border-bottom: none; }
+.fin-exp-date { font-size: 10px; color: var(--mid); flex-shrink: 0; min-width: 76px; }
+.fin-exp-desc { flex: 1; }
+.fin-exp-note { font-size: 11px; color: var(--mid); }
+.fin-exp-amt { font-family: 'Cormorant Garamond', serif; font-size: 16px; white-space: nowrap; flex-shrink: 0; }
+.fin-exp-del { padding: 2px 7px; background: none; border: 1px solid rgba(184,92,92,0.3); color: var(--red); font-size: 9px; cursor: pointer; flex-shrink: 0; }
+.fin-exp-del:hover { background: rgba(184,92,92,0.07); }
+.fin-add-form { margin-top: 12px; background: var(--light); padding: 14px; border: 1px solid rgba(136,145,125,0.14); }
+.fin-add-grid { display: grid; grid-template-columns: 1fr 1fr 100px 120px; gap: 8px; align-items: end; margin-bottom: 10px; }
+.fin-cat-pill { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; background: rgba(134,162,166,0.14); color: var(--teal); margin-right: 4px; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  .topbar { padding: 0 14px; }
+  .topbar-title { font-size: 15px; }
+  .tabbar { padding: 0 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; white-space: nowrap; display: block; }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab { display: inline-block; padding: 11px 12px; font-size: 8px; }
+  .body { padding: 14px; }
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stat { padding: 12px 14px; }
+  .stat-n { font-size: 20px; }
+  #enqContainer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tbl { min-width: 660px; }
+  .modal-overlay { align-items: flex-end; }
+  .modal-box { width: 100% !important; max-width: 100% !important; max-height: 92vh; border-radius: 12px 12px 0 0 !important; }
+  #profileOverlay .modal-box { max-height: 94vh; }
+  .profile-grid { grid-template-columns: 1fr !important; }
+  .fin-overview { grid-template-columns: 1fr 1fr; }
+  .fin-add-grid { grid-template-columns: 1fr 1fr; }
+  .ph { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .pills { flex-wrap: wrap; }
+}
+@media (max-width: 480px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat:last-child { grid-column: span 2; }
+  .topbar-brand { display: none; }
+  .signout-btn { font-size: 8px; padding: 5px 8px; }
+  .fin-overview { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body>
@@ -389,6 +442,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <button class="tab"     onclick="showTab('properties')">Properties</button>
     <button class="tab"     onclick="showTab('gallery')">Gallery</button>
     <button class="tab"     onclick="showTab('bookinglinks')">Book Links</button>
+    <button class="tab"     onclick="showTab('financials')">Financials</button>
   </div>
   <div class="body">
 
@@ -650,6 +704,62 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <pre id="kvInspectResult" style="display:none;margin-top:10px;padding:10px;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--stone);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow:auto;"></pre>
         </div>
       </div>
+    </div>
+
+    <!-- FINANCIALS -->
+    <div id="pane-financials" style="display:none">
+      <div class="ph"><div class="ph-title serif">Financial Overview — Ta.Garden</div></div>
+      <div class="fin-overview" id="finOverview">
+        <div class="fin-card"><div class="fin-card-lbl">Total Revenue</div><div class="fin-card-n" id="fin-revenue">—</div><div class="fin-card-sub">from confirmed bookings</div></div>
+        <div class="fin-card"><div class="fin-card-lbl">Total Expenses</div><div class="fin-card-n" id="fin-expenses">—</div><div class="fin-card-sub">startup + recurring</div></div>
+        <div class="fin-card"><div class="fin-card-lbl">Net Position</div><div class="fin-card-n" id="fin-net" style="color:var(--red);">—</div><div class="fin-card-sub" id="fin-net-sub"></div></div>
+        <div class="fin-card"><div class="fin-card-lbl">Break-even</div><div class="fin-card-n" id="fin-breakeven" style="font-size:18px;">—</div><div class="fin-card-sub" id="fin-breakeven-sub">at current monthly revenue</div></div>
+      </div>
+
+      <!-- Add Expense -->
+      <div class="fin-section" style="margin-bottom:20px;">
+        <div class="fin-section-hd" onclick="toggleFinForm()">
+          <div class="fin-section-title">+ Add Expense</div>
+          <span style="font-size:18px;color:var(--mid);" id="finFormArrow">▸</span>
+        </div>
+        <div id="finAddForm" style="display:none;padding:16px 18px;">
+          <div class="fin-add-grid">
+            <div><label class="fl">Description</label><input type="text" class="fc" id="fin-desc" placeholder="e.g. Monthly rent to Thao"></div>
+            <div><label class="fl">Category</label>
+              <select class="fc" id="fin-cat">
+                <option value="lease">Lease / Rent Payments</option>
+                <option value="deposit">Deposit to Homeowner</option>
+                <option value="furniture">Furniture &amp; Decor</option>
+                <option value="labor">Labor &amp; Services</option>
+                <option value="supplies">Linens &amp; Supplies</option>
+                <option value="security">Security &amp; Tech</option>
+                <option value="utilities">Utilities</option>
+                <option value="cleaning">Cleaning &amp; Maintenance</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div><label class="fl">Amount (USD)</label><input type="number" class="fc" id="fin-usd" placeholder="0" min="0" step="0.01"></div>
+            <div><label class="fl">Date</label><input type="date" class="fc" id="fin-date"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;margin-bottom:12px;">
+            <div><label class="fl">Note (optional)</label><input type="text" class="fc" id="fin-note" placeholder="e.g. Month of July"></div>
+            <div><label class="fl">Amount (VND)</label><input type="number" class="fc" id="fin-vnd" placeholder="0" min="0"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mid);cursor:pointer;">
+              <input type="checkbox" id="fin-startup" checked> One-time startup cost
+            </label>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+            <button class="btn-dark" onclick="doAddExpense()">Add Expense →</button>
+            <button class="btn-sm" onclick="toggleFinForm()">Cancel</button>
+            <span class="status-msg" id="finAddStatus" style="margin:0;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expenses by category -->
+      <div id="finExpensesList"><div class="loading">Loading…</div></div>
     </div>
 
     <!-- PROPERTIES -->
@@ -940,11 +1050,11 @@ async function switchProperty(id) {
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 function showTab(name) {
-  ['enquiries','timeline','blocking','properties','gallery','sanctuary','bookinglinks'].forEach(t => {
+  ['enquiries','timeline','blocking','properties','gallery','sanctuary','bookinglinks','financials'].forEach(t => {
     document.getElementById('pane-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((el,i) => {
-    el.classList.toggle('on', ['enquiries','timeline','blocking','properties','gallery','bookinglinks'][i] === name);
+    el.classList.toggle('on', ['enquiries','timeline','blocking','properties','gallery','bookinglinks','financials'][i] === name);
   });
   if (name === 'enquiries')    renderEnquiries();
   if (name === 'timeline')     renderTimeline();
@@ -952,6 +1062,7 @@ function showTab(name) {
   if (name === 'properties')   renderPropCards();
   if (name === 'gallery')      loadGallery();
   if (name === 'bookinglinks') { loadBookingLinks(); blPopulateEnquiryDropdown(); blRoomChanged(); }
+  if (name === 'financials')   loadFinancials();
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -3114,6 +3225,170 @@ async function createTestInquiry() {
     st.textContent = 'Network error: ' + err.message;
   }
   btn.disabled = false; btn.textContent = 'Create Test Inquiry →';
+}
+
+// ── Financials ────────────────────────────────────────────────────────────────
+
+const FIN_CATS = {
+  lease:     { label: 'Lease / Rent Payments',    color: '#86a2a6' },
+  deposit:   { label: 'Deposit to Homeowner',     color: '#a0856c' },
+  furniture: { label: 'Furniture & Decor',        color: '#6a8f7a' },
+  labor:     { label: 'Labor & Services',         color: '#8a7a6a' },
+  supplies:  { label: 'Linens & Supplies',        color: '#9a8a7a' },
+  security:  { label: 'Security & Tech',          color: '#7a8a9a' },
+  utilities: { label: 'Utilities',                color: '#7a9a8a' },
+  cleaning:  { label: 'Cleaning & Maintenance',   color: '#8a9a7a' },
+  other:     { label: 'Other',                    color: '#88917d' },
+};
+
+let allExpenses = [];
+
+function toggleFinForm() {
+  const f = document.getElementById('finAddForm');
+  const arrow = document.getElementById('finFormArrow');
+  const open = f.style.display !== 'none';
+  f.style.display = open ? 'none' : 'block';
+  arrow.textContent = open ? '▸' : '▾';
+  if (!open) document.getElementById('fin-date').value = new Date().toISOString().slice(0,10);
+  else document.getElementById('fin-date').value = new Date().toISOString().slice(0,10);
+}
+
+async function loadFinancials() {
+  document.getElementById('finExpensesList').innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const r = await fetch(`/api/admin/financials?propertyId=${currentProp?.id||'ta-garden'}`, { headers: { 'x-admin-secret': secret } });
+    const d = await r.json();
+    allExpenses = d.expenses || [];
+  } catch { allExpenses = []; }
+  renderFinancials();
+}
+
+function renderFinancials() {
+  // Revenue from confirmed bookings
+  const confirmed = allEnquiries.filter(e => !e.archived && e.status === 'confirmed');
+  const totalRevenue = confirmed.reduce((s,e) => s + calcEnqRevenue(e), 0);
+
+  // Expenses
+  const totalExpenses = allExpenses.reduce((s,e) => s + (e.amountUsd || 0), 0);
+  const netPosition = totalRevenue - totalExpenses;
+  const monthlyRev = confirmed.reduce((s,e) => {
+    const rate = e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0;
+    return s + rate;
+  }, 0);
+
+  // Break-even
+  let breakEvenHtml = '—', breakEvenSub = 'no confirmed revenue yet';
+  if (monthlyRev > 0 && netPosition < 0) {
+    const months = Math.ceil(Math.abs(netPosition) / monthlyRev);
+    breakEvenHtml = `${months} mo`;
+    breakEvenSub = `at $${monthlyRev}/mo current revenue`;
+  } else if (netPosition >= 0) {
+    breakEvenHtml = '✓';
+    breakEvenSub = 'expenses covered';
+  }
+
+  document.getElementById('fin-revenue').textContent = totalRevenue ? '$' + totalRevenue.toLocaleString() : '—';
+  document.getElementById('fin-expenses').textContent = totalExpenses ? '$' + Math.round(totalExpenses).toLocaleString() : '—';
+  const netEl = document.getElementById('fin-net');
+  netEl.textContent = netPosition >= 0 ? '+$' + netPosition.toLocaleString() : '-$' + Math.abs(Math.round(netPosition)).toLocaleString();
+  netEl.style.color = netPosition >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('fin-net-sub').textContent = netPosition >= 0 ? 'profitable' : 'startup deficit';
+  document.getElementById('fin-breakeven').textContent = breakEvenHtml;
+  document.getElementById('fin-breakeven-sub').textContent = breakEvenSub;
+
+  // Group by category
+  const grouped = {};
+  for (const exp of allExpenses) {
+    const cat = exp.category || 'other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(exp);
+  }
+
+  let html = '';
+  for (const [cat, items] of Object.entries(grouped).sort()) {
+    const info = FIN_CATS[cat] || FIN_CATS.other;
+    const catTotal = items.reduce((s,e) => s + (e.amountUsd || 0), 0);
+    const rows = items.sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(exp => `
+      <div class="fin-exp-row">
+        <div class="fin-exp-date">${exp.date || '—'}</div>
+        <div class="fin-exp-desc">
+          ${exp.description}
+          ${exp.isStartup ? '<span class="fin-cat-pill">startup</span>' : '<span class="fin-cat-pill" style="background:rgba(200,146,42,0.12);color:var(--amber);">recurring</span>'}
+          ${exp.note ? `<div class="fin-exp-note">${exp.note}</div>` : ''}
+        </div>
+        <div class="fin-exp-amt">$${Number(exp.amountUsd).toLocaleString()}${exp.amountVnd ? `<div style="font-size:11px;color:var(--mid);">${Number(exp.amountVnd).toLocaleString()} VND</div>` : ''}</div>
+        <button class="fin-exp-del" onclick="doDeleteExpense('${exp.id}')">✕</button>
+      </div>`).join('');
+    html += `
+      <div class="fin-section">
+        <div class="fin-section-hd" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+          <div class="fin-section-title"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${info.color};margin-right:8px;vertical-align:middle;"></span>${info.label}</div>
+          <div class="fin-section-amt">$${Math.round(catTotal).toLocaleString()}</div>
+        </div>
+        <div class="fin-section-body">${rows}</div>
+      </div>`;
+  }
+
+  if (!html) html = `<div style="padding:24px;color:var(--mid);font-size:13px;background:var(--white);border:1px solid rgba(136,145,125,0.14);">No expenses recorded yet. Use the form above to add your first expense.</div>`;
+
+  // Monthly recurring summary
+  const recurring = allExpenses.filter(e => !e.isStartup);
+  const startupTotal = allExpenses.filter(e => e.isStartup).reduce((s,e) => s+(e.amountUsd||0), 0);
+  const recurringTotal = recurring.reduce((s,e) => s+(e.amountUsd||0), 0);
+  const summary = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div class="fin-card"><div class="fin-card-lbl">Startup Investment</div><div class="fin-card-n">$${Math.round(startupTotal).toLocaleString()}</div><div class="fin-card-sub">one-time costs</div></div>
+      <div class="fin-card"><div class="fin-card-lbl">Recurring Expenses</div><div class="fin-card-n">$${Math.round(recurringTotal).toLocaleString()}</div><div class="fin-card-sub">ongoing costs logged</div></div>
+    </div>`;
+
+  document.getElementById('finExpensesList').innerHTML = summary + html;
+}
+
+async function doAddExpense() {
+  const desc   = document.getElementById('fin-desc').value.trim();
+  const cat    = document.getElementById('fin-cat').value;
+  const usd    = parseFloat(document.getElementById('fin-usd').value) || 0;
+  const vnd    = parseFloat(document.getElementById('fin-vnd').value) || null;
+  const date   = document.getElementById('fin-date').value;
+  const note   = document.getElementById('fin-note').value.trim();
+  const startup = document.getElementById('fin-startup').checked;
+  const status = document.getElementById('finAddStatus');
+
+  if (!desc) { status.textContent = 'Description required.'; status.style.color = 'var(--red)'; return; }
+  if (!usd)  { status.textContent = 'Amount required.'; status.style.color = 'var(--red)'; return; }
+  status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
+
+  try {
+    const r = await fetch('/api/admin/financials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', description: desc, category: cat, amountUsd: usd, amountVnd: vnd, date, note, isStartup: startup }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      allExpenses = d.expenses;
+      document.getElementById('fin-desc').value = '';
+      document.getElementById('fin-usd').value = '';
+      document.getElementById('fin-vnd').value = '';
+      document.getElementById('fin-note').value = '';
+      status.textContent = 'Added ✓'; status.style.color = 'var(--green)';
+      renderFinancials();
+      setTimeout(() => { status.textContent = ''; }, 1500);
+    } else { status.textContent = d.error || 'Error'; status.style.color = 'var(--red)'; }
+  } catch { status.textContent = 'Network error.'; status.style.color = 'var(--red)'; }
+}
+
+async function doDeleteExpense(expId) {
+  if (!confirm('Remove this expense?')) return;
+  try {
+    const r = await fetch('/api/admin/financials', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', expenseId: expId }),
+    });
+    const d = await r.json();
+    if (d.success) { allExpenses = d.expenses; renderFinancials(); }
+  } catch {}
 }
 
 // ── Auto-login ────────────────────────────────────────────────────────────────

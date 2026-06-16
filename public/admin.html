@@ -957,10 +957,11 @@ function showTab(name) {
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 function renderStats() {
-  const pending   = allEnquiries.filter(e => e.status === 'pending').length;
-  const confirmed = allEnquiries.filter(e => e.status === 'confirmed').length;
-  const rev       = allEnquiries.filter(e => e.status === 'confirmed' && e.price).reduce((s,e) => s+e.price, 0);
-  set('s0', allEnquiries.length);
+  const active    = allEnquiries.filter(e => !e.archived);
+  const pending   = active.filter(e => e.status === 'pending').length;
+  const confirmed = active.filter(e => e.status === 'confirmed').length;
+  const rev       = active.filter(e => e.status === 'confirmed' && e.price).reduce((s,e) => s+e.price, 0);
+  set('s0', active.length);
   set('s1', pending);
   set('s2', confirmed);
   set('s3', rev ? '$' + rev.toLocaleString() : '—');
@@ -1026,13 +1027,12 @@ function renderArrivals() {
 }
 
 function renderEnquiries() {
-  const list = filterStatus === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === filterStatus);
+  const active   = (filterStatus === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === filterStatus)).filter(e => !e.archived);
+  const archived = allEnquiries.filter(e => e.archived);
   const c = document.getElementById('enqContainer');
   const arrivalsHtml = renderArrivals();
-  if (!list.length) { c.innerHTML = arrivalsHtml + '<div class="empty">No enquiries yet for this property.</div>'; return; }
-  c.innerHTML = arrivalsHtml + `<table class="tbl">
-    <thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Est. Total</th><th>Message</th><th>Status &amp; Actions</th></tr></thead>
-    <tbody>${list.map(e => {
+
+  function rowHtml(e) {
       const isPending   = e.status === 'pending';
       const isConfirmed = e.status === 'confirmed';
       const waLink = e.phone ? `<a href="https://wa.me/${e.phone.replace(/[^0-9]/g,'')}" target="_blank" class="act-btn act-wa">WhatsApp</a>` : '';
@@ -1040,7 +1040,7 @@ function renderEnquiries() {
       const declineBtn = e.status !== 'cancelled' ? `<button class="act-btn act-decline" onclick="openDeclineModal('${e.id}')">Decline</button>` : '';
       const noteBtn = `<button class="act-btn act-note" onclick="openNoteModal('${e.id}')">Note</button>`;
       const profileBtn = `<button class="act-btn act-profile" onclick="openProfileModal('${e.id}')">Profile</button>`;
-      const deleteBtn = `<button class="act-btn act-decline" onclick="deleteEnquiry('${e.id}')" title="Permanently delete this enquiry" style="opacity:0.6;">Delete</button>`;
+      const archiveBtn = `<button class="act-btn act-note" onclick="archiveEnquiry('${e.id}')" title="Archive this enquiry" style="opacity:0.7;">Archive</button>`;
       const ob = e.onboarding || {};
       const obDots = ['paymentReceived','contractSigned','passportUploaded','visaUploaded'].map(k => `<div class="ob-dot${ob[k]?' done':''}" title="${k}"></div>`).join('');
       const noteBubble = e.note ? `<div class="note-bubble">${e.note.replace(/</g,'&lt;')}</div>` : '';
@@ -1071,12 +1071,37 @@ function renderEnquiries() {
         <span class="status-badge ${e.status}">${e.status}</span>
         <div class="onboarding-mini" title="Payment · Contract · Passport · Visa">${obDots}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">
-          ${confirmBtn}${declineBtn}${noteBtn}${profileBtn}${waLink}${deleteBtn}
+          ${confirmBtn}${declineBtn}${noteBtn}${profileBtn}${waLink}${archiveBtn}
         </div>
       </td>
     </tr>`;
-    }).join('')}</tbody>
-  </table>`;
+  }
+
+  const mainTable = active.length
+    ? `<table class="tbl">
+    <thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Est. Total</th><th>Message</th><th>Status &amp; Actions</th></tr></thead>
+    <tbody>${active.map(rowHtml).join('')}</tbody>
+  </table>`
+    : '<div class="empty">No enquiries yet for this property.</div>';
+
+  const archivedSection = archived.length ? `
+  <details style="margin-top:24px;">
+    <summary style="cursor:pointer;font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--mid);padding:10px 0;list-style:none;display:flex;align-items:center;gap:8px;">
+      <span>▸</span> Archived Enquiries (${archived.length})
+    </summary>
+    <table class="tbl" style="margin-top:10px;opacity:0.75;">
+      <thead><tr><th>Guest</th><th>Email</th><th>Room</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${archived.map(e => `<tr>
+        <td><div class="g-name">${e.name}</div><div style="font-size:10px;color:var(--mid);">${fmtDt(e.createdAt)}</div></td>
+        <td><a href="mailto:${e.email}" style="color:var(--terra);text-decoration:none;font-size:12px;">${e.email}</a></td>
+        <td><span class="badge badge-room">${(e.room||'').replace('The ','')}</span></td>
+        <td><span class="status-badge ${e.status}">${e.status}</span></td>
+        <td><button class="act-btn act-confirm" onclick="restoreEnquiry('${e.id}')" style="font-size:9px;">Restore</button></td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </details>` : '';
+
+  c.innerHTML = arrivalsHtml + mainTable + archivedSection;
 }
 
 // ── Modal helpers ─────────────────────────────────────────────────────────────
@@ -1428,7 +1453,7 @@ async function openProfileModal(id) {
     </div>
   </div>`;
 
-  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created', dates_updated:'Dates Updated' };
+  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created', dates_updated:'Dates Updated', archived:'Archived / Restored' };
   const logSection = `<div class="profile-section">
     <div class="profile-section-title">Activity Log</div>
     ${activityLog.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${activityLog.map(e => {
@@ -2951,6 +2976,41 @@ async function setupColt() {
     st.textContent = 'Network error: ' + err.message;
   }
   btn.disabled = false; btn.textContent = 'Create Colt\'s Profile →';
+}
+
+async function archiveEnquiry(id) {
+  if (!confirm('Archive this enquiry? You can restore it anytime.')) return;
+  const r = await fetch('/api/admin/enquiry', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+    body: JSON.stringify({ id, archived: true, propertyId: currentProp?.id || 'ta-garden' }),
+  });
+  const d = await r.json();
+  if (d.success) {
+    const e = allEnquiries.find(x => x.id === id);
+    if (e) e.archived = true;
+    renderStats();
+    renderEnquiries();
+  } else {
+    alert('Error archiving.');
+  }
+}
+
+async function restoreEnquiry(id) {
+  const r = await fetch('/api/admin/enquiry', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+    body: JSON.stringify({ id, archived: false, propertyId: currentProp?.id || 'ta-garden' }),
+  });
+  const d = await r.json();
+  if (d.success) {
+    const e = allEnquiries.find(x => x.id === id);
+    if (e) e.archived = false;
+    renderStats();
+    renderEnquiries();
+  } else {
+    alert('Error restoring.');
+  }
 }
 
 async function deleteEnquiry(id) {

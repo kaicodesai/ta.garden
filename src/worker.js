@@ -1246,33 +1246,110 @@ body{background:#e8e0d5;}
 }
 
 function buildArrivalReminderEmail(enq) {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5efe8;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border:1px solid rgba(136,145,125,0.15);">
-    <div style="background:#2a2520;padding:32px 36px;">
-      <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Ta.Garden</div>
-      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;color:#ede0d1;line-height:1.3;">Your arrival is in 2 days</div>
-    </div>
-    <div style="padding:36px;">
-      <p style="margin:0 0 20px;font-size:15px;color:#2a2520;line-height:1.7;">Hi ${enq.name.split(' ')[0]},</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#5a534c;line-height:1.8;">We're looking forward to welcoming you to Ta.Garden on <strong style="color:#2a2520;">${fmt(enq.checkIn)}</strong>. A few things to know before you arrive:</p>
+  const firstName = enq.name.split(' ')[0];
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body,table,td{margin:0;padding:0;}
+body{background:#e8e0d5;font-family:Georgia,serif;}
+@media only screen and (max-width:600px){.w600{width:100%!important;}.pad{padding:24px!important;}}
+</style>
+</head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8e0d5;padding:32px 16px;">
+<tr><td align="center">
+<table class="w600" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;">
 
-      <div style="background:#f5efe8;padding:20px 24px;margin:24px 0;border-left:3px solid #c17a4a;">
-        <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Arrival Details</div>
-        <div style="font-size:13px;color:#2a2520;line-height:2;">
-          <div><strong>Check-in:</strong> From 2:00 PM</div>
-          <div><strong>Address:</strong> Ta.Garden, Cam Nam Island, Hội An</div>
-          <div><strong>Your room:</strong> ${enq.room}</div>
-        </div>
-      </div>
+  <!-- Header -->
+  <tr><td style="background:#1a1a18;padding:28px 36px;">
+    <div style="font-family:Georgia,serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#86a2a6;margin-bottom:6px;">Ta.Garden</div>
+    <div style="font-family:Georgia,serif;font-size:24px;font-weight:300;color:#ede0d1;">You arrive in 2 days, ${firstName}.</div>
+  </td></tr>
 
-      <p style="margin:0 0 16px;font-size:14px;color:#5a534c;line-height:1.8;">We'll meet you at the home, show you around, and hand over your keys. If your plans change or you're running late, just send a message — Ashley is always reachable on WhatsApp.</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#5a534c;line-height:1.8;">Is there anything you need before you arrive? Just reply to this email.</p>
-      <p style="margin:0;font-size:14px;color:#5a534c;">See you soon,<br><span style="color:#2a2520;font-weight:500;">Ashley &amp; the Ta.Garden team</span></p>
-    </div>
-    <div style="padding:20px 36px;border-top:1px solid rgba(136,145,125,0.12);text-align:center;">
-      <div style="font-size:11px;color:#88917d;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam<br>A Soul &amp; Luna Property</div>
-    </div>
-  </div>
+  <!-- Intro -->
+  <tr><td class="pad" style="padding:32px 36px;background:#faf8f5;">
+    <p style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.8;">We're looking forward to welcoming you to <strong>${enq.room}</strong> on <strong>${fmt(enq.checkIn)}</strong>. Everything will be ready for you. Here's all you need to know before you arrive.</p>
+
+    <!-- Check-in & Check-out -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:14px 20px;border-bottom:1px solid #f0ebe4;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:8px;">Check-in &amp; Check-out</div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:6px 16px 6px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;vertical-align:top;"><strong style="color:#1a1a18;">Check-in</strong><br>From 2:00 PM on ${fmt(enq.checkIn)}<br><span style="font-size:12px;color:#88917d;">Need to arrive earlier? Just let us know — we'll do our best to accommodate.</span></td>
+            <td style="padding:6px 0 6px 16px;border-left:1px solid #f0ebe4;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;vertical-align:top;"><strong style="color:#1a1a18;">Check-out</strong><br>By 12:00 PM on ${fmt(enq.checkOut || '')}<br><span style="font-size:12px;color:#88917d;">Need a little more time? Just message us — we're flexible when we can be.</span></td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- Keys -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:8px;">Your Keys</div>
+        <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.8;">You'll receive your room key when you arrive. <strong style="color:#1a1a18;">Please leave your key inside the room when you check out</strong> — do not take it with you or leave it with anyone else.</p>
+      </td></tr>
+    </table>
+
+    <!-- WiFi -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:10px;">WiFi</div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 20px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;"><span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#88917d;display:block;margin-bottom:2px;">Network</span><strong style="font-size:16px;color:#1a1a18;font-family:Georgia,serif;">Thu An</strong></td>
+            <td style="padding:0 0 0 20px;border-left:1px solid #f0ebe4;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;"><span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#88917d;display:block;margin-bottom:2px;">Password</span><strong style="font-size:16px;color:#1a1a18;font-family:Georgia,serif;">123456789</strong></td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- House Notes -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:12px;">A Few Things to Know</div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${[
+            ['Common Spaces', 'Our shared areas — kitchen, living spaces, garden — are for everyone. Please treat them with care and leave them as you found them.'],
+            ['Quiet Hours', 'We ask that all guests keep noise to a minimum from <strong>9:00 PM onwards</strong>. This helps everyone rest and keeps the energy of the home peaceful.'],
+            ['The Gate', 'Please <strong>close and latch the gate behind you</strong> every time you enter or leave. This keeps the home secure for everyone.'],
+            ['On-Site Support', 'Colt, our house manager, lives on-site and is available for any questions about the house or major repairs. He\'s your first point of contact for anything practical.'],
+          ].map(([title, text]) => `<tr><td style="padding:8px 0;border-bottom:1px solid #f5f0eb;vertical-align:top;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">${title}</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">${text}</div>
+          </td></tr>`).join('')}
+          <tr><td style="padding:12px 0 0;">
+            <p style="margin:0;font-family:Georgia,serif;font-size:14px;color:#1a1a18;font-style:italic;line-height:1.7;">Think of Ta.Garden as your home away from home. Make yourself comfortable, settle in, and let us know if there's anything at all you need.</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- Location -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:24px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:10px;">How to Find Us</div>
+        <p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;"><strong style="color:#1a1a18;">K570/24, Cam Nam Island, Hội An</strong></p>
+        <p style="margin:0 0 10px;font-family:Arial,sans-serif;font-size:12px;color:#88917d;line-height:1.6;">Google Maps cannot locate the street address — use the GPS coordinates below or the map link:</p>
+        <p style="margin:0 0 12px;font-family:Georgia,serif;font-size:15px;color:#1a1a18;">15.867740, 108.355771</p>
+        <a href="https://goo.gl/maps/78FMqsqrDY1dFiAE8" style="display:inline-block;padding:10px 20px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Open in Google Maps →</a>
+      </td></tr>
+    </table>
+
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.8;">Any questions before you arrive? Just reply to this email — we're here.<br><br>See you soon,<br><strong style="color:#1a1a18;">Ashley &amp; the Ta.Garden team</strong></p>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#1a1a18;padding:20px 36px;text-align:center;">
+    <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam &nbsp;·&nbsp; A Soul &amp; Luna Property</div>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
 </body></html>`;
 }
 
@@ -1290,7 +1367,7 @@ function buildCheckoutReminderEmail(enq) {
       <div style="background:#f5efe8;padding:20px 24px;margin:24px 0;border-left:3px solid #c17a4a;">
         <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Before You Go</div>
         <div style="font-size:13px;color:#2a2520;line-height:2;">
-          <div><strong>Checkout time:</strong> By 11:00 AM</div>
+          <div><strong>Checkout time:</strong> By 12:00 PM</div>
           <div><strong>Keys:</strong> Leave on the kitchen table or hand to Ashley directly</div>
           <div><strong>Anything left behind?</strong> Message us and we'll hold it safely</div>
         </div>

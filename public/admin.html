@@ -1786,6 +1786,7 @@ async function saveProfileEdit() {
       });
       if (newEmail) { const el = document.getElementById('pv-email'); if (el) el.textContent = newEmail; if (enq) enq.email = newEmail; }
       if (newPhone) { const el = document.getElementById('pv-phone'); if (el) el.textContent = newPhone; if (enq) enq.phone = newPhone; }
+      if (newEmail || newPhone) renderEnquiries();
       status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
       setTimeout(() => { toggleProfileEdit(); status.textContent = ''; }, 1000);
     } else {

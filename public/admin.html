@@ -1388,9 +1388,23 @@ async function openProfileModal(id) {
     </div>
     <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--mid);">
       <div><span style="font-weight:600;color:var(--stone);">Room:</span> ${enq.room}</div>
-      <div><span style="font-weight:600;color:var(--stone);">Move-in:</span> ${enq.checkIn ? fmt(enq.checkIn) : '—'}</div>
+      <div><span style="font-weight:600;color:var(--stone);">Move-in:</span> <span id="fin-checkin-lbl">${enq.checkIn ? fmt(enq.checkIn) : '—'}</span></div>
       <div><span style="font-weight:600;color:var(--stone);">Stay Type:</span> ${enq.stayType === 'monthly' ? 'Monthly' : 'Short Stay'}</div>
-      <div><span style="font-weight:600;color:var(--stone);">Move-out:</span> ${enq.checkOut ? fmt(enq.checkOut) : 'Ongoing'}</div>
+      <div><span style="font-weight:600;color:var(--stone);">Move-out:</span> <span id="fin-checkout-lbl">${enq.checkOut ? fmt(enq.checkOut) : 'Ongoing'}</span></div>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn-sm" onclick="toggleDatesForm()" id="editDatesBtn">Edit Dates</button>
+      <div id="datesEditForm" style="display:none;margin-top:10px;background:#fff;padding:12px;border-radius:4px;border:1px solid var(--border,#ddd5c8);">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label class="fl" style="font-size:10px;">Move-in Date</label><input type="date" class="fc" id="editCheckIn" value="${enq.checkIn || ''}"></div>
+          <div><label class="fl" style="font-size:10px;">Move-out Date</label><input type="date" class="fc" id="editCheckOut" value="${enq.checkOut || ''}"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-dark" onclick="saveDates()">Save Dates →</button>
+          <button class="btn-sm" onclick="toggleDatesForm()">Cancel</button>
+          <span id="datesStatus" class="status-msg" style="margin:0;"></span>
+        </div>
+      </div>
     </div>
   </div>`;
 
@@ -1414,7 +1428,7 @@ async function openProfileModal(id) {
     </div>
   </div>`;
 
-  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created' };
+  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created', dates_updated:'Dates Updated' };
   const logSection = `<div class="profile-section">
     <div class="profile-section-title">Activity Log</div>
     ${activityLog.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${activityLog.map(e => {
@@ -1473,6 +1487,39 @@ function renderElecList() {
 function toggleElecForm() {
   const f = document.getElementById('elecAddForm');
   f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleDatesForm() {
+  const f = document.getElementById('datesEditForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveDates() {
+  const id = profileModalEnqId;
+  const checkIn  = document.getElementById('editCheckIn').value;
+  const checkOut = document.getElementById('editCheckOut').value;
+  const status = document.getElementById('datesStatus');
+  if (!checkIn) { status.textContent = 'Move-in date required.'; status.style.color = 'var(--red)'; return; }
+  if (checkOut && checkOut <= checkIn) { status.textContent = 'Move-out must be after move-in.'; status.style.color = 'var(--red)'; return; }
+  status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
+  try {
+    const r = await fetch('/api/admin/enquiry', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id, checkIn, checkOut: checkOut || null, propertyId: currentProp?.id || 'ta-garden' }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      const enq = allEnquiries.find(e => e.id === id);
+      if (enq) { enq.checkIn = checkIn; enq.checkOut = checkOut || null; }
+      document.getElementById('fin-checkin-lbl').textContent = checkIn ? fmt(checkIn) : '—';
+      document.getElementById('fin-checkout-lbl').textContent = checkOut ? fmt(checkOut) : 'Ongoing';
+      status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
+      setTimeout(() => { toggleDatesForm(); status.textContent = ''; }, 1200);
+    } else {
+      status.textContent = d.error || 'Error saving.'; status.style.color = 'var(--red)';
+    }
+  } catch { status.textContent = 'Network error.'; status.style.color = 'var(--red)'; }
 }
 
 function elecCalcUsd() {

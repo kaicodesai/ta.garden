@@ -338,13 +338,34 @@ async function adminUpdateEnquiry(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
-  const { id, status, propertyId = 'ta-garden' } = await request.json();
+  const { id, status, checkIn, checkOut, propertyId = 'ta-garden' } = await request.json();
   const key = enquiriesKey(propertyId);
-  const val = await env.BOOKINGS.get(key);
-  const enquiries = safeJsonParse(val);
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
   const idx = enquiries.findIndex(e => e.id === id);
   if (idx === -1) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
-  enquiries[idx].status = status;
+
+  if (status !== undefined) enquiries[idx].status = status;
+
+  if (checkIn !== undefined) {
+    const prev = { checkIn: enquiries[idx].checkIn, checkOut: enquiries[idx].checkOut };
+    enquiries[idx].checkIn  = checkIn;
+    enquiries[idx].checkOut = checkOut !== undefined ? checkOut : enquiries[idx].checkOut;
+    await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+
+    // Regenerate contract in KV so due dates, start date, and cron triggers are current
+    const enq = enquiries[idx];
+    const isColt = enq.room === 'First Floor Room';
+    const contractHtml = isColt ? buildColtContractEmail(enq) : buildContractEmail(enq, { rentUsd: enq.rentUsd, rentVnd: enq.rentVnd, depositAmount: enq.depositAmount });
+    await env.BOOKINGS.put(`contract_${id}`, contractHtml);
+
+    const fromStr = prev.checkIn ? fmt(prev.checkIn) : '(none)';
+    const toStr   = checkIn ? fmt(checkIn) : '(none)';
+    const outFrom = prev.checkOut ? fmt(prev.checkOut) : '(none)';
+    const outTo   = (checkOut !== undefined ? checkOut : enquiries[idx].checkOut) ? fmt(checkOut !== undefined ? checkOut : enquiries[idx].checkOut) : '(none)';
+    await appendLog(env, id, { type: 'dates_updated', note: `Dates updated by admin. Move-in: ${fromStr} → ${toStr}. Move-out: ${outFrom} → ${outTo}. Contract regenerated.` });
+    return Response.json({ success: true }, { headers: cors });
+  }
+
   await env.BOOKINGS.put(key, JSON.stringify(enquiries));
   return Response.json({ success: true }, { headers: cors });
 }

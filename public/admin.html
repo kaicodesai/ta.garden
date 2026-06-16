@@ -956,11 +956,38 @@ function showTab(name) {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
+// Dynamically compute estimated revenue from current dates + rates (never stale)
+function calcEnqRevenue(e) {
+  if (!e.checkIn || !e.checkOut) return 0;
+  const days = Math.round((new Date(e.checkOut) - new Date(e.checkIn)) / 86400000);
+  if (days <= 0) return 0;
+  if (e.stayType === 'monthly') {
+    const months = Math.round((days / 30) * 10) / 10;
+    const rate = e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0;
+    return Math.round(months * rate);
+  }
+  // short stay — fall back to stored price
+  return e.price || 0;
+}
+
+function calcEnqPriceLabel(e) {
+  if (!e.checkIn || !e.checkOut) return e.price ? '$' + e.price.toLocaleString() : '—';
+  const days = Math.round((new Date(e.checkOut) - new Date(e.checkIn)) / 86400000);
+  if (days <= 0) return '—';
+  if (e.stayType === 'monthly') {
+    const months = Math.round((days / 30) * 10) / 10;
+    const rate = e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0;
+    const total = Math.round(months * rate);
+    return total ? `$${total.toLocaleString()} <span style="font-size:10px;color:var(--mid);">(${months}mo)</span>` : '—';
+  }
+  return e.price ? '$' + e.price.toLocaleString() : '—';
+}
+
 function renderStats() {
   const active    = allEnquiries.filter(e => !e.archived);
   const pending   = active.filter(e => e.status === 'pending').length;
   const confirmed = active.filter(e => e.status === 'confirmed').length;
-  const rev       = active.filter(e => e.status === 'confirmed' && e.price).reduce((s,e) => s+e.price, 0);
+  const rev       = active.filter(e => e.status === 'confirmed').reduce((s,e) => s + calcEnqRevenue(e), 0);
   set('s0', active.length);
   set('s1', pending);
   set('s2', confirmed);
@@ -1062,7 +1089,7 @@ function renderEnquiries() {
         <div>In:&nbsp; ${fmt(e.checkIn)}</div>
         <div>Out: ${e.checkOut ? fmt(e.checkOut) : '<span style="color:var(--teal);font-weight:600;">Ongoing</span>'}</div>
       </td>
-      <td class="price-n">${e.price ? '$'+e.price.toLocaleString() : '—'}</td>
+      <td class="price-n">${calcEnqPriceLabel(e)}</td>
       <td style="font-size:12px;color:var(--mid);max-width:140px;">
         <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(e.message||'').replace(/"/g,'&quot;')}">${e.message||'—'}</div>
         ${noteBubble}
@@ -1539,6 +1566,8 @@ async function saveDates() {
       if (enq) { enq.checkIn = checkIn; enq.checkOut = checkOut || null; }
       document.getElementById('fin-checkin-lbl').textContent = checkIn ? fmt(checkIn) : '—';
       document.getElementById('fin-checkout-lbl').textContent = checkOut ? fmt(checkOut) : 'Ongoing';
+      renderStats();
+      renderEnquiries();
       status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
       setTimeout(() => { toggleDatesForm(); status.textContent = ''; }, 1200);
     } else {
@@ -1982,7 +2011,7 @@ function renderSanctuaryDetail(prop) {
 
   const confirmed  = allEnquiries.filter(e => e.status === 'confirmed');
   const pending    = allEnquiries.filter(e => e.status === 'pending');
-  const revenue    = confirmed.filter(e => e.price).reduce((s,e) => s + e.price, 0);
+  const revenue    = confirmed.reduce((s,e) => s + calcEnqRevenue(e), 0);
   const rooms      = prop.rooms || [];
   const occupied   = rooms.filter(r => getRoomInfo(r, todayStr).status === 'occupied').length;
 
@@ -2077,7 +2106,7 @@ function renderRoomCard(roomName, todayStr) {
   const occ     = getOccupancyDays(roomName, todayStr, 30);
   const calHtml = getMiniCal(roomName, todayStr, 30);
   const stays   = allEnquiries.filter(e => e.room === roomName && e.status === 'confirmed');
-  const revenue = stays.filter(e => e.price).reduce((s,e) => s + e.price, 0);
+  const revenue = stays.reduce((s,e) => s + calcEnqRevenue(e), 0);
   const rd      = allRoomData[roomName] || null;
   const listingStatus = rd?.status || 'active';
 

@@ -111,6 +111,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/kv-repair'       && m === 'POST')   return safeCall(() => adminKvRepair(request, env, cors), cors);
     if (p === '/api/admin/export'          && m === 'GET')    return safeCall(() => adminExportData(request, env, cors), cors);
     if (p === '/api/admin/test-email'      && m === 'POST')   return safeCall(() => adminTestEmail(request, env, cors), cors);
+    if (p === '/api/admin/preview-email'   && m === 'POST')   return safeCall(() => adminPreviewEmail(request, env, cors), cors);
 
     // Direct booking links
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
@@ -1518,6 +1519,31 @@ async function adminCreateTestInquiry(request, env, cors, ctx) {
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
   return Response.json({ success: true, enqId, message: `Test inquiry created for ${email}` }, { headers: cors });
+}
+
+async function adminPreviewEmail(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { type = 'arrival', to = 'lightofkai777@gmail.com', room = 'The River Room' } = await request.json().catch(() => ({}));
+  const sampleEnq = {
+    id: 'preview', name: 'Kai Anderson', email: to, room,
+    stayType: 'monthly', checkIn: '2026-06-18', checkOut: '2026-07-18',
+    rentUsd: ROOM_RATES[room]?.monthly || 340, depositAmount: ROOM_RATES[room]?.monthly || 340,
+  };
+  let html, subject;
+  if (type === 'arrival') {
+    html = buildArrivalReminderEmail(sampleEnq);
+    subject = `[PREVIEW] Your stay at Ta.Garden starts in 2 days`;
+  } else if (type === 'checkout') {
+    html = buildCheckoutReminderEmail(sampleEnq);
+    subject = `[PREVIEW] Checkout day — thank you for staying at Ta.Garden`;
+  } else if (type === 'monthly') {
+    html = buildMonthlyReminderGuestEmail(sampleEnq, '2026-07-18', sampleEnq.rentUsd, STRIPE_USD);
+    subject = `[PREVIEW] Monthly rent due Jul 18, 2026 — Ta.Garden`;
+  } else {
+    return Response.json({ error: 'Unknown type. Use: arrival, checkout, monthly' }, { status: 400, headers: cors });
+  }
+  const res = await resend(FROM, to, subject, html, null, env);
+  return Response.json({ success: res?.ok, type, to, room }, { headers: cors });
 }
 
 async function adminTestEmail(request, env, cors) {

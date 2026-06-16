@@ -349,27 +349,26 @@ function renderPortal() {
     <div class="section" id="contractSection">
       <div class="section-title">House Agreement</div>
       ${ob.contractSigned
-        ? `<div style="display:flex;align-items:center;gap:10px;">
+        ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <span style="color:var(--green);font-size:16px;">✓</span>
             <span style="font-size:13px;color:var(--mid);">Signed${session.signedAt ? ' on ' + new Date(session.signedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''}. A copy was emailed to you.</span>
+            <button onclick="viewGuestContract()" style="padding:7px 16px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Agreement</button>
            </div>`
         : ob.paymentReceived
           ? `<p style="font-size:13px;color:var(--mid);margin:0 0 16px;line-height:1.6;">Your deposit has been received. Please review and sign your rental agreement below.</p>
-             <div style="background:var(--light);border:1px solid var(--border,#ddd5c8);border-radius:6px;padding:16px 20px;font-size:12px;color:var(--mid);line-height:1.7;max-height:200px;overflow-y:auto;margin-bottom:16px;">
-               <strong>Ta.Garden — Monthly Room Rental Agreement</strong><br>
-               Room: ${session.room || '—'} &nbsp;·&nbsp; Start: ${fmt(session.checkIn)}<br>
-               Rent: $${session.rentUsd || '—'}/mo &nbsp;·&nbsp; Deposit: $${session.depositAmount || '—'}<br><br>
-               By signing, you agree to the full rental agreement including payment terms, house rules, 15-day notice to vacate, and all conditions as emailed to you.
-             </div>
+             <button onclick="viewGuestContract()" style="display:inline-block;margin-bottom:16px;padding:9px 18px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Full Agreement →</button>
              <div style="margin-bottom:12px;">
                <label style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);display:block;margin-bottom:6px;">Type your full name as e-signature</label>
                <input type="text" id="contractSigInput" placeholder="Your full legal name" style="width:100%;padding:12px;border:1px solid var(--border,#ddd5c8);border-radius:4px;font-size:14px;font-family:Georgia,serif;box-sizing:border-box;">
              </div>
              <button onclick="submitContractSign()" style="padding:12px 28px;background:var(--dark,#3a3a2a);color:#c8b89a;border:none;border-radius:4px;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;">Sign Agreement</button>
              <div id="contractSignError" style="margin-top:10px;font-size:13px;color:var(--red,#c0392b);display:none;"></div>`
-          : `<div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--light);border-radius:6px;">
-               <span style="font-size:16px;">🔒</span>
-               <span style="font-size:13px;color:var(--mid);">Available once your deposit payment is confirmed.</span>
+          : `<div style="padding:14px 16px;background:var(--light);border-radius:6px;">
+               <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                 <span style="font-size:16px;">🔒</span>
+                 <span style="font-size:13px;color:var(--mid);">Signing available once your deposit payment is confirmed.</span>
+               </div>
+               <button onclick="viewGuestContract()" style="padding:7px 16px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Agreement →</button>
              </div>`
       }
     </div>
@@ -659,6 +658,13 @@ async function submitProfile() {
     err.textContent = 'Something went wrong: ' + ex.message + '. Please try again or email hi@soulandlunawellness.com';
     btn.disabled = false; btn.textContent = 'Submit Guest Profile →';
   }
+}
+
+function viewGuestContract() {
+  const id = session?.enquiryId;
+  const p  = session?.propId || 'ta-garden';
+  if (!id) return;
+  window.open(`/api/guest/contract?id=${id}&p=${p}`, '_blank');
 }
 
 async function submitContractSign() {

@@ -80,6 +80,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/guest'                  && m === 'GET')   return handleGuestGet(request, env, cors);
     if (p === '/api/guest/submit'           && m === 'POST')  return handleGuestSubmit(request, env, cors, ctx);
     if (p === '/api/guest/sign-contract'   && m === 'POST')  return safeCall(() => handleGuestSignContract(request, env, cors), cors);
+    if (p === '/api/guest/contract'        && m === 'GET')   return safeCall(() => handleGuestViewContract(request, env, cors), cors);
     if (p === '/api/guest/request-login'    && m === 'POST')  return safeCall(() => handleGuestRequestLogin(request, env, cors, ctx), cors);
     if (p === '/api/guest/verify-token'     && m === 'GET')   return handleGuestVerifyToken(request, env, cors);
 
@@ -733,6 +734,29 @@ async function handleGuestSignContract(request, env, cors) {
   ));
 
   return Response.json({ success: true, message: 'Contract signed. A copy has been emailed to you.' }, { headers: cors });
+}
+
+async function handleGuestViewContract(request, env, cors) {
+  const params = new URL(request.url).searchParams;
+  const id = params.get('id');
+  const propId = params.get('p') || 'ta-garden';
+  if (!id || !env.BOOKINGS) return new Response('Not found', { status: 404, headers: cors });
+
+  // Verify the enquiry exists (id is the auth token)
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(enquiriesKey(propId)));
+  const enq = enquiries.find(e => e.id === id);
+  if (!enq) return new Response('Not found', { status: 404, headers: cors });
+
+  const html = await env.BOOKINGS.get(`contract_${id}`);
+  if (!html) {
+    // Contract not yet generated — build a preview
+    const rates = { rentUsd: enq.rentUsd, rentVnd: enq.rentVnd, depositAmount: enq.depositAmount };
+    const preview = enq.room === 'First Floor Room'
+      ? buildColtContractEmail(enq)
+      : buildContractEmail(enq, rates);
+    return new Response(preview, { headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+  return new Response(html, { headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
 // ── Admin: update onboarding checklist ────────────────────────────────────────

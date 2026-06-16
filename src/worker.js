@@ -1307,16 +1307,57 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       </td></tr>
     </table>
 
+    <!-- Your Room & Linens -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:12px;">Your Room</div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f5f0eb;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">Linens &amp; Bedding</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">Fresh linens and bedsheets are provided. Please leave them in good condition — treat them as you would your own.</div>
+          </td></tr>
+          <tr><td style="padding:6px 0;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">Laundry &amp; Cleaning</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">Laundry and room cleaning are your responsibility during your stay. If you'd like us to help coordinate this, just ask — we're happy to point you in the right direction.</div>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- Kitchen & Fridge -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:12px;">Kitchen &amp; Fridge</div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f5f0eb;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">Your Fridge</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">Each room has its own mini fridge. There is also a community fridge on the first floor available to all guests — please keep it clean and label your items.</div>
+          </td></tr>
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f5f0eb;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">First Floor Kitchen</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">The kitchen on the first floor is shared by all guests. Please <strong>wash your dishes immediately after each use</strong> and leave the space clean for others.</div>
+          </td></tr>
+          ${enq.room === 'The Sky Suite' ? `<tr><td style="padding:6px 0;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">Top Floor — Your Private Space</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">As the Sky Suite guest, the entire top floor is exclusively yours. No other guests have access to this level.</div>
+          </td></tr>` : `<tr><td style="padding:6px 0;">
+            <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">Top Floor</div>
+            <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">The top floor is exclusively reserved for the Sky Suite guest. Please respect this as their private space.</div>
+          </td></tr>`}
+        </table>
+      </td></tr>
+    </table>
+
     <!-- House Notes -->
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
       <tr><td style="padding:16px 20px;">
-        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:12px;">A Few Things to Know</div>
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:12px;">House Rules</div>
         <table width="100%" cellpadding="0" cellspacing="0">
           ${[
-            ['Common Spaces', 'Our shared areas — kitchen, living spaces, garden — are for everyone. Please treat them with care and leave them as you found them.'],
-            ['Quiet Hours', 'We ask that all guests keep noise to a minimum from <strong>9:00 PM onwards</strong>. This helps everyone rest and keeps the energy of the home peaceful.'],
-            ['The Gate', 'Please <strong>close and latch the gate behind you</strong> every time you enter or leave. This keeps the home secure for everyone.'],
-            ['On-Site Support', 'Colt, our house manager, lives on-site and is available for any questions about the house or major repairs. He\'s your first point of contact for anything practical.'],
+            ['Common Spaces', 'Shared areas — garden, living spaces, first floor — are for everyone. Please treat them with care and leave them as you found them.'],
+            ['Quiet Hours', 'Please keep noise to a minimum from <strong>9:00 PM onwards</strong>. This helps everyone rest and keeps the energy of the home peaceful.'],
+            ['The Gate', 'Please <strong>close and latch the gate</strong> every time you enter or leave. This keeps the home secure for all residents.'],
+            ['Parking', 'Park your motorbike in the <strong>front yard to the side</strong> of the property. Parking is free and secure.'],
           ].map(([title, text]) => `<tr><td style="padding:8px 0;border-bottom:1px solid #f5f0eb;vertical-align:top;">
             <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:3px;">${title}</div>
             <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;line-height:1.7;">${text}</div>
@@ -1324,6 +1365,29 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
           <tr><td style="padding:12px 0 0;">
             <p style="margin:0;font-family:Georgia,serif;font-size:14px;color:#1a1a18;font-style:italic;line-height:1.7;">Think of Ta.Garden as your home away from home. Make yourself comfortable, settle in, and let us know if there's anything at all you need.</p>
           </td></tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- Emergency Contacts -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#88917d;font-family:Arial,sans-serif;margin-bottom:12px;">On-Site &amp; Emergency Contacts</div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:10px 16px 10px 0;vertical-align:top;border-bottom:1px solid #f5f0eb;">
+              <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:2px;">Colt — House Manager</div>
+              <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;margin-bottom:4px;">Lives on-site. First point of contact for house questions, repairs, and day-to-day needs.</div>
+              <a href="https://wa.me/84886559491" style="display:inline-block;padding:6px 14px;background:#25D366;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">WhatsApp Colt →</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0 0;vertical-align:top;">
+              <div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a18;margin-bottom:2px;">Thao — Vietnamese Partner</div>
+              <div style="font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;margin-bottom:4px;">Available for any local questions, Vietnamese language support, or urgent matters.</div>
+              <a href="https://wa.me/84945908833" style="display:inline-block;padding:6px 14px;background:#25D366;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">WhatsApp Thao →</a>
+            </td>
+          </tr>
         </table>
       </td></tr>
     </table>

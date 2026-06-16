@@ -869,10 +869,86 @@ async function adminSendContract(request, env, cors) {
 
 function finKey(propId) { return `financials__${propId || 'ta-garden'}`; }
 
+const RIVERHOUSE_STARTUP_EXPENSES = [
+  {"id": "seed_001", "description": "Bali Living Room Carpet", "category": "furniture", "amountUsd": 22, "amountVnd": 566800, "date": "2025-12-01", "note": "Green room carpet", "isStartup": true},
+  {"id": "seed_002", "description": "Bamboo Lampshades", "category": "furniture", "amountUsd": 15, "amountVnd": 388400, "date": "2025-12-01", "note": "Yoga room light fixtures", "isStartup": true},
+  {"id": "seed_003", "description": "Decorative Wall Decal", "category": "furniture", "amountUsd": 6, "amountVnd": 148900, "date": "2025-12-01", "note": "Lady Buddha room", "isStartup": true},
+  {"id": "seed_004", "description": "Kitchen Decal Wall Stickers", "category": "labor", "amountUsd": 11, "amountVnd": 284700, "date": "2025-12-01", "note": "Kitchen wallpaper", "isStartup": true},
+  {"id": "seed_005", "description": "Art from Local Artist", "category": "furniture", "amountUsd": 95, "amountVnd": 2500000, "date": "2025-12-01", "note": "Artwork for each room", "isStartup": true},
+  {"id": "seed_006", "description": "Yoga Mats", "category": "supplies", "amountUsd": 48, "amountVnd": 1244000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_007", "description": "Matte Red Wallpaper", "category": "labor", "amountUsd": 4, "amountVnd": 106900, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_008", "description": "PVC Waterproof Wallpaper - Green", "category": "labor", "amountUsd": 30, "amountVnd": 767141, "date": "2025-12-01", "note": "Green room wallpaper", "isStartup": true},
+  {"id": "seed_009", "description": "Beige Linen Chiffon Curtains", "category": "furniture", "amountUsd": 389, "amountVnd": 10193500, "date": "2025-12-01", "note": "Whole house", "isStartup": true},
+  {"id": "seed_010", "description": "PVC Waterproof Wallpaper - Green (2nd order)", "category": "labor", "amountUsd": 30, "amountVnd": 767141, "date": "2025-12-01", "note": "Green room", "isStartup": true},
+  {"id": "seed_011", "description": "Jute Rugs / Water Hyacinth Mats", "category": "furniture", "amountUsd": 180, "amountVnd": 4698000, "date": "2025-12-01", "note": "Jute rugs for house", "isStartup": true},
+  {"id": "seed_012", "description": "Breathable Waterproof Mattress Topper", "category": "supplies", "amountUsd": 77, "amountVnd": 1996000, "date": "2025-12-01", "note": "Pink mattress toppers", "isStartup": true},
+  {"id": "seed_013", "description": "Round LED Touch Mirror", "category": "furniture", "amountUsd": 21, "amountVnd": 547400, "date": "2025-12-01", "note": "Main entrance", "isStartup": true},
+  {"id": "seed_014", "description": "Mattress Protector (Waterproof)", "category": "supplies", "amountUsd": 73, "amountVnd": 1909000, "date": "2025-12-01", "note": "White mattress protectors", "isStartup": true},
+  {"id": "seed_015", "description": "Handmade Bamboo & Rattan Lantern", "category": "furniture", "amountUsd": 9, "amountVnd": 230600, "date": "2025-12-01", "note": "Art room", "isStartup": true},
+  {"id": "seed_016", "description": "Living Room / Bedroom Rug", "category": "furniture", "amountUsd": 23, "amountVnd": 581999, "date": "2025-12-01", "note": "Art room", "isStartup": true},
+  {"id": "seed_017", "description": "Warehouse Used Items / Furniture", "category": "furniture", "amountUsd": 187, "amountVnd": 4893790, "date": "2025-12-01", "note": "Used items", "isStartup": true},
+  {"id": "seed_018", "description": "Kien - Labor (Painting & Furniture)", "category": "labor", "amountUsd": 170, "amountVnd": 4448900, "date": "2025-12-01", "note": "Painting, covering furniture", "isStartup": true},
+  {"id": "seed_019", "description": "Deep Cleaning - Entire House", "category": "labor", "amountUsd": 76, "amountVnd": 2000000, "date": "2025-12-01", "note": "Full deep clean", "isStartup": true},
+  {"id": "seed_020", "description": "Security Cameras", "category": "security", "amountUsd": 162, "amountVnd": 4290000, "date": "2025-12-01", "note": "Cameras for house", "isStartup": true},
+  {"id": "seed_021", "description": "Electricity Work", "category": "labor", "amountUsd": 195, "amountVnd": 5000000, "date": "2025-12-01", "note": "Incl. Kien materials & labor", "isStartup": true},
+  {"id": "seed_022", "description": "Bedding", "category": "supplies", "amountUsd": 35, "amountVnd": 906000, "date": "2025-12-01", "note": "3 ordered, charged for 2", "isStartup": true},
+  {"id": "seed_023", "description": "Yoga Blocks", "category": "supplies", "amountUsd": 34, "amountVnd": 880000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_024", "description": "Lanterns", "category": "furniture", "amountUsd": 75, "amountVnd": 2000000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_025", "description": "Paint Easel", "category": "furniture", "amountUsd": 10, "amountVnd": 260000, "date": "2025-12-01", "note": "Art room", "isStartup": true},
+  {"id": "seed_026", "description": "Duvet Inserts", "category": "supplies", "amountUsd": 23, "amountVnd": 585000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_027", "description": "Pillows", "category": "supplies", "amountUsd": 28, "amountVnd": 711200, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_028", "description": "Nordic Style Tea Table", "category": "furniture", "amountUsd": 25, "amountVnd": 651000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_029", "description": "Antique Wood Fan", "category": "furniture", "amountUsd": 4, "amountVnd": 96000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_030", "description": "Yellow Round Seat Cushion", "category": "furniture", "amountUsd": 9, "amountVnd": 233100, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_031", "description": "Kitchen Decal Wall Stickers (2nd)", "category": "labor", "amountUsd": 37, "amountVnd": 956000, "date": "2025-12-01", "note": "Kitchen", "isStartup": true},
+  {"id": "seed_032", "description": "Pumpkin Round Seat Cushion", "category": "furniture", "amountUsd": 10, "amountVnd": 254900, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_033", "description": "Wooden Folding Table & Chair Set", "category": "furniture", "amountUsd": 46, "amountVnd": 1193500, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_034", "description": "Modern White Bedroom Lamps", "category": "furniture", "amountUsd": 17, "amountVnd": 432000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_035", "description": "Matte Red Wallpaper (2nd order)", "category": "labor", "amountUsd": 5, "amountVnd": 126000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_036", "description": "PVC Waterproof Wallpaper - Green (bulk)", "category": "labor", "amountUsd": 144, "amountVnd": 3750705, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_037", "description": "Japanese Futon Seat Cushion", "category": "furniture", "amountUsd": 29, "amountVnd": 754500, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_038", "description": "Kitchen Decal / Bathroom Walls", "category": "labor", "amountUsd": 25, "amountVnd": 642400, "date": "2025-12-01", "note": "Bathroom", "isStartup": true},
+  {"id": "seed_039", "description": "Dish Rack", "category": "supplies", "amountUsd": 10, "amountVnd": 284000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_040", "description": "Wooden Bookshelf", "category": "furniture", "amountUsd": 20, "amountVnd": 500900, "date": "2025-12-01", "note": "Art room", "isStartup": true},
+  {"id": "seed_041", "description": "PVC Waterproof Wallpaper - Brown", "category": "labor", "amountUsd": 21, "amountVnd": 540918, "date": "2025-12-01", "note": "Living Room", "isStartup": true},
+  {"id": "seed_042", "description": "Enamel Tea Set - 5 Piece", "category": "supplies", "amountUsd": 6, "amountVnd": 151000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_043", "description": "Elegant Lotus Tea Set - 7 Piece", "category": "supplies", "amountUsd": 7, "amountVnd": 184000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_044", "description": "PVC Waterproof Wallpaper - Brown (2nd)", "category": "labor", "amountUsd": 21, "amountVnd": 540918, "date": "2025-12-01", "note": "Living Room", "isStartup": true},
+  {"id": "seed_045", "description": "PVC Waterproof Wallpaper - Brown (3rd)", "category": "labor", "amountUsd": 21, "amountVnd": 540918, "date": "2025-12-01", "note": "Living Room", "isStartup": true},
+  {"id": "seed_046", "description": "Set of 6 White Towels (x4 sets)", "category": "supplies", "amountUsd": 55, "amountVnd": 1436000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_047", "description": "Copper Core Metal Fan", "category": "furniture", "amountUsd": 72, "amountVnd": 1860000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_048", "description": "Wood Grain Bathroom Mat", "category": "furniture", "amountUsd": 22, "amountVnd": 569000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_049", "description": "Ceramic Tea Set (x2)", "category": "supplies", "amountUsd": 23, "amountVnd": 593027, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_050", "description": "PVC Waterproof Wallpaper - Brown (4th)", "category": "labor", "amountUsd": 21, "amountVnd": 540918, "date": "2025-12-01", "note": "Living Room", "isStartup": true},
+  {"id": "seed_051", "description": "ARGB LED Chasing Light", "category": "furniture", "amountUsd": 13, "amountVnd": 329530, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_052", "description": "Spring Mattress", "category": "furniture", "amountUsd": 125, "amountVnd": 3235300, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_053", "description": "Desk", "category": "furniture", "amountUsd": 17, "amountVnd": 438080, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_054", "description": "Water Pump", "category": "furniture", "amountUsd": 7, "amountVnd": 174300, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_055", "description": "Statue of Mother Goddess", "category": "furniture", "amountUsd": 14, "amountVnd": 359000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_056", "description": "High Quality Ceramic Bowls (x6)", "category": "supplies", "amountUsd": 28, "amountVnd": 714000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_057", "description": "Round LED Touch Mirror (2nd)", "category": "furniture", "amountUsd": 18, "amountVnd": 455000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_058", "description": "Knitted Portable Blanket", "category": "supplies", "amountUsd": 23, "amountVnd": 596413, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_059", "description": "Roll of Foam (room insulation)", "category": "labor", "amountUsd": 6, "amountVnd": 142000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_060", "description": "Vintage Round Wooden Stools", "category": "furniture", "amountUsd": 19, "amountVnd": 480000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_061", "description": "Wooden Floating Shelves (sets of 3)", "category": "furniture", "amountUsd": 86, "amountVnd": 2232100, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_062", "description": "White Cotton Hotel Sheets", "category": "supplies", "amountUsd": 35, "amountVnd": 891049, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_063", "description": "Paint & Materials", "category": "labor", "amountUsd": 69, "amountVnd": 1756276, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_064", "description": "House Cleaning", "category": "labor", "amountUsd": 63, "amountVnd": 1600000, "date": "2025-12-01", "note": "", "isStartup": true},
+  {"id": "seed_065", "description": "Colt & Materials", "category": "labor", "amountUsd": 70, "amountVnd": null, "date": "2025-12-01", "note": "USD only on receipt", "isStartup": true},
+  {"id": "seed_066", "description": "Kitchen Decal / Bathroom Walls (bulk)", "category": "labor", "amountUsd": 33, "amountVnd": 854100, "date": "2025-12-01", "note": "Bathroom", "isStartup": true},
+  {"id": "seed_067", "description": "DEPOSIT - Paid to Thao (Owner)", "category": "deposit", "amountUsd": 836, "amountVnd": 22000000, "date": "2026-01-01", "note": "Security deposit - already paid", "isStartup": false},
+  {"id": "seed_068", "description": "Rent - 1st Floor Room (Kai)", "category": "lease", "amountUsd": 114, "amountVnd": 3000000, "date": "2026-01-01", "note": "Discounted rate while in development", "isStartup": false},
+  {"id": "seed_069", "description": "2 MONTHS RENT - DUE ON 1ST TENANT (UPCOMING)", "category": "lease", "amountUsd": 1671, "amountVnd": 44000000, "date": "2026-01-01", "note": "UPCOMING: Pay Thao upon securing 1st tenant", "isStartup": false},
+];
+
 async function adminGetFinancials(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   const propId = new URL(request.url).searchParams.get('propertyId') || 'ta-garden';
-  const expenses = safeJsonParse(await env.BOOKINGS.get(finKey(propId)));
+  let expenses = safeJsonParse(await env.BOOKINGS.get(finKey(propId)));
+  if (expenses.length === 0) {
+    expenses = RIVERHOUSE_STARTUP_EXPENSES;
+    await env.BOOKINGS.put(finKey(propId), JSON.stringify(expenses));
+  }
   return Response.json({ expenses }, { headers: cors });
 }
 

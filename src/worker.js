@@ -8,7 +8,7 @@ const STRIPE_VND = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
 const ROOM_RATES = {
   'The River Room':   { monthly: 340, nightly: 25 },
   'The Balcony Room': { monthly: 400, nightly: 30 },
-  'The Sky Suite':    { monthly: 680, nightly: 50 },
+  'The Sky Suite':    { monthly: 560, nightly: 50 },
   'First Floor Room': { monthly: 200, nightly: 0, vndOnly: true, internal: true },
 };
 

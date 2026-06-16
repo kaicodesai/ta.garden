@@ -1505,6 +1505,8 @@ async function openProfileModal(id) {
       <!-- Read view -->
       <div id="profileReadView">
         <div class="profile-grid">
+          <div class="profile-field"><div class="profile-key">Email</div><div class="profile-val" id="pv-email">${enq.email || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Phone / WhatsApp</div><div class="profile-val" id="pv-phone">${enq.phone || '—'}</div></div>
           <div class="profile-field"><div class="profile-key">Full Name</div><div class="profile-val" id="pv-fullName">${_p.fullName || '—'}</div></div>
           <div class="profile-field"><div class="profile-key">Date of Birth</div><div class="profile-val" id="pv-dateOfBirth">${_p.dateOfBirth || '—'}</div></div>
           <div class="profile-field"><div class="profile-key">Nationality</div><div class="profile-val" id="pv-nationality">${_p.nationality || '—'}</div></div>
@@ -1522,6 +1524,8 @@ async function openProfileModal(id) {
       <!-- Edit view -->
       <div id="profileEditView" style="display:none;">
         <div class="profile-grid" style="margin-bottom:10px;">
+          <div class="profile-field"><label class="profile-key">Email</label><input class="fc" id="pe-email" type="email" value="${enq.email||''}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Phone / WhatsApp</label><input class="fc" id="pe-phone" type="tel" value="${enq.phone||''}" style="font-size:13px;padding:7px 10px;"></div>
           <div class="profile-field"><label class="profile-key">Full Name</label><input class="fc" id="pe-fullName" value="${(_p.fullName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
           <div class="profile-field"><label class="profile-key">Date of Birth</label><input class="fc" id="pe-dateOfBirth" value="${_p.dateOfBirth||''}" style="font-size:13px;padding:7px 10px;"></div>
           <div class="profile-field"><label class="profile-key">Nationality</label><input class="fc" id="pe-nationality" value="${(_p.nationality||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
@@ -1754,20 +1758,34 @@ async function saveProfileEdit() {
     },
   };
   if (!updates.son.fullName) updates.son = null;
+  const newEmail = g('pe-email');
+  const newPhone = g('pe-phone');
   status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
   try {
-    const r = await fetch('/api/admin/guest-profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
-      body: JSON.stringify({ id, propertyId: currentProp?.id || 'ta-garden', updates }),
-    });
-    const d = await r.json();
+    const calls = [
+      fetch('/api/admin/guest-profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ id, propertyId: currentProp?.id || 'ta-garden', updates }),
+      }),
+    ];
+    const enq = allEnquiries.find(e => e.id === id);
+    if ((newEmail && newEmail !== enq?.email) || (newPhone && newPhone !== enq?.phone)) {
+      calls.push(fetch('/api/admin/enquiry', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ id, email: newEmail || undefined, phone: newPhone || undefined, propertyId: currentProp?.id || 'ta-garden' }),
+      }));
+    }
+    const results = await Promise.all(calls);
+    const d = await results[0].json();
     if (d.success) {
-      // Update read view labels
       ['fullName','dateOfBirth','nationality','passportNumber','homeAddress','emergencyName','emergencyPhone','emergencyRelation'].forEach(k => {
         const el = document.getElementById('pv-' + k);
         if (el) el.textContent = updates[k] || '—';
       });
+      if (newEmail) { const el = document.getElementById('pv-email'); if (el) el.textContent = newEmail; if (enq) enq.email = newEmail; }
+      if (newPhone) { const el = document.getElementById('pv-phone'); if (el) el.textContent = newPhone; if (enq) enq.phone = newPhone; }
       status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
       setTimeout(() => { toggleProfileEdit(); status.textContent = ''; }, 1000);
     } else {

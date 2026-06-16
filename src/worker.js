@@ -344,7 +344,7 @@ async function adminUpdateEnquiry(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
-  const { id, status, checkIn, checkOut, archived, propertyId = 'ta-garden' } = await request.json();
+  const { id, status, checkIn, checkOut, archived, email, phone, propertyId = 'ta-garden' } = await request.json();
   const key = enquiriesKey(propertyId);
   const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
   const idx = enquiries.findIndex(e => e.id === id);
@@ -354,6 +354,19 @@ async function adminUpdateEnquiry(request, env, cors) {
     enquiries[idx].archived = archived;
     await env.BOOKINGS.put(key, JSON.stringify(enquiries));
     await appendLog(env, id, { type: 'archived', note: archived ? 'Enquiry archived by admin.' : 'Enquiry restored from archive.' });
+    return Response.json({ success: true }, { headers: cors });
+  }
+
+  if (email !== undefined) {
+    enquiries[idx].email = email;
+    await appendLog(env, id, { type: 'profile_updated', note: `Email updated by admin to: ${email}` });
+  }
+  if (phone !== undefined) {
+    enquiries[idx].phone = phone;
+    await appendLog(env, id, { type: 'profile_updated', note: `Phone updated by admin to: ${phone}` });
+  }
+  if (email !== undefined || phone !== undefined) {
+    await env.BOOKINGS.put(key, JSON.stringify(enquiries));
     return Response.json({ success: true }, { headers: cors });
   }
 

@@ -354,7 +354,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .sg-thumb-del:hover { background: var(--red); }
 
 /* ── Financial tab ── */
-.fin-overview { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.fin-overview { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 20px; }
 .fin-card { background: var(--white); border: 1px solid rgba(136,145,125,0.14); padding: 18px 20px; }
 .fin-card-lbl { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); margin-bottom: 6px; }
 .fin-card-n { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; }
@@ -406,7 +406,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
   .modal-box { width: 100% !important; max-width: 100% !important; max-height: 92vh; border-radius: 12px 12px 0 0 !important; }
   #profileOverlay .modal-box { max-height: 94vh; }
   .profile-grid { grid-template-columns: 1fr !important; }
-  .fin-overview { grid-template-columns: 1fr 1fr; }
+  .fin-overview { grid-template-columns: repeat(3,1fr); }
   .fin-add-grid { grid-template-columns: 1fr 1fr; }
   .ph { flex-direction: column; align-items: flex-start; gap: 10px; }
   .pills { flex-wrap: wrap; }
@@ -745,6 +745,11 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <div class="fin-card-lbl">Net Position</div>
           <div class="fin-card-n" id="fin-net">—</div>
           <div class="fin-card-sub" id="fin-net-sub"></div>
+        </div>
+        <div class="fin-card">
+          <div class="fin-card-lbl">Break-Even</div>
+          <div class="fin-card-n" id="fin-breakeven" style="font-size:22px;">—</div>
+          <div class="fin-card-sub" id="fin-breakeven-sub">at current monthly revenue</div>
         </div>
       </div>
 
@@ -3390,6 +3395,12 @@ function renderFinancials() {
   const pendingExp   = allExpenses.filter(e => !e.paid).reduce((s,e) => s + (e.amountUsd||0), 0);
   const net          = totalRevenue - totalExp;
 
+  // Monthly revenue from active confirmed stays
+  const monthlyRev = confirmed.reduce((s,e) => {
+    const rate = e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0;
+    return s + rate;
+  }, 0);
+
   document.getElementById('fin-revenue').textContent  = totalRevenue ? '$' + totalRevenue.toLocaleString() : '—';
   document.getElementById('fin-expenses').textContent  = totalExp ? '$' + Math.round(totalExp).toLocaleString() : '—';
   document.getElementById('fin-paid').textContent      = paidExp ? '$' + Math.round(paidExp).toLocaleString() : '—';
@@ -3398,6 +3409,21 @@ function renderFinancials() {
   netEl.textContent   = net >= 0 ? '+$' + net.toLocaleString() : '-$' + Math.abs(Math.round(net)).toLocaleString();
   netEl.style.color   = net >= 0 ? 'var(--green)' : 'var(--red)';
   document.getElementById('fin-net-sub').textContent   = net >= 0 ? 'profitable' : 'startup deficit';
+
+  // Break-even
+  const beEl  = document.getElementById('fin-breakeven');
+  const beSub = document.getElementById('fin-breakeven-sub');
+  if (net >= 0) {
+    beEl.textContent = '✓'; beEl.style.color = 'var(--green)';
+    beSub.textContent = 'investment recovered';
+  } else if (monthlyRev > 0) {
+    const months = Math.ceil(Math.abs(net) / monthlyRev);
+    beEl.textContent = `${months} mo`; beEl.style.color = 'var(--dark)';
+    beSub.textContent = `at $${monthlyRev.toLocaleString()}/mo current revenue`;
+  } else {
+    beEl.textContent = '—'; beEl.style.color = 'var(--mid)';
+    beSub.textContent = 'no confirmed revenue yet';
+  }
 
   // ── Filter ──
   const catF    = document.getElementById('fin-filter-cat')?.value    || '';

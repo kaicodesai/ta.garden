@@ -2204,7 +2204,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
         ${[
           effectiveRentUsd ? `Pay your first month's rent ($${effectiveRentUsd}) + security deposit ($${effectiveDeposit}) to secure your room. Your deposit is fully refunded when you leave.` : 'Complete your first month\'s payment to secure your room.',
-          'Review and sign the Ta.Garden House Agreement (sent separately once your payment is confirmed)',
+          'Review the rental agreement below — by completing payment you confirm your acceptance of these terms. A countersigned copy will be emailed to you once payment is received.',
           'Complete your guest profile — upload passport photo and visa details via your personal link below',
           'We\'ll confirm check-in details closer to your arrival date',
         ].map((step, i) => `<tr>
@@ -2248,6 +2248,15 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       </tr></table>` : ''}
     </td>
   </tr>
+
+  <!-- Contract terms -->
+  ${enq.room !== 'First Floor Room' ? `<tr><td style="padding:0 32px 32px;background:#f5f0eb;">
+    <div style="border-top:2px solid rgba(136,145,125,0.2);padding-top:28px;">
+      <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:4px;font-family:Arial,sans-serif;">Ta.Garden · Monthly Room Rental Agreement</div>
+      <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;margin-bottom:20px;">Please read the terms below. Completing payment above confirms your acceptance. A countersigned copy will be emailed to you once payment is received.</div>
+      ${buildContractTermsHtml(enq, { rentUsd: effectiveRentUsd, rentVnd: rates.rentVnd, depositAmount: effectiveDeposit })}
+    </div>
+  </td></tr>` : ''}
 
   <!-- Footer -->
   <tr>
@@ -2511,6 +2520,59 @@ body{background:#e8e0d5;font-family:Arial,sans-serif;}
 </table>
 </body>
 </html>`;
+}
+
+function buildContractTermsHtml(enq, rates = {}) {
+  const rentUsd = rates.rentUsd || ROOM_RATES[enq.room]?.monthly || '___';
+  const rentVnd = rates.rentVnd || '___';
+  const deposit = rates.depositAmount || rentUsd;
+  const startDate = enq.checkIn ? fmt(enq.checkIn) : '___';
+  const dueDay = enq.checkIn ? new Date(enq.checkIn + 'T00:00:00Z').getUTCDate() : null;
+  const dueDayStr = dueDay ? `the ${ordinal(dueDay)} of each month` : 'the same day of each month as the tenancy start date';
+  const row = (col1, col2, last) => `<tr>
+    <td style="padding:10px 14px;font-size:11px;color:#88917d;text-transform:uppercase;letter-spacing:0.1em;width:45%;${last?'':'border-bottom:1px solid #e8e0d5;'}">${col1}</td>
+    <td style="padding:10px 14px;font-size:13px;color:#3a3a2a;${last?'':'border-bottom:1px solid #e8e0d5;'}">${col2}</td>
+  </tr>`;
+  const cls = [
+    ['Tenant Full Name', enq.name],
+    ['Email Address', enq.email],
+    ['WhatsApp / Phone', enq.phone || '—'],
+    ['Room', enq.room],
+    ['Monthly Rent (USD)', `$${rentUsd}`],
+    ['Monthly Rent (VND)', rentVnd !== '___' ? `${Number(rentVnd).toLocaleString()} VND` : '—'],
+    ['Security Deposit', `$${deposit} (1 month's rent — fully refunded on departure)`],
+    ['Tenancy Start Date', startDate],
+    ['Minimum Term', '1 month — renewable monthly'],
+    ['Notice to Vacate', '15 days written notice required'],
+  ];
+  const p = (t) => `<p style="margin:0 0 10px;font-size:13px;color:#4a4a3a;line-height:1.7;font-family:Arial,sans-serif;">${t}</p>`;
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd5c8;border-radius:6px;margin-bottom:20px;">
+      ${cls.map((r,i) => row(r[0], r[1], i === cls.length-1)).join('')}
+    </table>
+    ${p('<strong>1. PREMISES</strong> — The Landlord agrees to rent to the Tenant the room described above, located at Ta.Garden, K570/24, Cam Nam Island, Hội An, Vietnam. The Tenant shall have access to shared common areas including kitchen, bathrooms, and outdoor spaces as designated by the Landlord.')}
+    ${p('<strong>2. TERM</strong> — The tenancy commences on ' + startDate + ' on a month-to-month basis, renewable each month unless 15 days written notice is given by either party prior to the renewal date.')}
+    ${p('<strong>3. PAYMENT TERMS</strong>')}
+    ${p('3.1 Payment Method — All rent is paid monthly in advance via the Ta.Garden Guest Portal. Accepted methods: bank transfer or card via the portal.')}
+    ${p('3.2 Due Date — Rent is due on ' + dueDayStr + '. A 3-day grace period applies. Payments more than 3 days late incur a 5% late fee.')}
+    ${p("3.3 Security Deposit — A security deposit equal to one (1) month's rent is held against damage, unpaid rent, or early departure. Returned within 14 days of move-out, less deductions.")}
+    ${p('3.4 Utilities — Electricity and water are metered and billed at the end of each calendar month based on actual usage. Invoiced via the Guest Portal and due within 5 days. WiFi is included in the monthly rent.')}
+    ${p('<strong>4. HOUSE RULES</strong>')}
+    ${p('4.1 Guests — Overnight guests require prior approval. Maximum 1 overnight guest. Stays exceeding 3 consecutive nights require written consent.')}
+    ${p('4.2 Noise — Quiet hours are 10pm–7am. Loud music, parties, or disruptive behaviour is grounds for immediate termination.')}
+    ${p('4.3 Common Areas — Shared spaces to be kept clean and tidy. Dishes cleaned within 24 hours.')}
+    ${p('4.4 Smoking &amp; Substances — No indoor smoking. Illegal substances strictly prohibited. Violation = immediate termination without deposit refund.')}
+    ${p('4.5 Pets — No pets without prior written approval.')}
+    ${p('4.6 Alterations — No physical alterations without written consent.')}
+    ${p('<strong>5. VISA &amp; DOCUMENTATION</strong> — Tenant must upload a passport copy to the Guest Portal within 24 hours of move-in (required for Vietnamese legal compliance). Tenant is solely responsible for maintaining a valid visa.')}
+    ${p('<strong>6. PROPERTY MANAGER</strong> — On-site manager is Colt, reachable via WhatsApp for day-to-day matters. Landlord (Kai Edwards) contactable via the Guest Portal for billing, lease, or escalation matters.')}
+    ${p('<strong>7. MAINTENANCE</strong> — Tenant shall keep the room clean and in good condition. Damage beyond normal wear and tear will be deducted from the security deposit. Maintenance issues must be reported promptly to the Property Manager.')}
+    ${p('<strong>8. TERMINATION</strong> — Either party may terminate with 15 days written notice. Immediate termination by Landlord for: non-payment, house rule violations, illegal activity, or misrepresentation. Early departure without notice forfeits the security deposit.')}
+    ${p('<strong>9. ENTRY BY LANDLORD</strong> — The Landlord or Property Manager may enter with 24 hours written notice for inspection or repairs. Emergency entry may occur without prior notice.')}
+    ${p('<strong>10. GOVERNING LAW</strong> — This Agreement is governed by the laws of the Socialist Republic of Vietnam.')}
+    <div style="margin-top:16px;padding:14px;background:#fff;border:1px solid rgba(136,145,125,0.25);border-radius:4px;font-size:12px;color:#88917d;line-height:1.7;font-family:Arial,sans-serif;font-style:italic;">
+      By completing payment, ${enq.name} agrees to the terms of this rental agreement. A fully countersigned copy of this agreement will be emailed to you once your payment is confirmed.
+    </div>`;
 }
 
 function buildContractEmail(enq, rates = {}) {

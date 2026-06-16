@@ -3538,14 +3538,21 @@ function finCancelAdd() {
 }
 
 async function finSaveNewRow() {
-  const desc = document.getElementById('fnew-desc')?.value.trim();
-  const cat  = document.getElementById('fnew-cat')?.value;
-  const usd  = parseFloat(document.getElementById('fnew-usd')?.value) || 0;
+  const descEl = document.getElementById('fnew-desc');
+  const usdEl  = document.getElementById('fnew-usd');
+  const desc = (descEl?.value || '').trim();
+  const cat  = document.getElementById('fnew-cat')?.value || 'other';
+  const usd  = parseFloat(usdEl?.value) || 0;
   const vnd  = parseFloat(document.getElementById('fnew-vnd')?.value) || null;
-  const date = document.getElementById('fnew-date')?.value;
-  const note = document.getElementById('fnew-note')?.value.trim();
-  if (!desc) { document.getElementById('fnew-desc').style.borderColor='var(--red)'; return; }
-  if (!usd)  { document.getElementById('fnew-usd').style.borderColor='var(--red)'; return; }
+  const date = document.getElementById('fnew-date')?.value || new Date().toISOString().slice(0,10);
+  const note = (document.getElementById('fnew-note')?.value || '').trim();
+
+  if (!desc) { if (descEl) { descEl.style.borderColor = 'var(--red)'; descEl.focus(); } return; }
+  if (!usd)  { if (usdEl)  { usdEl.style.borderColor  = 'var(--red)'; usdEl.focus();  } return; }
+
+  const saveBtn = document.querySelector('.fin-add-row .fin-row-save');
+  if (saveBtn) { saveBtn.textContent = '…'; saveBtn.disabled = true; }
+
   try {
     const r = await fetch('/api/admin/financials', {
       method: 'POST',
@@ -3553,8 +3560,18 @@ async function finSaveNewRow() {
       body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', description: desc, category: cat, amountUsd: usd, amountVnd: vnd, date, note, isStartup: false }),
     });
     const d = await r.json();
-    if (d.success) { allExpenses = d.expenses; finAddingRow = false; renderFinancials(); }
-  } catch {}
+    if (d.success) {
+      allExpenses = d.expenses;
+      finAddingRow = false;
+      renderFinancials();
+    } else {
+      if (saveBtn) { saveBtn.textContent = '✓'; saveBtn.disabled = false; }
+      alert(d.error || 'Failed to save expense. Check description and amount.');
+    }
+  } catch (err) {
+    if (saveBtn) { saveBtn.textContent = '✓'; saveBtn.disabled = false; }
+    alert('Network error — could not save expense.');
+  }
 }
 
 function finStartEditRow(id) {
@@ -3584,14 +3601,16 @@ async function finSaveEditRow(id) {
   const usd = parseFloat(document.getElementById(`fedit-usd-${id}`)?.value) || 0;
   const vnd = parseFloat(document.getElementById(`fedit-vnd-${id}`)?.value) || null;
   const updates = {
-    date:        document.getElementById(`fedit-date-${id}`)?.value,
-    category:    document.getElementById(`fedit-cat-${id}`)?.value,
-    description: document.getElementById(`fedit-desc-${id}`)?.value.trim(),
-    note:        document.getElementById(`fedit-note-${id}`)?.value.trim(),
+    date:        document.getElementById(`fedit-date-${id}`)?.value || '',
+    category:    document.getElementById(`fedit-cat-${id}`)?.value  || 'other',
+    description: (document.getElementById(`fedit-desc-${id}`)?.value || '').trim(),
+    note:        (document.getElementById(`fedit-note-${id}`)?.value || '').trim(),
     amountUsd:   usd,
     amountVnd:   vnd,
   };
   if (!updates.description) return;
+  const saveBtn = document.querySelector(`#finTbody tr[data-id="${id}"] .fin-row-save`);
+  if (saveBtn) { saveBtn.textContent = '…'; saveBtn.disabled = true; }
   try {
     const r = await fetch('/api/admin/financials', {
       method: 'PATCH',
@@ -3600,7 +3619,8 @@ async function finSaveEditRow(id) {
     });
     const d = await r.json();
     if (d.success) { allExpenses = d.expenses; renderFinancials(); }
-  } catch {}
+    else { if (saveBtn) { saveBtn.textContent = '✓'; saveBtn.disabled = false; } alert(d.error || 'Save failed.'); }
+  } catch { if (saveBtn) { saveBtn.textContent = '✓'; saveBtn.disabled = false; } alert('Network error.'); }
 }
 
 async function doTogglePaid(id) {

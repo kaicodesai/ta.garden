@@ -775,6 +775,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           </select>
         </div>
         <button class="btn-dark" onclick="finStartAddRow()" style="font-size:11px;padding:8px 16px;">+ Add Expense</button>
+        <button class="btn-sm"   onclick="finExportCsv()"  style="font-size:11px;padding:8px 14px;">Export ↓</button>
       </div>
 
       <!-- Spreadsheet table -->
@@ -3524,6 +3525,52 @@ function renderFinancials() {
 
   document.getElementById('finTbody').innerHTML = html;
   if (finAddingRow) document.getElementById('fnew-desc')?.focus();
+}
+
+function finExportCsv() {
+  const catF    = document.getElementById('fin-filter-cat')?.value    || '';
+  const statusF = document.getElementById('fin-filter-status')?.value || '';
+  let rows = allExpenses.filter(e => {
+    if (catF    && e.category !== catF)          return false;
+    if (statusF === 'paid'    && !e.paid)         return false;
+    if (statusF === 'pending' &&  e.paid)         return false;
+    return true;
+  });
+  rows = [...rows].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const headers = ['Date','Category','Description','Note','USD','VND','Status','Type'];
+  const lines = [
+    headers.join(','),
+    ...rows.map(e => [
+      esc(e.date || ''),
+      esc((FIN_CATS[e.category] || FIN_CATS.other).label),
+      esc(e.description || ''),
+      esc(e.note || ''),
+      e.amountUsd ?? '',
+      e.amountVnd ?? '',
+      esc(e.paid ? 'Paid' : 'Pending'),
+      esc(e.isStartup ? 'Startup' : 'Recurring'),
+    ].join(',')),
+  ];
+
+  // Summary rows at the bottom
+  const totalUsd = rows.reduce((s, e) => s + (e.amountUsd || 0), 0);
+  const paidUsd  = rows.filter(e => e.paid).reduce((s, e) => s + (e.amountUsd || 0), 0);
+  lines.push('');
+  lines.push(`"Total",,,,"${totalUsd}",,,""`);
+  lines.push(`"Paid Out",,,,"${paidUsd}",,,""`);
+  lines.push(`"Pending",,,,"${totalUsd - paidUsd}",,,""`);
+
+  const csv  = lines.join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href     = url;
+  a.download = `tagarden-expenses-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function finStartAddRow() {

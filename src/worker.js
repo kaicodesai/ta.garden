@@ -88,6 +88,13 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/record-payment'   && m === 'DELETE') return safeCall(() => adminDeletePayment(request, env, cors), cors);
     if (p === '/api/admin/payments'         && m === 'GET')   return safeCall(() => adminGetPayments(request, env, cors), cors);
 
+    // Electricity billing
+    if (p === '/api/admin/electricity'      && m === 'POST')  return safeCall(() => adminPostElectricity(request, env, cors), cors);
+    if (p === '/api/admin/electricity'      && m === 'GET')   return safeCall(() => adminGetElectricity(request, env, cors), cors);
+    if (p === '/api/admin/electricity'      && m === 'DELETE') return safeCall(() => adminDeleteElectricity(request, env, cors), cors);
+    if (p === '/api/admin/electricity'      && m === 'PATCH') return safeCall(() => adminMarkElectricityPaid(request, env, cors), cors);
+    if (p === '/api/guest/electricity'      && m === 'GET')   return safeCall(() => guestGetElectricity(request, env, cors), cors);
+
     // Email automation
     if (p === '/api/admin/send-emails'     && m === 'POST')   return safeCall(() => adminRunEmails(request, env, cors), cors);
 
@@ -363,6 +370,7 @@ async function adminDeleteEnquiry(request, env, cors) {
     env.BOOKINGS.delete(`contract_${id}`),
     env.BOOKINGS.delete(`payments__${id}`),
     env.BOOKINGS.delete(`guest__${id}`),
+    env.BOOKINGS.delete(`electricity__${id}`),
   ]);
 
   // Remove from blocked ranges if this enquiry blocked calendar dates
@@ -569,12 +577,14 @@ async function guestPortalData(enquiryId, propId, env, cors) {
   const enq = list.find(e => e.id === enquiryId);
   if (!enq) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
 
-  const [profileRaw, paymentsRaw] = await Promise.all([
+  const [profileRaw, paymentsRaw, electricityRaw] = await Promise.all([
     env.BOOKINGS.get(`guest__${enquiryId}`),
     env.BOOKINGS.get(`payments__${enquiryId}`),
+    env.BOOKINGS.get(`electricity__${enquiryId}`),
   ]);
-  const profile  = profileRaw  ? JSON.parse(profileRaw)  : null;
-  const payments = paymentsRaw ? JSON.parse(paymentsRaw) : [];
+  const profile     = profileRaw     ? JSON.parse(profileRaw)     : null;
+  const payments    = paymentsRaw    ? JSON.parse(paymentsRaw)    : [];
+  const electricity = electricityRaw ? JSON.parse(electricityRaw) : [];
 
   return Response.json({
     enquiryId: enq.id,
@@ -601,6 +611,7 @@ async function guestPortalData(enquiryId, propId, env, cors) {
       son: profile.son || null,
     } : null,
     payments,
+    electricity,
   }, { headers: cors });
 }
 
@@ -861,6 +872,61 @@ async function adminDeletePayment(request, env, cors) {
   const payments = safeJsonParse(raw);
   await env.BOOKINGS.put(key, JSON.stringify(payments.filter(p => p.id !== id)));
   return Response.json({ success: true }, { headers: cors });
+}
+
+// ── Electricity billing ───────────────────────────────────────────────────────
+
+async function adminPostElectricity(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { enquiryId, period, amountVnd, note } = await request.json();
+  if (!enquiryId || !period || !amountVnd) return Response.json({ error: 'enquiryId, period, and amountVnd required' }, { status: 400, headers: cors });
+
+  const key = `electricity__${enquiryId}`;
+  const bills = safeJsonParse(await env.BOOKINGS.get(key));
+  const id = `elec_${Date.now()}`;
+  const amountUsd = Math.round((Number(amountVnd) / 25000) * 100) / 100;
+  bills.unshift({ id, period, amountVnd: Number(amountVnd), amountUsd, note: note || '', status: 'unpaid', postedAt: new Date().toISOString() });
+  await env.BOOKINGS.put(key, JSON.stringify(bills));
+  await appendLog(env, enquiryId, { type: 'electricity_posted', note: `Electricity bill posted: ${Number(amountVnd).toLocaleString()} VND for ${period}` });
+  return Response.json({ success: true, id }, { headers: cors });
+}
+
+async function adminGetElectricity(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return Response.json({ error: 'id required' }, { status: 400, headers: cors });
+  const raw = await env.BOOKINGS.get(`electricity__${id}`);
+  return Response.json({ bills: safeJsonParse(raw) }, { headers: cors });
+}
+
+async function adminDeleteElectricity(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { enquiryId, id } = await request.json();
+  if (!enquiryId || !id) return Response.json({ error: 'enquiryId and id required' }, { status: 400, headers: cors });
+  const key = `electricity__${enquiryId}`;
+  const bills = safeJsonParse(await env.BOOKINGS.get(key));
+  await env.BOOKINGS.put(key, JSON.stringify(bills.filter(b => b.id !== id)));
+  return Response.json({ success: true }, { headers: cors });
+}
+
+async function adminMarkElectricityPaid(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { enquiryId, id, status } = await request.json();
+  if (!enquiryId || !id) return Response.json({ error: 'enquiryId and id required' }, { status: 400, headers: cors });
+  const key = `electricity__${enquiryId}`;
+  const bills = safeJsonParse(await env.BOOKINGS.get(key));
+  const idx = bills.findIndex(b => b.id === id);
+  if (idx >= 0) { bills[idx].status = status || 'paid'; bills[idx].paidAt = new Date().toISOString(); }
+  await env.BOOKINGS.put(key, JSON.stringify(bills));
+  await appendLog(env, enquiryId, { type: 'electricity_paid', note: `Electricity bill marked as ${status || 'paid'} for ${bills[idx]?.period || ''}` });
+  return Response.json({ success: true }, { headers: cors });
+}
+
+async function guestGetElectricity(request, env, cors) {
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return Response.json({ bills: [] }, { headers: cors });
+  const raw = await env.BOOKINGS.get(`electricity__${id}`);
+  return Response.json({ bills: safeJsonParse(raw) }, { headers: cors });
 }
 
 // ── Public: gallery ───────────────────────────────────────────────────────────

@@ -383,7 +383,10 @@ function renderPortal() {
     <!-- Payments -->
     <div class="section">
       <div class="section-title">Monthly Payments</div>
-      <a class="payment-cta" href="${STRIPE_LINK}" target="_blank" rel="noopener">Pay This Month →</a>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <a class="payment-cta" href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" target="_blank" rel="noopener" style="flex:1;min-width:120px;text-align:center;">Pay in USD →</a>
+        <a class="payment-cta" href="https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03" target="_blank" rel="noopener" style="flex:1;min-width:120px;text-align:center;background:#2d5a27;">Pay in VND →</a>
+      </div>
       ${payments.length ? `
         <div class="payment-list">
           ${payments.map(p => `
@@ -399,7 +402,46 @@ function renderPortal() {
           <span class="payment-total-val">${fmtAmt(total, sameVND ? 'VND' : '')}</span>
         </div>` : ''}
       ` : `<div class="payment-empty">No payments recorded yet. Your first payment will appear here once confirmed.</div>`}
-    </div>`;
+    </div>
+
+    <!-- Electricity -->
+    ${(() => {
+      const elec = session.electricity || [];
+      const unpaid = elec.filter(b => b.status !== 'paid');
+      const paid   = elec.filter(b => b.status === 'paid');
+      if (!elec.length) return '';
+      return `<div class="section">
+        <div class="section-title">Electricity Bills</div>
+        ${unpaid.length ? unpaid.map(b => {
+          const period = b.period ? new Date(b.period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : b.period;
+          return `<div style="padding:14px;background:#fff8f0;border:1px solid #f0c070;border-radius:6px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+              <div>
+                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);margin-bottom:2px;">${period}</div>
+                <div style="font-size:18px;font-family:Georgia,serif;">${Number(b.amountVnd).toLocaleString()} VND <span style="font-size:12px;color:var(--mid);">≈ $${b.amountUsd}</span></div>
+                ${b.note ? `<div style="font-size:12px;color:var(--mid);margin-top:2px;">${b.note}</div>` : ''}
+              </div>
+              <span style="font-size:10px;padding:3px 10px;background:#fff3e0;color:#e65100;border-radius:3px;font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Due</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <a href="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02" target="_blank" rel="noopener" style="flex:1;display:block;text-align:center;padding:10px;background:var(--teal,#86a2a6);color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;border-radius:4px;">Pay in USD →</a>
+              <a href="https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03" target="_blank" rel="noopener" style="flex:1;display:block;text-align:center;padding:10px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;border-radius:4px;">Pay in VND →</a>
+            </div>
+          </div>`;
+        }).join('') : ''}
+        ${paid.length ? `<div style="margin-top:6px;">
+          ${paid.map(b => {
+            const period = b.period ? new Date(b.period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : b.period;
+            return `<div class="payment-row" style="opacity:0.65;">
+              <span class="payment-date">${period}</span>
+              <span class="payment-amount">${Number(b.amountVnd).toLocaleString()} VND</span>
+              <span class="payment-note">${b.note || 'Electricity'}</span>
+              <span class="payment-check">✓</span>
+            </div>`;
+          }).join('')}
+        </div>` : ''}
+      </div>`;
+    })()}
 
   // Attach form handlers if form was rendered
   setupProfileForm();

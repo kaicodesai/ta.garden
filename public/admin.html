@@ -1216,6 +1216,7 @@ function renderDoc(dataUrl, label) {
 }
 
 let profileModalEnqId = null;
+let profileElecBills = [];
 let profilePayments = [];
 
 async function openProfileModal(id) {
@@ -1228,16 +1229,19 @@ async function openProfileModal(id) {
   document.getElementById('profileOverlay').classList.add('open');
 
   let profile = null, activityLog = [], hasContract = false;
+  profileElecBills = [];
   try {
-    const [pr, payr] = await Promise.all([
+    const [pr, payr, elecr] = await Promise.all([
       fetch(`/api/admin/guest-profile?id=${id}`, { headers: { 'x-admin-secret': secret } }),
       fetch(`/api/admin/payments?id=${id}`, { headers: { 'x-admin-secret': secret } }),
+      fetch(`/api/admin/electricity?id=${id}`, { headers: { 'x-admin-secret': secret } }),
     ]);
     const pd = await pr.json();
     profile = pd.profile;
     activityLog = pd.log || [];
     hasContract = pd.hasContract || false;
     profilePayments = (await payr.json()).payments || [];
+    profileElecBills = (await elecr.json()).bills || [];
   } catch {}
 
   const ob = enq.onboarding || {};
@@ -1336,7 +1340,60 @@ async function openProfileModal(id) {
         <div style="font-size:13px;color:var(--mid);">No contract on file yet.</div>
       </div>`;
 
-  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded' };
+  // ── Financial summary ──
+  const VND_RATE_ADM = 25000;
+  const rentUsd = enq.rentUsd || ROOM_RATES_JS[enq.room]?.monthly || null;
+  const rentVnd = enq.rentVnd || (rentUsd ? rentUsd * VND_RATE_ADM : null);
+  const deposit = enq.depositAmount || rentUsd;
+  const depositPaid = enq.onboarding?.paymentReceived;
+  const finHtml = `<div class="profile-section" style="background:var(--bg-light,#f0ebe4);border-radius:6px;padding:14px 16px;margin-bottom:0;">
+    <div class="profile-section-title" style="margin-bottom:10px;">Financial Summary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <div style="text-align:center;padding:12px;background:#fff;border-radius:4px;border:1px solid var(--border,#ddd5c8);">
+        <div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:6px;">Monthly Rent</div>
+        <div style="font-family:Georgia,serif;font-size:20px;color:var(--stone,#3a3a2a);">${rentUsd ? '$'+rentUsd : '—'}</div>
+        ${rentVnd ? `<div style="font-size:11px;color:var(--teal,#86a2a6);margin-top:2px;">${Number(rentVnd).toLocaleString()} VND</div>` : ''}
+      </div>
+      <div style="text-align:center;padding:12px;background:#fff;border-radius:4px;border:1px solid var(--border,#ddd5c8);">
+        <div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:6px;">Security Deposit</div>
+        <div style="font-family:Georgia,serif;font-size:20px;color:var(--stone,#3a3a2a);">${deposit ? '$'+deposit : '—'}</div>
+        <div style="font-size:10px;margin-top:2px;${depositPaid ? 'color:#4caf50;' : 'color:#c0392b;'}">${depositPaid ? '✓ Received' : '✗ Pending'}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:#fff;border-radius:4px;border:1px solid var(--border,#ddd5c8);">
+        <div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:6px;">First Month Total</div>
+        <div style="font-family:Georgia,serif;font-size:20px;color:var(--stone,#3a3a2a);">${(rentUsd && deposit) ? '$'+(rentUsd+deposit) : '—'}</div>
+        <div style="font-size:10px;color:var(--mid);margin-top:2px;">rent + deposit</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--mid);">
+      <div><span style="font-weight:600;color:var(--stone);">Room:</span> ${enq.room}</div>
+      <div><span style="font-weight:600;color:var(--stone);">Move-in:</span> ${enq.checkIn ? fmt(enq.checkIn) : '—'}</div>
+      <div><span style="font-weight:600;color:var(--stone);">Stay Type:</span> ${enq.stayType === 'monthly' ? 'Monthly' : 'Short Stay'}</div>
+      <div><span style="font-weight:600;color:var(--stone);">Move-out:</span> ${enq.checkOut ? fmt(enq.checkOut) : 'Ongoing'}</div>
+    </div>
+  </div>`;
+
+  // ── Electricity section ──
+  const elecHtml = `<div class="profile-section" id="electricitySection">
+    <div class="profile-section-title">Electricity Bills</div>
+    <div id="elecBillList">${renderElecList()}</div>
+    <button class="btn-sm" style="margin-top:10px;" onclick="toggleElecForm()">+ Post Electricity Bill</button>
+    <div class="pay-add-form" id="elecAddForm" style="display:none;">
+      <div class="pay-form-row">
+        <div class="fg"><label class="fl">Billing Period</label><input type="month" class="fc" id="elecPeriod" value="${new Date().toISOString().slice(0,7)}"></div>
+        <div class="fg"><label class="fl">Amount (VND)</label><input type="number" class="fc" id="elecAmountVnd" placeholder="e.g. 320000" oninput="elecCalcUsd()"></div>
+        <div class="fg"><label class="fl">≈ USD (auto)</label><input type="text" class="fc" id="elecAmountUsd" placeholder="auto" readonly style="background:rgba(136,145,125,0.06);"></div>
+        <div class="fg"><label class="fl">Note (optional)</label><input type="text" class="fc" id="elecNote" placeholder="e.g. Reading: 112 → 245 kWh"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+        <button class="btn-dark" onclick="doPostElectricity()">Post to Guest Portal →</button>
+        <button class="btn-sm" onclick="toggleElecForm()">Cancel</button>
+        <span class="status-msg" id="elecStatus" style="margin:0;"></span>
+      </div>
+    </div>
+  </div>`;
+
+  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created' };
   const logSection = `<div class="profile-section">
     <div class="profile-section-title">Activity Log</div>
     ${activityLog.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${activityLog.map(e => {
@@ -1355,7 +1412,7 @@ async function openProfileModal(id) {
     : '<div style="font-size:13px;color:var(--mid);">No activity logged yet.</div>'}
   </div>`;
 
-  document.getElementById('profileModalBody').innerHTML = checklistHtml + portalHtml + contractSection + logSection + profileHtml + paymentsHtml;
+  document.getElementById('profileModalBody').innerHTML = finHtml + checklistHtml + portalHtml + contractSection + profileHtml + elecHtml + paymentsHtml + logSection;
 }
 
 function renderPayList() {
@@ -1374,6 +1431,83 @@ function renderPayList() {
     <span class="pay-total-lbl">Total</span>
     <span class="pay-total-val">${total.toLocaleString()}${sameVND ? ' VND' : ''}</span>
   </div>` : ''}`;
+}
+
+function renderElecList() {
+  if (!profileElecBills.length) return '<div style="font-size:13px;color:var(--mid);padding:4px 0;">No electricity bills posted yet.</div>';
+  return `<div class="pay-list">${profileElecBills.map(b => {
+    const isPaid = b.status === 'paid';
+    const period = b.period ? new Date(b.period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : b.period;
+    return `<div class="pay-row" style="${isPaid ? 'opacity:0.6;' : ''}">
+      <span class="pay-date">${period}</span>
+      <span class="pay-amount">${Number(b.amountVnd).toLocaleString()} VND <span style="color:var(--mid);font-size:10px;">≈ $${b.amountUsd}</span></span>
+      <span class="pay-note">${b.note || ''}</span>
+      <span style="font-size:10px;padding:2px 8px;border-radius:3px;${isPaid ? 'background:#e8f5e9;color:#2e7d32;' : 'background:#fff3e0;color:#e65100;'}">${isPaid ? 'Paid' : 'Unpaid'}</span>
+      ${!isPaid ? `<button class="btn-sm" style="padding:2px 8px;font-size:10px;" onclick="doMarkElecPaid('${b.id}')">Mark Paid</button>` : ''}
+      <button class="pay-del" onclick="doDeleteElec('${b.id}')">✕</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function toggleElecForm() {
+  const f = document.getElementById('elecAddForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function elecCalcUsd() {
+  const vnd = Number(document.getElementById('elecAmountVnd').value) || 0;
+  document.getElementById('elecAmountUsd').value = vnd ? '$' + (Math.round(vnd / 25000 * 100) / 100).toFixed(2) : '';
+}
+
+async function doPostElectricity() {
+  const period    = document.getElementById('elecPeriod').value;
+  const amountVnd = document.getElementById('elecAmountVnd').value;
+  const note      = document.getElementById('elecNote').value.trim();
+  const st        = document.getElementById('elecStatus');
+  if (!period || !amountVnd) { st.style.color = '#c0392b'; st.textContent = 'Period and amount required.'; return; }
+  st.textContent = 'Posting…';
+  try {
+    const r = await fetch('/api/admin/electricity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ enquiryId: profileModalEnqId, period, amountVnd: Number(amountVnd), note }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      // Reload bills
+      const er = await fetch(`/api/admin/electricity?id=${profileModalEnqId}`, { headers: { 'x-admin-secret': secret } });
+      profileElecBills = (await er.json()).bills || [];
+      document.getElementById('elecBillList').innerHTML = renderElecList();
+      document.getElementById('elecAddForm').style.display = 'none';
+      document.getElementById('elecAmountVnd').value = '';
+      document.getElementById('elecAmountUsd').value = '';
+      document.getElementById('elecNote').value = '';
+      st.textContent = '';
+    } else { st.style.color = '#c0392b'; st.textContent = d.error || 'Failed'; }
+  } catch (err) { st.style.color = '#c0392b'; st.textContent = 'Error: ' + err.message; }
+}
+
+async function doMarkElecPaid(billId) {
+  await fetch('/api/admin/electricity', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+    body: JSON.stringify({ enquiryId: profileModalEnqId, id: billId, status: 'paid' }),
+  });
+  const er = await fetch(`/api/admin/electricity?id=${profileModalEnqId}`, { headers: { 'x-admin-secret': secret } });
+  profileElecBills = (await er.json()).bills || [];
+  document.getElementById('elecBillList').innerHTML = renderElecList();
+}
+
+async function doDeleteElec(billId) {
+  if (!confirm('Delete this electricity bill?')) return;
+  await fetch('/api/admin/electricity', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+    body: JSON.stringify({ enquiryId: profileModalEnqId, id: billId }),
+  });
+  const er = await fetch(`/api/admin/electricity?id=${profileModalEnqId}`, { headers: { 'x-admin-secret': secret } });
+  profileElecBills = (await er.json()).bills || [];
+  document.getElementById('elecBillList').innerHTML = renderElecList();
 }
 
 function togglePayForm() {

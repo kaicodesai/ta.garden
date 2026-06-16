@@ -2,6 +2,8 @@
 // (Settings → Variables & Secrets → Add Secret → RESEND_API_KEY)
 const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
 const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
+const STRIPE_USD = 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+const STRIPE_VND = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
 
 const ROOM_RATES = {
   'The River Room':   { monthly: 340, nightly: 25 },
@@ -112,6 +114,9 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/send-contract'   && m === 'POST')   return safeCall(() => adminSendContract(request, env, cors), cors);
     if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return safeCall(() => handleBookingLinkConfirm(request, env, cors, ctx), cors);
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
+
+    // Redirect /guest → /guest.html (keeps query string intact)
+    if (p === '/guest') return Response.redirect(`${url.origin}/guest.html${url.search}`, 301);
 
     // Static files are served automatically by Cloudflare before the worker runs.
     // This fallback only triggers for unmatched paths with no static file.
@@ -1112,9 +1117,14 @@ body{background:#e8e0d5;}
         </tr></table>
       </td></tr>
     </table>
-    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-      <a href="${stripeUrl}" style="display:inline-block;padding:16px 40px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Now via Stripe</a>
-    </td></tr></table>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="padding:0 6px 0 0;" align="center">
+        <a href="${stripeUrl}" style="display:inline-block;padding:15px 28px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in USD →</a>
+      </td>
+      <td style="padding:0 0 0 6px;" align="center">
+        <a href="${STRIPE_VND}" style="display:inline-block;padding:15px 28px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in VND →</a>
+      </td>
+    </tr></table>
     <p style="margin:20px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;text-align:center;">Thank you for being part of Ta.Garden 🌿</p>
   </td></tr>
   <tr><td style="background:#3a3a2a;padding:16px 32px;text-align:center;" class="pad">
@@ -1990,7 +2000,14 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 
       <!-- Buttons -->
       ${guestPortalUrl ? `<a href="${guestPortalUrl}" class="btn" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;font-family:Arial,sans-serif;">Complete Guest Profile →</a>` : ''}
-      ${(enq.stripeUrl || effectiveDeposit) ? `<a href="${enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02'}" class="btn" style="display:block;text-align:center;padding:16px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay Deposit${effectiveDeposit ? ` — $${effectiveDeposit}` : ''} via Stripe →</a>` : ''}
+      ${effectiveDeposit ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px;"><tr>
+        <td style="padding:0 5px 0 0;">
+          <a href="${enq.stripeUrl || STRIPE_USD}" style="display:block;text-align:center;padding:15px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay in USD${effectiveDeposit ? ` — $${effectiveDeposit}` : ''} →</a>
+        </td>
+        <td style="padding:0 0 0 5px;">
+          <a href="${STRIPE_VND}" style="display:block;text-align:center;padding:15px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay in VND →</a>
+        </td>
+      </tr></table>` : ''}
     </td>
   </tr>
 
@@ -2615,10 +2632,15 @@ body{background:#e8e0d5;}
           <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${depositStr}</strong></td></tr>
           <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit — <strong style="color:#fff;">${depositStr}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(fully refunded when you leave)</span></td></tr>
         </table>
-        <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-          <a href="${stripeUrl}" style="display:inline-block;padding:14px 36px;background:#86a2a6;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Now — ${deposit ? '$'+(deposit*2).toLocaleString() : depositStr}</a>
-        </td></tr></table>
-        <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Secure payment via Stripe</p>
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="padding:0 6px 0 0;" align="center">
+            <a href="${stripeUrl || STRIPE_USD}" style="display:inline-block;padding:13px 24px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in USD →</a>
+          </td>
+          <td style="padding:0 0 0 6px;" align="center">
+            <a href="${STRIPE_VND}" style="display:inline-block;padding:13px 24px;background:#5a7a56;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in VND →</a>
+          </td>
+        </tr></table>
+        <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Secure payment via Stripe · Choose your preferred currency</p>
       </td></tr>
     </table>
   </td></tr>

@@ -810,7 +810,11 @@ details.faq-item[open] summary::after { content: '\2212'; }
         </div>
         <div class="form-group">
           <label class="form-label">Desired Move-In Date</label>
-          <input type="date" class="form-control" id="sf-date">
+          <input type="date" class="form-control" id="sf-date" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Desired Move-Out Date</label>
+          <input type="date" class="form-control" id="sf-checkout" required>
         </div>
         <div class="form-group">
           <label class="form-label">Tell us a little about yourself</label>
@@ -1152,14 +1156,18 @@ details.faq-item[open] summary::after { content: '\2212'; }
     const email = document.getElementById('sf-email').value.trim();
     const code  = document.getElementById('sf-code').value;
     const phone = document.getElementById('sf-phone').value.trim();
-    const room  = document.getElementById('sf-room').value;
-    const date  = document.getElementById('sf-date').value;
-    const msg   = document.getElementById('sf-message').value.trim();
-    const st    = document.getElementById('sf-status');
-    const btn   = document.getElementById('sf-btn');
+    const room     = document.getElementById('sf-room').value;
+    const date     = document.getElementById('sf-date').value;
+    const checkout = document.getElementById('sf-checkout').value;
+    const msg      = document.getElementById('sf-message').value.trim();
+    const st       = document.getElementById('sf-status');
+    const btn      = document.getElementById('sf-btn');
     const fullPhone = phone ? code + ' ' + phone : '';
 
     if (!name || !email || !room) { setStatus(st, 'err', 'Please fill in your name, email, and select a room.'); return; }
+    if (!date) { setStatus(st, 'err', 'Please select a move-in date.'); return; }
+    if (!checkout) { setStatus(st, 'err', 'Please select a move-out date.'); return; }
+    if (checkout <= date) { setStatus(st, 'err', 'Move-out date must be after move-in date.'); return; }
 
     btn.textContent = 'Sending…'; btn.disabled = true; st.textContent = '';
 
@@ -1167,7 +1175,7 @@ details.faq-item[open] summary::after { content: '\2212'; }
       const res = await fetch('/api/enquire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone: fullPhone, room, stayType: 'monthly', checkIn: date || null, checkOut: null, message: msg }),
+        body: JSON.stringify({ name, email, phone: fullPhone, room, stayType: 'monthly', checkIn: date || null, checkOut: checkout || null, message: msg }),
       });
       const data = await res.json();
       if (data.success) {

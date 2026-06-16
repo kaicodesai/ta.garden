@@ -70,6 +70,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/ical-sync'        && m === 'POST')  return safeCall(() => adminIcalSync(request, env, cors), cors);
     if (p === '/api/admin/onboarding'       && m === 'PATCH') return safeCall(() => adminUpdateOnboarding(request, env, cors), cors);
     if (p === '/api/admin/guest-profile'    && m === 'GET')   return safeCall(() => adminGetGuestProfile(request, env, cors), cors);
+    if (p === '/api/admin/guest-profile'    && m === 'PATCH') return safeCall(() => adminUpdateGuestProfile(request, env, cors), cors);
 
     // Gallery (public read, admin write)
     if (p === '/api/gallery'               && m === 'GET')    return handleGalleryGet(request, env, cors);
@@ -809,6 +810,20 @@ async function adminGetGuestProfile(request, env, cors) {
     log: logRaw ? JSON.parse(logRaw) : [],
     hasContract: !!contractRaw,
   }, { headers: cors });
+}
+
+async function adminUpdateGuestProfile(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { id, propertyId = 'ta-garden', updates } = await request.json();
+  if (!id || !updates) return Response.json({ error: 'id and updates required' }, { status: 400, headers: cors });
+
+  const raw = await env.BOOKINGS.get(`guest__${id}`);
+  const profile = raw ? JSON.parse(raw) : {};
+  const merged = { ...profile, ...updates };
+  if (updates.son === null) delete merged.son;
+  await env.BOOKINGS.put(`guest__${id}`, JSON.stringify(merged));
+  await appendLog(env, id, { type: 'profile_updated', note: `Profile fields updated by admin: ${Object.keys(updates).filter(k=>k!=='son').join(', ')}` });
+  return Response.json({ success: true }, { headers: cors });
 }
 
 async function adminGetActivityLog(request, env, cors) {

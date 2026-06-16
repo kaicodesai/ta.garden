@@ -1460,16 +1460,53 @@ async function openProfileModal(id) {
 
   let profileHtml = '';
   if (profile) {
-    profileHtml = `<div class="profile-section">
-      <div class="profile-section-title">Personal Details</div>
-      <div class="profile-grid">
-        <div class="profile-field"><div class="profile-key">Full Name</div><div class="profile-val">${profile.fullName || '—'}</div></div>
-        <div class="profile-field"><div class="profile-key">Date of Birth</div><div class="profile-val">${profile.dateOfBirth || '—'}</div></div>
-        <div class="profile-field"><div class="profile-key">Nationality</div><div class="profile-val">${profile.nationality || '—'}</div></div>
-        <div class="profile-field"><div class="profile-key">Passport Number</div><div class="profile-val">${profile.passportNumber || '—'}</div></div>
-        <div class="profile-field" style="grid-column:1/-1;"><div class="profile-key">Home Address</div><div class="profile-val">${profile.homeAddress || '—'}</div></div>
-        <div class="profile-field"><div class="profile-key">Emergency Contact</div><div class="profile-val">${profile.emergencyName || '—'}</div></div>
-        <div class="profile-field"><div class="profile-key">Emergency Phone</div><div class="profile-val">${profile.emergencyPhone || '—'}</div></div>
+    const son = profile.son || {};
+    profileHtml = `<div class="profile-section" id="profileDetailsSection">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="profile-section-title" style="margin-bottom:0;">Personal Details</div>
+        <button class="btn-sm" onclick="toggleProfileEdit()" id="profileEditBtn">Edit</button>
+      </div>
+      <!-- Read view -->
+      <div id="profileReadView">
+        <div class="profile-grid">
+          <div class="profile-field"><div class="profile-key">Full Name</div><div class="profile-val" id="pv-fullName">${profile.fullName || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Date of Birth</div><div class="profile-val" id="pv-dateOfBirth">${profile.dateOfBirth || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Nationality</div><div class="profile-val" id="pv-nationality">${profile.nationality || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Passport Number</div><div class="profile-val" id="pv-passportNumber">${profile.passportNumber || '—'}</div></div>
+          <div class="profile-field" style="grid-column:1/-1;"><div class="profile-key">Home Address</div><div class="profile-val" id="pv-homeAddress">${profile.homeAddress || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Emergency Contact</div><div class="profile-val" id="pv-emergencyName">${profile.emergencyName || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Emergency Phone</div><div class="profile-val" id="pv-emergencyPhone">${profile.emergencyPhone || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Emergency Relation</div><div class="profile-val" id="pv-emergencyRelation">${profile.emergencyRelation || '—'}</div></div>
+        </div>
+        ${son.fullName ? `<div style="margin-top:10px;padding:10px;background:var(--light);border-radius:4px;font-size:12px;color:var(--mid);">
+          <div style="font-weight:600;color:var(--stone,#3a3a2a);margin-bottom:4px;">Additional Party</div>
+          ${son.fullName} &nbsp;·&nbsp; ${son.nationality || ''} &nbsp;·&nbsp; ${son.dateOfBirth || ''} &nbsp;·&nbsp; PP: ${son.passportNumber || '—'}
+        </div>` : ''}
+      </div>
+      <!-- Edit view -->
+      <div id="profileEditView" style="display:none;">
+        <div class="profile-grid" style="margin-bottom:10px;">
+          <div class="profile-field"><label class="profile-key">Full Name</label><input class="fc" id="pe-fullName" value="${(profile.fullName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Date of Birth</label><input class="fc" id="pe-dateOfBirth" value="${profile.dateOfBirth||''}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Nationality</label><input class="fc" id="pe-nationality" value="${(profile.nationality||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Passport Number</label><input class="fc" id="pe-passportNumber" value="${(profile.passportNumber||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field" style="grid-column:1/-1;"><label class="profile-key">Home Address</label><input class="fc" id="pe-homeAddress" value="${(profile.homeAddress||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Emergency Contact</label><input class="fc" id="pe-emergencyName" value="${(profile.emergencyName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Emergency Phone</label><input class="fc" id="pe-emergencyPhone" value="${(profile.emergencyPhone||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Emergency Relation</label><input class="fc" id="pe-emergencyRelation" value="${(profile.emergencyRelation||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+        </div>
+        <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:8px;">Additional Party (if applicable)</div>
+        <div class="profile-grid" style="margin-bottom:12px;">
+          <div class="profile-field"><label class="profile-key">Full Name</label><input class="fc" id="pe-sonFullName" value="${(son.fullName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Date of Birth</label><input class="fc" id="pe-sonDateOfBirth" value="${son.dateOfBirth||''}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Nationality</label><input class="fc" id="pe-sonNationality" value="${(son.nationality||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Passport Number</label><input class="fc" id="pe-sonPassportNumber" value="${(son.passportNumber||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-dark" onclick="saveProfileEdit()">Save Changes →</button>
+          <button class="btn-sm" onclick="toggleProfileEdit()">Cancel</button>
+          <span class="status-msg" id="profileEditStatus" style="margin:0;"></span>
+        </div>
       </div>
     </div>
     <div class="profile-section">
@@ -1591,7 +1628,7 @@ async function openProfileModal(id) {
     </div>
   </div>`;
 
-  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created', dates_updated:'Dates Updated', archived:'Archived / Restored' };
+  const logTypeLabels = { booking_confirmed:'Booking Confirmed', confirmation_email:'Confirmation Email Sent', contract_email:'Contract Email Sent', contract_signed:'Contract Signed by Guest', decline_email:'Decline Email Sent', booking_declined:'Booking Declined', payment_recorded:'Payment Recorded', document_uploaded:'Document Uploaded', electricity_posted:'Electricity Bill Posted', electricity_paid:'Electricity Marked Paid', profile_created:'Profile Created', dates_updated:'Dates Updated', archived:'Archived / Restored', profile_updated:'Profile Updated by Admin' };
   const logSection = `<div class="profile-section">
     <div class="profile-section-title">Activity Log</div>
     ${activityLog.length ? `<div style="display:flex;flex-direction:column;gap:6px;">${activityLog.map(e => {
@@ -1650,6 +1687,59 @@ function renderElecList() {
 function toggleElecForm() {
   const f = document.getElementById('elecAddForm');
   f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleProfileEdit() {
+  const read = document.getElementById('profileReadView');
+  const edit = document.getElementById('profileEditView');
+  const btn  = document.getElementById('profileEditBtn');
+  const isEdit = edit.style.display !== 'none';
+  read.style.display = isEdit ? '' : 'none';
+  edit.style.display = isEdit ? 'none' : '';
+  btn.textContent = isEdit ? 'Edit' : 'Cancel';
+}
+
+async function saveProfileEdit() {
+  const id = profileModalEnqId;
+  const status = document.getElementById('profileEditStatus');
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  const updates = {
+    fullName:          g('pe-fullName'),
+    dateOfBirth:       g('pe-dateOfBirth'),
+    nationality:       g('pe-nationality'),
+    passportNumber:    g('pe-passportNumber'),
+    homeAddress:       g('pe-homeAddress'),
+    emergencyName:     g('pe-emergencyName'),
+    emergencyPhone:    g('pe-emergencyPhone'),
+    emergencyRelation: g('pe-emergencyRelation'),
+    son: {
+      fullName:       g('pe-sonFullName'),
+      dateOfBirth:    g('pe-sonDateOfBirth'),
+      nationality:    g('pe-sonNationality'),
+      passportNumber: g('pe-sonPassportNumber'),
+    },
+  };
+  if (!updates.son.fullName) updates.son = null;
+  status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
+  try {
+    const r = await fetch('/api/admin/guest-profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ id, propertyId: currentProp?.id || 'ta-garden', updates }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      // Update read view labels
+      ['fullName','dateOfBirth','nationality','passportNumber','homeAddress','emergencyName','emergencyPhone','emergencyRelation'].forEach(k => {
+        const el = document.getElementById('pv-' + k);
+        if (el) el.textContent = updates[k] || '—';
+      });
+      status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
+      setTimeout(() => { toggleProfileEdit(); status.textContent = ''; }, 1000);
+    } else {
+      status.textContent = d.error || 'Error saving.'; status.style.color = 'var(--red)';
+    }
+  } catch { status.textContent = 'Network error.'; status.style.color = 'var(--red)'; }
 }
 
 function toggleDatesForm() {

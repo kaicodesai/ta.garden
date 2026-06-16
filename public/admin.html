@@ -1489,8 +1489,9 @@ async function openProfileModal(id) {
   </div>`;
 
   let profileHtml = '';
-  if (profile) {
-    const son = profile.son || {};
+  {
+    const _p = profile || {};
+    const son = _p.son || {};
     profileHtml = `<div class="profile-section" id="profileDetailsSection">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div class="profile-section-title" style="margin-bottom:0;">Personal Details</div>
@@ -1499,14 +1500,14 @@ async function openProfileModal(id) {
       <!-- Read view -->
       <div id="profileReadView">
         <div class="profile-grid">
-          <div class="profile-field"><div class="profile-key">Full Name</div><div class="profile-val" id="pv-fullName">${profile.fullName || '—'}</div></div>
-          <div class="profile-field"><div class="profile-key">Date of Birth</div><div class="profile-val" id="pv-dateOfBirth">${profile.dateOfBirth || '—'}</div></div>
-          <div class="profile-field"><div class="profile-key">Nationality</div><div class="profile-val" id="pv-nationality">${profile.nationality || '—'}</div></div>
-          <div class="profile-field"><div class="profile-key">Passport Number</div><div class="profile-val" id="pv-passportNumber">${profile.passportNumber || '—'}</div></div>
-          <div class="profile-field" style="grid-column:1/-1;"><div class="profile-key">Home Address</div><div class="profile-val" id="pv-homeAddress">${profile.homeAddress || '—'}</div></div>
-          <div class="profile-field"><div class="profile-key">Emergency Contact</div><div class="profile-val" id="pv-emergencyName">${profile.emergencyName || '—'}</div></div>
-          <div class="profile-field"><div class="profile-key">Emergency Phone</div><div class="profile-val" id="pv-emergencyPhone">${profile.emergencyPhone || '—'}</div></div>
-          <div class="profile-field"><div class="profile-key">Emergency Relation</div><div class="profile-val" id="pv-emergencyRelation">${profile.emergencyRelation || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Full Name</div><div class="profile-val" id="pv-fullName">${_p.fullName || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Date of Birth</div><div class="profile-val" id="pv-dateOfBirth">${_p.dateOfBirth || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Nationality</div><div class="profile-val" id="pv-nationality">${_p.nationality || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Passport Number</div><div class="profile-val" id="pv-passportNumber">${_p.passportNumber || '—'}</div></div>
+          <div class="profile-field" style="grid-column:1/-1;"><div class="profile-key">Home Address</div><div class="profile-val" id="pv-homeAddress">${_p.homeAddress || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Emergency Contact</div><div class="profile-val" id="pv-emergencyName">${_p.emergencyName || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Emergency Phone</div><div class="profile-val" id="pv-emergencyPhone">${_p.emergencyPhone || '—'}</div></div>
+          <div class="profile-field"><div class="profile-key">Emergency Relation</div><div class="profile-val" id="pv-emergencyRelation">${_p.emergencyRelation || '—'}</div></div>
         </div>
         ${son.fullName ? `<div style="margin-top:10px;padding:10px;background:var(--light);border-radius:4px;font-size:12px;color:var(--mid);">
           <div style="font-weight:600;color:var(--stone,#3a3a2a);margin-bottom:4px;">Additional Party</div>
@@ -1516,14 +1517,14 @@ async function openProfileModal(id) {
       <!-- Edit view -->
       <div id="profileEditView" style="display:none;">
         <div class="profile-grid" style="margin-bottom:10px;">
-          <div class="profile-field"><label class="profile-key">Full Name</label><input class="fc" id="pe-fullName" value="${(profile.fullName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field"><label class="profile-key">Date of Birth</label><input class="fc" id="pe-dateOfBirth" value="${profile.dateOfBirth||''}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field"><label class="profile-key">Nationality</label><input class="fc" id="pe-nationality" value="${(profile.nationality||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field"><label class="profile-key">Passport Number</label><input class="fc" id="pe-passportNumber" value="${(profile.passportNumber||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field" style="grid-column:1/-1;"><label class="profile-key">Home Address</label><input class="fc" id="pe-homeAddress" value="${(profile.homeAddress||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field"><label class="profile-key">Emergency Contact</label><input class="fc" id="pe-emergencyName" value="${(profile.emergencyName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field"><label class="profile-key">Emergency Phone</label><input class="fc" id="pe-emergencyPhone" value="${(profile.emergencyPhone||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
-          <div class="profile-field"><label class="profile-key">Emergency Relation</label><input class="fc" id="pe-emergencyRelation" value="${(profile.emergencyRelation||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Full Name</label><input class="fc" id="pe-fullName" value="${(_p.fullName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Date of Birth</label><input class="fc" id="pe-dateOfBirth" value="${_p.dateOfBirth||''}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Nationality</label><input class="fc" id="pe-nationality" value="${(_p.nationality||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Passport Number</label><input class="fc" id="pe-passportNumber" value="${(_p.passportNumber||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field" style="grid-column:1/-1;"><label class="profile-key">Home Address</label><input class="fc" id="pe-homeAddress" value="${(_p.homeAddress||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Emergency Contact</label><input class="fc" id="pe-emergencyName" value="${(_p.emergencyName||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Emergency Phone</label><input class="fc" id="pe-emergencyPhone" value="${(_p.emergencyPhone||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
+          <div class="profile-field"><label class="profile-key">Emergency Relation</label><input class="fc" id="pe-emergencyRelation" value="${(_p.emergencyRelation||'').replace(/"/g,'&quot;')}" style="font-size:13px;padding:7px 10px;"></div>
         </div>
         <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:8px;">Additional Party (if applicable)</div>
         <div class="profile-grid" style="margin-bottom:12px;">
@@ -1544,17 +1545,15 @@ async function openProfileModal(id) {
       <div class="doc-grid">
         <div class="doc-card">
           <div class="doc-title">Passport Photo</div>
-          ${profile.passport ? renderDoc(profile.passport, 'Passport') : '<div class="doc-empty">Not uploaded</div>'}
+          ${_p.passport ? renderDoc(_p.passport, 'Passport') : '<div class="doc-empty">Not uploaded</div>'}
         </div>
         <div class="doc-card">
           <div class="doc-title">Visa Document</div>
-          ${profile.visa ? renderDoc(profile.visa, 'Visa') : '<div class="doc-empty">Not uploaded</div>'}
+          ${_p.visa ? renderDoc(_p.visa, 'Visa') : '<div class="doc-empty">Not uploaded</div>'}
         </div>
       </div>
-      <div style="font-size:11px;color:var(--mid);margin-top:8px;">Submitted ${profile.submittedAt ? new Date(profile.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div>
-    </div>`;
-  } else {
-    profileHtml = `<div style="padding:16px 0 0;color:var(--mid);font-size:13px;">No profile submitted yet.</div>`;
+      <div style="font-size:11px;color:var(--mid);margin-top:8px;">${_p.submittedAt ? 'Submitted ' + new Date(_p.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'No profile submitted yet by guest'}</div>
+    </div>`
   }
 
   const paymentsHtml = `<div class="profile-section" id="paymentsSection">

@@ -429,7 +429,7 @@ async function adminNotify(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
-  const { enquiryId, propertyId = 'ta-garden', action, customMessage, rentUsd, rentVnd, depositAmount } = await request.json();
+  const { enquiryId, propertyId = 'ta-garden', action, customMessage, rentUsd, rentVnd, depositAmount, sendEmail = true } = await request.json();
   const key = enquiriesKey(propertyId);
   const val = await env.BOOKINGS.get(key);
   const enquiries = safeJsonParse(val);
@@ -448,19 +448,24 @@ async function adminNotify(request, env, cors) {
 
   const origin = new URL(request.url).origin;
   const customRates = { rentUsd: rentUsd || enquiries[idx].rentUsd, rentVnd: rentVnd || enquiries[idx].rentVnd, depositAmount: depositAmount || enquiries[idx].depositAmount };
-  const html    = action === 'confirm' ? buildConfirmEmail(enq, customMessage, origin, propertyId, customRates) : buildDeclineEmail(enq, customMessage);
-  const subject = action === 'confirm'
-    ? `Your booking at Ta.Garden is confirmed — ${enq.room}`
-    : `Re: Your enquiry at Ta.Garden — ${enq.room}`;
 
-  await sendAndLog(env, enquiryId, action === 'confirm' ? 'confirmation_email' : 'decline_email', enq.email, subject, html, null);
   if (action === 'confirm') {
+    const html = buildConfirmEmail(enq, customMessage, origin, propertyId, customRates);
+    const subject = `Your booking at Ta.Garden is confirmed — ${enq.room}`;
+    await sendAndLog(env, enquiryId, 'confirmation_email', enq.email, subject, html, null);
     const isColt = enq.room === 'First Floor Room';
     const contractHtml = isColt ? buildColtContractEmail(enq) : buildContractEmail(enq, customRates);
     await env.BOOKINGS.put(`contract_${enquiryId}`, contractHtml);
     await appendLog(env, enquiryId, { type: 'booking_confirmed', note: 'Booking confirmed — confirmation email sent. Contract saved to portal, not yet emailed.' });
   } else {
-    await appendLog(env, enquiryId, { type: 'booking_declined', note: 'Booking declined by admin.' });
+    if (sendEmail) {
+      const html = buildDeclineEmail(enq, customMessage);
+      const subject = `Re: Your enquiry at Ta.Garden — ${enq.room}`;
+      await sendAndLog(env, enquiryId, 'decline_email', enq.email, subject, html, null);
+      await appendLog(env, enquiryId, { type: 'booking_declined', note: 'Booking declined by admin — decline email sent to guest.' });
+    } else {
+      await appendLog(env, enquiryId, { type: 'booking_declined', note: 'Booking declined by admin — no email sent.' });
+    }
   }
   return Response.json({ success: true, status: newStatus }, { headers: cors });
 }

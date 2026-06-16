@@ -845,6 +845,12 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       </div>
       <label class="modal-lbl" id="modalLbl">Message to guest</label>
       <textarea class="modal-ta" id="modalMsg" rows="5"></textarea>
+      <div id="modalDeclineEmailRow" style="display:none;margin-top:10px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--mid);letter-spacing:0.04em;">
+          <input type="checkbox" id="modalDeclineEmail" onchange="updateDeclineBtn()">
+          Also send a decline email to the guest
+        </label>
+      </div>
       <div class="modal-hint" id="modalHint"></div>
     </div>
     <div class="modal-foot">
@@ -1116,10 +1122,14 @@ function openDeclineModal(id) {
   document.getElementById('modalTitle').textContent = 'Decline Enquiry';
   document.getElementById('modalGuestName').textContent = e.name;
   document.getElementById('modalGuestSub').innerHTML = `${e.room} &nbsp;·&nbsp; ${checkOutLabel}`;
-  document.getElementById('modalLbl').textContent = 'Message to guest';
+  document.getElementById('modalLbl').textContent = 'Message to guest (if sending email)';
   document.getElementById('modalMsg').value = `Unfortunately we're unable to accommodate your requested dates at this time. We hope to welcome you to Ta.Garden in the future.`;
-  document.getElementById('modalHint').textContent = 'A polite decline email will be sent. The enquiry will be marked as cancelled.';
-  document.getElementById('modalSendBtn').textContent = 'Send Decline →';
+  document.getElementById('modalHint').textContent = 'The enquiry will be marked as cancelled.';
+  document.getElementById('modalDeclineEmail').checked = false;
+  document.getElementById('modalDeclineEmailRow').style.display = 'block';
+  document.getElementById('modalMsg').style.display = 'none';
+  document.getElementById('modalLbl').style.display = 'none';
+  document.getElementById('modalSendBtn').textContent = 'Decline (No Email) →';
   document.getElementById('modalSendBtn').className = 'btn-decline-send';
   document.getElementById('modalSendBtn').onclick = () => doNotify('decline');
   document.getElementById('modalRatesBlock').style.display = 'none';
@@ -1146,15 +1156,26 @@ function openNoteModal(id) {
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('modalDeclineEmailRow').style.display = 'none';
+  document.getElementById('modalMsg').style.display = '';
+  document.getElementById('modalLbl').style.display = '';
   modalEnquiryId = null;
+}
+
+function updateDeclineBtn() {
+  const send = document.getElementById('modalDeclineEmail').checked;
+  document.getElementById('modalMsg').style.display = send ? '' : 'none';
+  document.getElementById('modalLbl').style.display = send ? '' : 'none';
+  document.getElementById('modalSendBtn').textContent = send ? 'Send Decline Email →' : 'Decline (No Email) →';
 }
 
 async function doNotify(action) {
   const id = modalEnquiryId;
   const msg = document.getElementById('modalMsg').value.trim();
   const btn = document.getElementById('modalSendBtn');
-  btn.disabled = true; btn.textContent = 'Sending…';
-  const payload = { enquiryId: id, propertyId: currentProp.id, action, customMessage: msg };
+  btn.disabled = true; btn.textContent = action === 'decline' ? 'Declining…' : 'Sending…';
+  const sendEmail = action === 'decline' ? document.getElementById('modalDeclineEmail').checked : true;
+  const payload = { enquiryId: id, propertyId: currentProp.id, action, customMessage: msg, sendEmail };
   if (action === 'confirm') {
     const ru = document.getElementById('modalRentUsd').value;
     const rv = document.getElementById('modalRentVnd').value;

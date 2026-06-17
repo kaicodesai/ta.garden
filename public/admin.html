@@ -1762,7 +1762,7 @@ async function openProfileModal(id) {
     return `<div class="profile-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div class="profile-section-title" style="margin-bottom:0;">Send Updated Confirmation</div>
-        <button class="btn-dark" onclick="openModal('confirm', allEnquiries.find(e=>e.id==='${id}'))" style="font-size:10px;padding:6px 14px;">Send Email →</button>
+        <button class="btn-dark" onclick="openConfirmModal('${id}')" style="font-size:10px;padding:6px 14px;">Send Email →</button>
       </div>
       <p style="font-size:12px;color:var(--mid);margin:0 0 4px;line-height:1.5;">Resends a confirmation email with the current dates and rates. Use after updating dates or adjusting rent.</p>
       <div id="resend-prorated-preview">${proratedHtml}</div>

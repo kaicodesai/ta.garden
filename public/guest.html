@@ -329,8 +329,23 @@ function renderPortal() {
       <div class="booking-dates">
         <div><div class="booking-date-lbl">Check-in</div><div>${fmt(session.checkIn)}</div></div>
         <div><div class="booking-date-lbl">Check-out</div><div>${fmt(session.checkOut)}</div></div>
-        ${session.rentUsd ? `<div><div class="booking-date-lbl">Monthly Rent</div><div>$${session.rentUsd}</div></div>` : ''}
-        ${session.depositAmount ? `<div><div class="booking-date-lbl">Security Deposit</div><div>$${session.depositAmount}</div></div>` : ''}
+        ${session.rentUsd ? `<div><div class="booking-date-lbl">Monthly Rent</div><div>$${session.rentUsd}</div>${session.rentVnd ? `<div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">${Number(session.rentVnd).toLocaleString()} VND</div>` : ''}</div>` : ''}
+        ${(() => {
+          if (!session.depositAmount) return '';
+          const depVnd = session.depositAmount * 25000;
+          return `<div><div class="booking-date-lbl">Security Deposit</div><div>$${session.depositAmount}</div><div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">${depVnd.toLocaleString()} VND</div></div>`;
+        })()}
+        ${(() => {
+          if (!session.rentUsd || !session.checkIn || !session.checkOut) return '';
+          const days = Math.round((new Date(session.checkOut) - new Date(session.checkIn)) / 86400000);
+          const months = Math.round((days / 30) * 10) / 10;
+          const proratedUsd = Math.round(months * session.rentUsd);
+          const dep = session.depositAmount || session.rentUsd;
+          const totalUsd = proratedUsd + dep;
+          const totalVnd = totalUsd * 25000;
+          const isProrated = proratedUsd !== session.rentUsd;
+          return `<div><div class="booking-date-lbl">Cost of Stay</div><div>$${totalUsd}</div><div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">${totalVnd.toLocaleString()} VND</div>${isProrated ? `<div style="font-size:10px;color:rgba(237,224,209,0.4);margin-top:1px;">$${proratedUsd} rent + $${dep} dep</div>` : ''}</div>`;
+        })()}
       </div>
     </div>
 

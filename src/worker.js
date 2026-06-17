@@ -671,6 +671,7 @@ async function guestPortalData(enquiryId, propId, env, cors) {
     onboarding: enq.onboarding || {},
     signedAt: enq.signedAt || null,
     rentUsd: enq.rentUsd || null,
+    rentVnd: enq.rentVnd || (enq.rentUsd ? enq.rentUsd * 25000 : null),
     depositAmount: enq.depositAmount || null,
     profileSubmitted: !!profile,
     profile: profile ? {

@@ -4,7 +4,6 @@ main = "src/worker.js"
 
 [assets]
 directory = "./public"
-html_handling = "none"
 
 [[kv_namespaces]]
 binding = "BOOKINGS"

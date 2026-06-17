@@ -1747,6 +1747,28 @@ async function openProfileModal(id) {
         <div style="font-size:13px;color:var(--mid);">No contract on file yet.</div>
       </div>`;
 
+  // ── Resend confirmation (for confirmed bookings with updated dates/rates) ──
+  const resendConfirmSection = enq.status === 'confirmed' ? (() => {
+    const rUsd = enq.rentUsd || ROOM_RATES_JS[enq.room]?.monthly || 0;
+    let proratedHtml = '';
+    if (enq.checkIn && enq.checkOut) {
+      const days = Math.round((new Date(enq.checkOut) - new Date(enq.checkIn)) / 86400000);
+      const months = Math.round((days / 30) * 10) / 10;
+      const total = Math.round(months * rUsd);
+      proratedHtml = `<div style="margin-top:10px;padding:10px 12px;background:rgba(134,162,166,0.08);border:1px solid rgba(134,162,166,0.2);border-radius:4px;font-size:12px;color:var(--stone);">
+        <strong>${days} days</strong> (${months} mo × $${rUsd}/mo) = <strong>$${total} total</strong> &nbsp;·&nbsp; Deposit: $${enq.depositAmount || rUsd} (unchanged)
+      </div>`;
+    }
+    return `<div class="profile-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="profile-section-title" style="margin-bottom:0;">Send Updated Confirmation</div>
+        <button class="btn-dark" onclick="openModal('confirm', allEnquiries.find(e=>e.id==='${id}'))" style="font-size:10px;padding:6px 14px;">Send Email →</button>
+      </div>
+      <p style="font-size:12px;color:var(--mid);margin:0 0 4px;line-height:1.5;">Resends a confirmation email with the current dates and rates. Use after updating dates or adjusting rent.</p>
+      ${proratedHtml}
+    </div>`;
+  })() : '';
+
   // ── Financial summary ──
   const VND_RATE_ADM = 25000;
   const rentUsd = enq.rentUsd || ROOM_RATES_JS[enq.room]?.monthly || null;
@@ -1833,7 +1855,7 @@ async function openProfileModal(id) {
     : '<div style="font-size:13px;color:var(--mid);">No activity logged yet.</div>'}
   </div>`;
 
-  document.getElementById('profileModalBody').innerHTML = finHtml + checklistHtml + portalHtml + contractSection + profileHtml + elecHtml + paymentsHtml + logSection;
+  document.getElementById('profileModalBody').innerHTML = finHtml + checklistHtml + portalHtml + contractSection + resendConfirmSection + profileHtml + elecHtml + paymentsHtml + logSection;
 }
 
 function renderPayList() {

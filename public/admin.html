@@ -1765,7 +1765,7 @@ async function openProfileModal(id) {
         <button class="btn-dark" onclick="openModal('confirm', allEnquiries.find(e=>e.id==='${id}'))" style="font-size:10px;padding:6px 14px;">Send Email →</button>
       </div>
       <p style="font-size:12px;color:var(--mid);margin:0 0 4px;line-height:1.5;">Resends a confirmation email with the current dates and rates. Use after updating dates or adjusting rent.</p>
-      ${proratedHtml}
+      <div id="resend-prorated-preview">${proratedHtml}</div>
     </div>`;
   })() : '';
 
@@ -1990,6 +1990,7 @@ async function saveDates() {
       if (enq) { enq.checkIn = checkIn; enq.checkOut = checkOut || null; }
       document.getElementById('fin-checkin-lbl').textContent = checkIn ? fmt(checkIn) : '—';
       document.getElementById('fin-checkout-lbl').textContent = checkOut ? fmt(checkOut) : 'Ongoing';
+      refreshProratedPreview(id);
       renderStats();
       renderEnquiries();
       status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
@@ -1998,6 +1999,20 @@ async function saveDates() {
       status.textContent = d.error || 'Error saving.'; status.style.color = 'var(--red)';
     }
   } catch { status.textContent = 'Network error.'; status.style.color = 'var(--red)'; }
+}
+
+function refreshProratedPreview(id) {
+  const el = document.getElementById('resend-prorated-preview');
+  if (!el) return;
+  const enq = allEnquiries.find(e => e.id === id);
+  if (!enq || !enq.checkIn || !enq.checkOut) { el.innerHTML = ''; return; }
+  const rUsd = enq.rentUsd || ROOM_RATES_JS[enq.room]?.monthly || 0;
+  const days = Math.round((new Date(enq.checkOut) - new Date(enq.checkIn)) / 86400000);
+  const months = Math.round((days / 30) * 10) / 10;
+  const total = Math.round(months * rUsd);
+  el.innerHTML = `<div style="margin-top:10px;padding:10px 12px;background:rgba(134,162,166,0.08);border:1px solid rgba(134,162,166,0.2);border-radius:4px;font-size:12px;color:var(--stone);">
+    <strong>${days} days</strong> (${months} mo × $${rUsd}/mo) = <strong>$${total} total</strong> &nbsp;·&nbsp; Deposit: $${enq.depositAmount || rUsd} (unchanged)
+  </div>`;
 }
 
 function elecCalcUsd() {

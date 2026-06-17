@@ -126,6 +126,10 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/financials'      && m === 'POST')   return safeCall(() => adminAddExpense(request, env, cors), cors);
     if (p === '/api/admin/financials'      && m === 'DELETE') return safeCall(() => adminDeleteExpense(request, env, cors), cors);
     if (p === '/api/admin/financials'      && m === 'PATCH')  return safeCall(() => adminUpdateExpense(request, env, cors), cors);
+    if (p === '/api/admin/recurring' && m === 'GET')    return safeCall(() => adminGetRecurring(request, env, cors), cors);
+    if (p === '/api/admin/recurring' && m === 'POST')   return safeCall(() => adminAddRecurring(request, env, cors), cors);
+    if (p === '/api/admin/recurring' && m === 'PATCH')  return safeCall(() => adminUpdateRecurring(request, env, cors), cors);
+    if (p === '/api/admin/recurring' && m === 'DELETE') return safeCall(() => adminDeleteRecurring(request, env, cors), cors);
     if (p.startsWith('/api/booking-link/') && p.endsWith('/confirm') && m === 'POST') return safeCall(() => handleBookingLinkConfirm(request, env, cors, ctx), cors);
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
 
@@ -997,6 +1001,61 @@ async function adminUpdateExpense(request, env, cors) {
   expenses[idx] = { ...expenses[idx], ...updates };
   await env.BOOKINGS.put(finKey(propertyId), JSON.stringify(expenses));
   return Response.json({ success: true, expenses }, { headers: cors });
+}
+
+// ── Admin: recurring / operating expenses ─────────────────────────────────────
+
+function recurKey(propId) { return `recurring__${propId || 'ta-garden'}`; }
+
+const TAGARDEN_RECURRING_SEED = [
+  { id: 'rec_001', description: 'Property Lease — All 3 Rooms', category: 'lease',     monthlyUsd: 880, monthlyVnd: 22000000, startDate: '2026-07-01', note: '22M VND/mo paid to homeowner', minUsd: null, maxUsd: null },
+  { id: 'rec_002', description: 'First Floor Room Rent (Colt)',  category: 'lease',     monthlyUsd: 120, monthlyVnd: 3000000,  startDate: '2026-07-01', note: 'Paid 1st of each month',       minUsd: null, maxUsd: null },
+  { id: 'rec_003', description: 'Electricity (House, non-guest)',category: 'utilities', monthlyUsd: 140, monthlyVnd: 3500000,  startDate: '2026-07-01', note: '3–4M VND estimated range',    minUsd: 120,  maxUsd: 160  },
+  { id: 'rec_004', description: 'Cleaning Services',             category: 'cleaning',  monthlyUsd: 70,  monthlyVnd: null,     startDate: '2026-07-01', note: '$60–80 USD estimated range',  minUsd: 60,   maxUsd: 80   },
+];
+
+async function adminGetRecurring(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const propId = new URL(request.url).searchParams.get('propertyId') || 'ta-garden';
+  let recurring = safeJsonParse(await env.BOOKINGS.get(recurKey(propId)));
+  if (recurring.length === 0) {
+    recurring = TAGARDEN_RECURRING_SEED;
+    await env.BOOKINGS.put(recurKey(propId), JSON.stringify(recurring));
+  }
+  return Response.json({ recurring }, { headers: cors });
+}
+
+async function adminAddRecurring(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { propertyId = 'ta-garden', description, category, monthlyUsd, monthlyVnd, startDate, note, minUsd, maxUsd } = await request.json();
+  if (!description || !monthlyUsd) return Response.json({ error: 'description and monthlyUsd required' }, { status: 400, headers: cors });
+  const recurring = safeJsonParse(await env.BOOKINGS.get(recurKey(propertyId)));
+  const item = { id: `rec_${Date.now()}`, description, category: category || 'other', monthlyUsd: Number(monthlyUsd), monthlyVnd: monthlyVnd ? Number(monthlyVnd) : null, startDate: startDate || new Date().toISOString().slice(0,10), note: note || '', minUsd: minUsd ? Number(minUsd) : null, maxUsd: maxUsd ? Number(maxUsd) : null };
+  recurring.push(item);
+  await env.BOOKINGS.put(recurKey(propertyId), JSON.stringify(recurring));
+  return Response.json({ success: true, recurring }, { headers: cors });
+}
+
+async function adminUpdateRecurring(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { propertyId = 'ta-garden', recurringId, updates } = await request.json();
+  if (!recurringId) return Response.json({ error: 'recurringId required' }, { status: 400, headers: cors });
+  const recurring = safeJsonParse(await env.BOOKINGS.get(recurKey(propertyId)));
+  const idx = recurring.findIndex(r => r.id === recurringId);
+  if (idx < 0) return Response.json({ error: 'not found' }, { status: 404, headers: cors });
+  recurring[idx] = { ...recurring[idx], ...updates };
+  await env.BOOKINGS.put(recurKey(propertyId), JSON.stringify(recurring));
+  return Response.json({ success: true, recurring }, { headers: cors });
+}
+
+async function adminDeleteRecurring(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  const { propertyId = 'ta-garden', recurringId } = await request.json();
+  if (!recurringId) return Response.json({ error: 'recurringId required' }, { status: 400, headers: cors });
+  const recurring = safeJsonParse(await env.BOOKINGS.get(recurKey(propertyId)));
+  const filtered = recurring.filter(r => r.id !== recurringId);
+  await env.BOOKINGS.put(recurKey(propertyId), JSON.stringify(filtered));
+  return Response.json({ success: true, recurring: filtered }, { headers: cors });
 }
 
 // ── Guest: magic link login ───────────────────────────────────────────────────

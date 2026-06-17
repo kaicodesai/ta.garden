@@ -388,6 +388,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .fin-total-row td { font-size: 11px; font-weight: 400; color: var(--mid); letter-spacing: 0.05em; background: rgba(136,145,125,0.05); border-top: 1px solid rgba(136,145,125,0.16) !important; }
 .fin-total-row td.fin-td-r { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 300; color: var(--dark); }
 .fin-add-row td { background: rgba(200,185,165,0.07); border-top: 2px dashed rgba(136,145,125,0.2) !important; }
+.rec-range { font-size:10px; color:var(--mid); display:block; }
 
 /* ── Mobile responsive ── */
 @media (max-width: 768px) {
@@ -750,6 +751,73 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <div class="fin-card-lbl">Break-Even</div>
           <div class="fin-card-n" id="fin-breakeven" style="font-size:22px;">—</div>
           <div class="fin-card-sub" id="fin-breakeven-sub">at current monthly revenue</div>
+        </div>
+      </div>
+
+      <!-- Monthly Snapshot -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--mid);margin-bottom:10px;">Monthly Snapshot</div>
+        <div class="fin-overview" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;">
+          <div class="fin-card">
+            <div class="fin-card-lbl">Monthly Revenue</div>
+            <div class="fin-card-n" id="snap-revenue">—</div>
+            <div class="fin-card-sub" id="snap-revenue-sub">confirmed bookings</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-card-lbl">Monthly Operating</div>
+            <div class="fin-card-n" id="snap-opex">—</div>
+            <div class="fin-card-sub" id="snap-opex-sub">est. monthly costs</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-card-lbl">Monthly Net</div>
+            <div class="fin-card-n" id="snap-net">—</div>
+            <div class="fin-card-sub" id="snap-net-sub"></div>
+          </div>
+        </div>
+
+        <!-- Recurring expenses table -->
+        <div class="fin-tbl-wrap" style="margin-bottom:6px;">
+          <table class="fin-tbl">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Start Date</th>
+                <th>Note</th>
+                <th class="fin-th-r" style="width:110px;">Monthly (VND)</th>
+                <th class="fin-th-r" style="width:100px;">Monthly (USD)</th>
+                <th style="width:60px;"></th>
+              </tr>
+            </thead>
+            <tbody id="recurTbody"></tbody>
+          </table>
+        </div>
+        <button class="btn-sm" onclick="recurStartAdd()" style="font-size:11px;">+ Add Operating Expense</button>
+        <div id="recurAddForm" style="display:none;margin-top:10px;background:var(--light);padding:14px;border:1px solid rgba(136,145,125,0.16);">
+          <div style="display:grid;grid-template-columns:1fr 1fr 100px 110px;gap:8px;margin-bottom:8px;">
+            <div><label class="fl">Description</label><input class="fc" id="rnew-desc" placeholder="e.g. Monthly Rent"></div>
+            <div><label class="fl">Category</label>
+              <select class="fc" id="rnew-cat">
+                <option value="lease">Lease / Rent</option>
+                <option value="utilities">Utilities</option>
+                <option value="cleaning">Cleaning</option>
+                <option value="labor">Labor &amp; Services</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div><label class="fl">Monthly USD</label><input class="fc" type="number" id="rnew-usd" placeholder="0" min="0"></div>
+            <div><label class="fl">Start Date</label><input class="fc" type="date" id="rnew-start"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 90px 90px;gap:8px;margin-bottom:10px;">
+            <div><label class="fl">Note / Range</label><input class="fc" id="rnew-note" placeholder="e.g. 3–4M VND estimate"></div>
+            <div><label class="fl">Min USD</label><input class="fc" type="number" id="rnew-min" placeholder="0" min="0"></div>
+            <div><label class="fl">Max USD</label><input class="fc" type="number" id="rnew-max" placeholder="0" min="0"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-dark" onclick="recurSaveNew()">Add →</button>
+            <button class="btn-sm" onclick="recurCancelAdd()">Cancel</button>
+            <span id="recurAddStatus" class="status-msg" style="margin:0;"></span>
+          </div>
         </div>
       </div>
 
@@ -3386,6 +3454,7 @@ const FIN_CATS = {
 };
 
 let allExpenses  = [];
+let allRecurring = [];
 let finSortField = 'date';
 let finSortDir   = -1;
 let finAddingRow = false;
@@ -3397,12 +3466,16 @@ function finSortBy(field) {
 }
 
 async function loadFinancials() {
-  document.getElementById('finTbody').innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mid);">Loading…</td></tr>';
+  document.getElementById('finTbody').innerHTML   = '<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mid);">Loading…</td></tr>';
+  document.getElementById('recurTbody').innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--mid);">Loading…</td></tr>';
   try {
-    const r = await fetch(`/api/admin/financials?propertyId=${currentProp?.id||'ta-garden'}`, { headers: { 'x-admin-secret': secret } });
-    const d = await r.json();
-    allExpenses = d.expenses || [];
-  } catch { allExpenses = []; }
+    const [fr, rr] = await Promise.all([
+      fetch(`/api/admin/financials?propertyId=${currentProp?.id||'ta-garden'}`, { headers: { 'x-admin-secret': secret } }),
+      fetch(`/api/admin/recurring?propertyId=${currentProp?.id||'ta-garden'}`,  { headers: { 'x-admin-secret': secret } }),
+    ]);
+    allExpenses  = (await fr.json()).expenses  || [];
+    allRecurring = (await rr.json()).recurring || [];
+  } catch { allExpenses = []; allRecurring = []; }
   renderFinancials();
 }
 
@@ -3430,16 +3503,29 @@ function renderFinancials() {
   netEl.style.color   = net >= 0 ? 'var(--green)' : 'var(--red)';
   document.getElementById('fin-net-sub').textContent   = net >= 0 ? 'profitable' : 'startup deficit';
 
+  // ── Monthly snapshot ──
+  const monthlyOpex = allRecurring.reduce((s, r) => s + (r.monthlyUsd || 0), 0);
+  const monthlyNet  = monthlyRev - monthlyOpex;
+  document.getElementById('snap-revenue').textContent = monthlyRev  ? '$' + monthlyRev.toLocaleString()           : '—';
+  document.getElementById('snap-opex').textContent    = monthlyOpex ? '$' + Math.round(monthlyOpex).toLocaleString() : '—';
+  const snapNetEl = document.getElementById('snap-net');
+  snapNetEl.textContent  = monthlyNet >= 0 ? '+$' + Math.round(monthlyNet).toLocaleString() : '-$' + Math.abs(Math.round(monthlyNet)).toLocaleString();
+  snapNetEl.style.color  = monthlyNet >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('snap-net-sub').textContent = monthlyNet >= 0 ? 'cash positive' : 'operating at loss';
+
   // Break-even
   const beEl  = document.getElementById('fin-breakeven');
   const beSub = document.getElementById('fin-breakeven-sub');
   if (net >= 0) {
     beEl.textContent = '✓'; beEl.style.color = 'var(--green)';
     beSub.textContent = 'investment recovered';
-  } else if (monthlyRev > 0) {
-    const months = Math.ceil(Math.abs(net) / monthlyRev);
+  } else if (monthlyNet > 0) {
+    const months = Math.ceil(Math.abs(net) / monthlyNet);
     beEl.textContent = `${months} mo`; beEl.style.color = 'var(--dark)';
-    beSub.textContent = `at $${monthlyRev.toLocaleString()}/mo current revenue`;
+    beSub.textContent = `at $${Math.round(monthlyNet).toLocaleString()}/mo net`;
+  } else if (monthlyRev > 0 && monthlyNet <= 0) {
+    beEl.textContent = '∞'; beEl.style.color = 'var(--red)';
+    beSub.textContent = 'operating costs exceed revenue';
   } else {
     beEl.textContent = '—'; beEl.style.color = 'var(--mid)';
     beSub.textContent = 'no confirmed revenue yet';
@@ -3525,6 +3611,9 @@ function renderFinancials() {
 
   document.getElementById('finTbody').innerHTML = html;
   if (finAddingRow) document.getElementById('fnew-desc')?.focus();
+
+  // ── Render recurring table ──
+  renderRecurring();
 }
 
 function finExportCsv() {
@@ -3681,6 +3770,93 @@ async function doTogglePaid(id) {
     });
     const d = await r.json();
     if (d.success) { allExpenses = d.expenses; renderFinancials(); }
+  } catch {}
+}
+
+function renderRecurring() {
+  const tbody = document.getElementById('recurTbody');
+  if (!tbody) return;
+  const totalMonthly = allRecurring.reduce((s, r) => s + (r.monthlyUsd || 0), 0);
+  if (!allRecurring.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--mid);font-size:13px;">No recurring expenses defined.</td></tr>';
+    return;
+  }
+  const rows = allRecurring.map(r => {
+    const info = FIN_CATS[r.category] || FIN_CATS.other;
+    const rangeHtml = (r.minUsd && r.maxUsd) ? `<span class="rec-range">Range: $${r.minUsd}–$${r.maxUsd}/mo</span>` : '';
+    const vndCell   = r.monthlyVnd ? Number(r.monthlyVnd).toLocaleString() + ' ₫' : '—';
+    return `<tr data-rid="${r.id}">
+      <td>${r.description}</td>
+      <td><span class="fin-cat-dot" style="background:${info.color}"></span><span style="font-size:12px;color:var(--mid);">${info.label}</span></td>
+      <td style="font-size:12px;color:var(--mid);">${r.startDate || '—'}</td>
+      <td style="font-size:12px;color:var(--mid);">${r.note || ''}${rangeHtml}</td>
+      <td class="fin-td-r" style="font-size:12px;color:var(--mid);">${vndCell}</td>
+      <td class="fin-td-r" style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:300;">$${Number(r.monthlyUsd||0).toLocaleString()}</td>
+      <td class="fin-td-actions">
+        <button class="fin-row-btn fin-row-del" onclick="recurDelete('${r.id}')" title="Remove">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+  const totalRow = `<tr class="fin-total-row">
+    <td colspan="5" style="text-align:right;padding-right:16px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;">Monthly Total</td>
+    <td class="fin-td-r" style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:300;">$${Math.round(totalMonthly).toLocaleString()}</td>
+    <td></td>
+  </tr>`;
+  tbody.innerHTML = rows + totalRow;
+}
+
+function recurStartAdd() {
+  const f = document.getElementById('recurAddForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display !== 'none') {
+    document.getElementById('rnew-start').value = new Date().toISOString().slice(0,10);
+    document.getElementById('rnew-desc').focus();
+  }
+}
+
+function recurCancelAdd() {
+  document.getElementById('recurAddForm').style.display = 'none';
+}
+
+async function recurSaveNew() {
+  const desc   = (document.getElementById('rnew-desc')?.value || '').trim();
+  const cat    = document.getElementById('rnew-cat')?.value || 'other';
+  const usd    = parseFloat(document.getElementById('rnew-usd')?.value)   || 0;
+  const start  = document.getElementById('rnew-start')?.value || '';
+  const note   = (document.getElementById('rnew-note')?.value || '').trim();
+  const minUsd = parseFloat(document.getElementById('rnew-min')?.value)   || null;
+  const maxUsd = parseFloat(document.getElementById('rnew-max')?.value)   || null;
+  const status = document.getElementById('recurAddStatus');
+  if (!desc) { status.textContent = 'Description required.'; status.style.color = 'var(--red)'; return; }
+  if (!usd)  { status.textContent = 'Monthly USD required.'; status.style.color = 'var(--red)'; return; }
+  status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
+  try {
+    const r = await fetch('/api/admin/recurring', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', description: desc, category: cat, monthlyUsd: usd, startDate: start, note, minUsd, maxUsd }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      allRecurring = d.recurring;
+      document.getElementById('recurAddForm').style.display = 'none';
+      ['rnew-desc','rnew-usd','rnew-note','rnew-min','rnew-max'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      status.textContent = '';
+      renderFinancials();
+    } else { status.textContent = d.error || 'Error.'; status.style.color = 'var(--red)'; }
+  } catch { status.textContent = 'Network error.'; status.style.color = 'var(--red)'; }
+}
+
+async function recurDelete(recurringId) {
+  if (!confirm('Remove this recurring expense?')) return;
+  try {
+    const r = await fetch('/api/admin/recurring', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', recurringId }),
+    });
+    const d = await r.json();
+    if (d.success) { allRecurring = d.recurring; renderFinancials(); }
   } catch {}
 }
 

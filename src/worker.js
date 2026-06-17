@@ -2478,7 +2478,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
         </tr>
       </table>
 
-      ${effectiveRentUsd ? (() => { const firstMonthTotal = (effectiveRentUsd || 0) + (effectiveDeposit || 0); return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
+      ${effectiveRentUsd ? (() => { const proratedRent = price?.total || effectiveRentUsd; const firstMonthTotal = (proratedRent || 0) + (effectiveDeposit || 0); const isProrated = price?.total && price.total !== effectiveRentUsd; return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid rgba(136,145,125,0.2);margin-bottom:24px;">
   <tr>
     <td style="padding:14px 20px;border-bottom:1px solid rgba(136,145,125,0.15);">
       <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -2501,7 +2501,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
         <td style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:#1a1a18;font-family:Arial,sans-serif;font-weight:bold;">Total Due to Move In</td>
         <td style="text-align:right;font-size:18px;font-family:Georgia,serif;color:#1a1a18;">$${firstMonthTotal.toLocaleString()}</td>
       </tr></table>
-      <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;text-align:right;margin-top:3px;">First month's rent + security deposit</div>
+      <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;text-align:right;margin-top:3px;">${isProrated ? 'Prorated rent' : "First month's rent"} + security deposit</div>
     </td>
   </tr>
 </table>`; })() : ''}
@@ -2512,7 +2512,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;font-family:Arial,sans-serif;">Next Steps</div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
         ${[
-          effectiveRentUsd ? `Pay your first month's rent ($${effectiveRentUsd}) + security deposit ($${effectiveDeposit}) to secure your room. Your deposit is fully refunded when you leave.` : 'Complete your first month\'s payment to secure your room.',
+          effectiveRentUsd ? `Pay your ${price?.total && price.total !== effectiveRentUsd ? `prorated rent ($${price.total})` : `first month's rent ($${effectiveRentUsd})`} + security deposit ($${effectiveDeposit}) to secure your room. Your deposit is fully refunded when you leave.` : 'Complete your first month\'s payment to secure your room.',
           'Review the rental agreement below — by completing payment you confirm your acceptance of these terms. A countersigned copy will be emailed to you once payment is received.',
           'Complete your guest profile — upload passport photo and visa details via your personal link below',
           'We\'ll confirm check-in details closer to your arrival date',

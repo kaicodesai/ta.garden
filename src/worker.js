@@ -349,7 +349,7 @@ async function adminUpdateEnquiry(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
-  const { id, status, checkIn, checkOut, archived, email, phone, propertyId = 'ta-garden' } = await request.json();
+  const { id, status, checkIn, checkOut, archived, email, phone, rentUsd, rentVnd, depositAmount, propertyId = 'ta-garden' } = await request.json();
   const key = enquiriesKey(propertyId);
   const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
   const idx = enquiries.findIndex(e => e.id === id);
@@ -372,6 +372,20 @@ async function adminUpdateEnquiry(request, env, cors) {
   }
   if (email !== undefined || phone !== undefined) {
     await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+    return Response.json({ success: true }, { headers: cors });
+  }
+
+  if (rentUsd !== undefined || rentVnd !== undefined || depositAmount !== undefined) {
+    const prev = { rentUsd: enquiries[idx].rentUsd, depositAmount: enquiries[idx].depositAmount };
+    if (rentUsd !== undefined) enquiries[idx].rentUsd = rentUsd ? Number(rentUsd) : null;
+    if (rentVnd !== undefined) enquiries[idx].rentVnd = rentVnd ? Number(rentVnd) : null;
+    if (depositAmount !== undefined) enquiries[idx].depositAmount = depositAmount ? Number(depositAmount) : null;
+    await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+    const enq = enquiries[idx];
+    const isColt = enq.room === 'First Floor Room';
+    const contractHtml = isColt ? buildColtContractEmail(enq) : buildContractEmail(enq, { rentUsd: enq.rentUsd, rentVnd: enq.rentVnd, depositAmount: enq.depositAmount });
+    await env.BOOKINGS.put(`contract_${id}`, contractHtml);
+    await appendLog(env, id, { type: 'rates_updated', note: `Financial terms updated. Rent: $${prev.rentUsd} → $${enq.rentUsd}. Deposit: $${prev.depositAmount} → $${enq.depositAmount}.` });
     return Response.json({ success: true }, { headers: cors });
   }
 

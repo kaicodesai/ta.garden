@@ -329,6 +329,8 @@ function renderPortal() {
       <div class="booking-dates">
         <div><div class="booking-date-lbl">Check-in</div><div>${fmt(session.checkIn)}</div></div>
         <div><div class="booking-date-lbl">Check-out</div><div>${fmt(session.checkOut)}</div></div>
+        ${session.rentUsd ? `<div><div class="booking-date-lbl">Monthly Rent</div><div>$${session.rentUsd}</div></div>` : ''}
+        ${session.depositAmount ? `<div><div class="booking-date-lbl">Security Deposit</div><div>$${session.depositAmount}</div></div>` : ''}
       </div>
     </div>
 

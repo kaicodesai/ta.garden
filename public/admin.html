@@ -1689,12 +1689,24 @@ async function openProfileModal(id) {
       <div class="profile-section-title">Documents</div>
       <div class="doc-grid">
         <div class="doc-card">
-          <div class="doc-title">Passport Photo</div>
-          ${_p.passport ? renderDoc(_p.passport, 'Passport') : '<div class="doc-empty">Not uploaded</div>'}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div class="doc-title" style="margin-bottom:0;">Passport Photo</div>
+            <label style="cursor:pointer;padding:3px 9px;border:1px solid rgba(136,145,125,0.3);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);background:none;white-space:nowrap;">
+              ${_p.passport ? 'Replace' : '+ Upload'}
+              <input type="file" accept="image/*,.pdf" style="display:none;" onchange="adminUploadDoc('${id}','passport',this)">
+            </label>
+          </div>
+          <div id="admin-doc-passport">${_p.passport ? renderDoc(_p.passport, 'Passport') : '<div class="doc-empty">Not uploaded</div>'}</div>
         </div>
         <div class="doc-card">
-          <div class="doc-title">Visa Document</div>
-          ${_p.visa ? renderDoc(_p.visa, 'Visa') : '<div class="doc-empty">Not uploaded</div>'}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div class="doc-title" style="margin-bottom:0;">Visa Document</div>
+            <label style="cursor:pointer;padding:3px 9px;border:1px solid rgba(136,145,125,0.3);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid);background:none;white-space:nowrap;">
+              ${_p.visa ? 'Replace' : '+ Upload'}
+              <input type="file" accept="image/*,.pdf" style="display:none;" onchange="adminUploadDoc('${id}','visa',this)">
+            </label>
+          </div>
+          <div id="admin-doc-visa">${_p.visa ? renderDoc(_p.visa, 'Visa') : '<div class="doc-empty">Not uploaded</div>'}</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--mid);margin-top:8px;">${_p.submittedAt ? 'Submitted ' + new Date(_p.submittedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'No profile submitted yet by guest'}</div>
@@ -2066,6 +2078,55 @@ async function doDeletePayment(payId) {
 
 function closeProfileModal() {
   document.getElementById('profileOverlay').classList.remove('open');
+}
+
+async function adminUploadDoc(enquiryId, field, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const MAX_MB = 4;
+  if (file.size > MAX_MB * 1024 * 1024) {
+    alert(`File too large — max ${MAX_MB} MB.`);
+    input.value = '';
+    return;
+  }
+  const label = input.closest('label');
+  const origText = label.childNodes[0].textContent.trim();
+  label.childNodes[0].textContent = 'Saving…';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    try {
+      const r = await fetch('/api/admin/guest-profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ id: enquiryId, updates: { [field]: dataUrl } }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        document.getElementById(`admin-doc-${field}`).innerHTML = renderDoc(dataUrl, field === 'passport' ? 'Passport' : 'Visa');
+        label.childNodes[0].textContent = 'Replace';
+        // Update onboarding flag
+        const flagKey = field === 'passport' ? 'passportUploaded' : 'visaUploaded';
+        await fetch('/api/admin/onboarding', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+          body: JSON.stringify({ id: enquiryId, propertyId: currentProp?.id || 'ta-garden', field: flagKey, value: true }),
+        });
+        const enq = allEnquiries.find(x => x.id === enquiryId);
+        if (enq?.onboarding) enq.onboarding[flagKey] = true;
+        renderEnquiries();
+      } else {
+        alert('Upload failed: ' + (d.error || 'Unknown error'));
+        label.childNodes[0].textContent = origText;
+      }
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+      label.childNodes[0].textContent = origText;
+    }
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
 }
 
 async function toggleOnboarding(id, field, value) {

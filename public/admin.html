@@ -1775,6 +1775,15 @@ async function openProfileModal(id) {
   const rentVnd = enq.rentVnd || (rentUsd ? rentUsd * VND_RATE_ADM : null);
   const deposit = enq.depositAmount || rentUsd;
   const depositPaid = enq.onboarding?.paymentReceived;
+  const calcProratedRent = (ru, ci, co) => {
+    if (!ru || !ci || !co) return ru;
+    const days = Math.round((new Date(co) - new Date(ci)) / 86400000);
+    const months = Math.round((days / 30) * 10) / 10;
+    return Math.round(months * ru);
+  };
+  const proratedRent = calcProratedRent(rentUsd, enq.checkIn, enq.checkOut);
+  const isProrated = proratedRent !== rentUsd;
+  const costOfStay = (proratedRent && deposit) ? proratedRent + deposit : null;
   const finHtml = `<div class="profile-section" style="background:var(--bg-light,#f0ebe4);border-radius:6px;padding:14px 16px;margin-bottom:0;">
     <div class="profile-section-title" style="margin-bottom:10px;">Financial Summary</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
@@ -1789,9 +1798,9 @@ async function openProfileModal(id) {
         <div style="font-size:10px;margin-top:2px;${depositPaid ? 'color:#4caf50;' : 'color:#c0392b;'}">${depositPaid ? '✓ Received' : '✗ Pending'}</div>
       </div>
       <div style="text-align:center;padding:12px;background:#fff;border-radius:4px;border:1px solid var(--border,#ddd5c8);">
-        <div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:6px;">First Month Total</div>
-        <div id="fin-firstmonth-lbl" style="font-family:Georgia,serif;font-size:20px;color:var(--stone,#3a3a2a);">${(rentUsd && deposit) ? '$'+(rentUsd+deposit) : '—'}</div>
-        <div style="font-size:10px;color:var(--mid);margin-top:2px;">rent + deposit</div>
+        <div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid);margin-bottom:6px;">Cost of Stay</div>
+        <div id="fin-firstmonth-lbl" style="font-family:Georgia,serif;font-size:20px;color:var(--stone,#3a3a2a);">${costOfStay ? '$'+costOfStay : '—'}</div>
+        <div id="fin-coststay-sub" style="font-size:10px;color:var(--mid);margin-top:2px;">${isProrated && proratedRent && deposit ? `$${proratedRent} rent + $${deposit} dep` : 'rent + deposit'}</div>
       </div>
     </div>
     <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--mid);">
@@ -2009,12 +2018,7 @@ async function saveRates() {
         if (rentVnd)  enq.rentVnd       = Number(rentVnd);
         if (deposit)  enq.depositAmount = Number(deposit);
       }
-      const ru = enq?.rentUsd || 0;
-      const dep = enq?.depositAmount || ru;
-      const depositLbl = document.getElementById('fin-deposit-lbl');
-      const firstMonthLbl = document.getElementById('fin-firstmonth-lbl');
-      if (depositLbl) depositLbl.textContent = dep ? '$' + dep : '—';
-      if (firstMonthLbl) firstMonthLbl.textContent = (ru && dep) ? '$' + (ru + dep) : '—';
+      refreshCostOfStay(id);
       refreshProratedPreview(id);
       renderEnquiries();
       status.textContent = 'Saved ✓'; status.style.color = 'var(--green)';
@@ -2045,6 +2049,7 @@ async function saveDates() {
       if (enq) { enq.checkIn = checkIn; enq.checkOut = checkOut || null; }
       document.getElementById('fin-checkin-lbl').textContent = checkIn ? fmt(checkIn) : '—';
       document.getElementById('fin-checkout-lbl').textContent = checkOut ? fmt(checkOut) : 'Ongoing';
+      refreshCostOfStay(id);
       refreshProratedPreview(id);
       renderStats();
       renderEnquiries();
@@ -2068,6 +2073,27 @@ function refreshProratedPreview(id) {
   el.innerHTML = `<div style="margin-top:10px;padding:10px 12px;background:rgba(134,162,166,0.08);border:1px solid rgba(134,162,166,0.2);border-radius:4px;font-size:12px;color:var(--stone);">
     <strong>${days} days</strong> (${months} mo × $${rUsd}/mo) = <strong>$${total} total</strong> &nbsp;·&nbsp; Deposit: $${enq.depositAmount || rUsd} (unchanged)
   </div>`;
+}
+
+function refreshCostOfStay(id) {
+  const enq = allEnquiries.find(e => e.id === id);
+  if (!enq) return;
+  const ru = enq.rentUsd || ROOM_RATES_JS[enq.room]?.monthly || 0;
+  const dep = enq.depositAmount || ru;
+  let proratedRent = ru;
+  if (ru && enq.checkIn && enq.checkOut) {
+    const days = Math.round((new Date(enq.checkOut) - new Date(enq.checkIn)) / 86400000);
+    const months = Math.round((days / 30) * 10) / 10;
+    proratedRent = Math.round(months * ru);
+  }
+  const isProrated = proratedRent !== ru;
+  const cost = (proratedRent && dep) ? proratedRent + dep : null;
+  const depLbl = document.getElementById('fin-deposit-lbl');
+  const costLbl = document.getElementById('fin-firstmonth-lbl');
+  const costSub = document.getElementById('fin-coststay-sub');
+  if (depLbl) depLbl.textContent = dep ? '$' + dep : '—';
+  if (costLbl) costLbl.textContent = cost ? '$' + cost : '—';
+  if (costSub) costSub.textContent = isProrated && proratedRent && dep ? `$${proratedRent} rent + $${dep} dep` : 'rent + deposit';
 }
 
 function elecCalcUsd() {

@@ -474,11 +474,14 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     <div id="pane-enquiries">
       <div class="ph">
         <div class="ph-title serif">Booking Enquiries</div>
-        <div class="pills">
-          <button class="pill on" onclick="setFilter('all',this)">All</button>
-          <button class="pill"    onclick="setFilter('pending',this)">Pending</button>
-          <button class="pill"    onclick="setFilter('confirmed',this)">Confirmed</button>
-          <button class="pill"    onclick="setFilter('cancelled',this)">Cancelled</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div class="pills">
+            <button class="pill on" onclick="setFilter('all',this)">All</button>
+            <button class="pill"    onclick="setFilter('pending',this)">Pending</button>
+            <button class="pill"    onclick="setFilter('confirmed',this)">Confirmed</button>
+            <button class="pill"    onclick="setFilter('cancelled',this)">Cancelled</button>
+          </div>
+          <button class="btn-sm" onclick="openRestoreGuestModal()" title="Re-activate a guest portal link using the original enquiry ID" style="font-size:10px;padding:5px 10px;">↺ Restore Guest Link</button>
         </div>
       </div>
       <div id="enqContainer"><div class="loading">Loading…</div></div>
@@ -1031,6 +1034,70 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
     </div>
     <div class="modal-body" id="profileModalBody">
       <div class="loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- RESTORE GUEST PORTAL MODAL -->
+<div class="modal-overlay" id="restoreGuestOverlay" onclick="if(event.target===this)closeRestoreGuestModal()">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Restore Guest Portal Link</div>
+      <button class="modal-close" onclick="closeRestoreGuestModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--mid);line-height:1.6;margin:0 0 16px;">Use this to re-create a guest portal entry using the original enquiry ID. The guest's original link will start working again.</p>
+      <div style="display:grid;gap:10px;">
+        <div>
+          <label class="modal-lbl">Original Enquiry ID <span style="color:var(--red)">*</span></label>
+          <input class="fc" id="rg-id" type="text" placeholder="enq_1781489402463" style="font-size:13px;padding:8px 10px;font-family:monospace;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label class="modal-lbl">Guest Name <span style="color:var(--red)">*</span></label>
+            <input class="fc" id="rg-name" type="text" placeholder="Shakira" style="font-size:13px;padding:8px 10px;">
+          </div>
+          <div>
+            <label class="modal-lbl">Email <span style="color:var(--red)">*</span></label>
+            <input class="fc" id="rg-email" type="email" placeholder="guest@email.com" style="font-size:13px;padding:8px 10px;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label class="modal-lbl">Phone / WhatsApp</label>
+            <input class="fc" id="rg-phone" type="text" placeholder="+1..." style="font-size:13px;padding:8px 10px;">
+          </div>
+          <div>
+            <label class="modal-lbl">Room <span style="color:var(--red)">*</span></label>
+            <select class="fc" id="rg-room" style="font-size:13px;padding:8px 10px;">
+              <option value="">Select room…</option>
+              <option>The River Room</option>
+              <option>The Balcony Room</option>
+              <option>The Sky Suite</option>
+              <option>First Floor Room</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div>
+            <label class="modal-lbl">Check-in <span style="color:var(--red)">*</span></label>
+            <input class="fc" id="rg-checkin" type="date" style="font-size:13px;padding:8px 10px;">
+          </div>
+          <div>
+            <label class="modal-lbl">Check-out</label>
+            <input class="fc" id="rg-checkout" type="date" style="font-size:13px;padding:8px 10px;">
+          </div>
+          <div>
+            <label class="modal-lbl">Monthly Rent (USD)</label>
+            <input class="fc" id="rg-rent" type="number" placeholder="560" min="0" style="font-size:13px;padding:8px 10px;">
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-sm" onclick="closeRestoreGuestModal()">Cancel</button>
+        <button class="btn-dark" id="rgSaveBtn" onclick="doRestoreGuest()">Restore Portal Link</button>
+      </div>
+      <div id="rg-result" style="margin-top:12px;display:none;"></div>
     </div>
   </div>
 </div>
@@ -3328,6 +3395,71 @@ async function setupColt() {
     st.textContent = 'Network error: ' + err.message;
   }
   btn.disabled = false; btn.textContent = 'Create Colt\'s Profile →';
+}
+
+function openRestoreGuestModal() {
+  ['rg-id','rg-name','rg-email','rg-phone','rg-checkin','rg-checkout','rg-rent'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('rg-room').value = '';
+  document.getElementById('rg-result').style.display = 'none';
+  document.getElementById('rgSaveBtn').disabled = false;
+  document.getElementById('rgSaveBtn').textContent = 'Restore Portal Link';
+  document.getElementById('restoreGuestOverlay').classList.add('open');
+}
+
+function closeRestoreGuestModal() {
+  document.getElementById('restoreGuestOverlay').classList.remove('open');
+}
+
+async function doRestoreGuest() {
+  const enquiryId = document.getElementById('rg-id').value.trim();
+  const name      = document.getElementById('rg-name').value.trim();
+  const email     = document.getElementById('rg-email').value.trim();
+  const phone     = document.getElementById('rg-phone').value.trim();
+  const room      = document.getElementById('rg-room').value;
+  const checkIn   = document.getElementById('rg-checkin').value;
+  const checkOut  = document.getElementById('rg-checkout').value;
+  const rentUsd   = document.getElementById('rg-rent').value;
+  const resultEl  = document.getElementById('rg-result');
+
+  if (!enquiryId || !name || !email || !room || !checkIn) {
+    alert('Please fill in all required fields (ID, Name, Email, Room, Check-in).');
+    return;
+  }
+
+  const btn = document.getElementById('rgSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Restoring…';
+
+  try {
+    const r = await fetch('/api/admin/restore-guest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ enquiryId, name, email, phone, room, checkIn, checkOut: checkOut || null, rentUsd: rentUsd ? Number(rentUsd) : null, propertyId: currentProp?.id || 'ta-garden' }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      const portalUrl = `${location.origin}/guest.html?id=${enquiryId}&p=${currentProp?.id || 'ta-garden'}`;
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `<div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);padding:12px;border-radius:4px;font-size:12px;">
+        <strong style="color:var(--green);">✓ Portal restored!</strong><br>
+        <span style="color:var(--mid);margin-top:6px;display:block;">Copy this link and send it to ${name}:</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+          <code style="flex:1;font-size:11px;word-break:break-all;">${portalUrl}</code>
+          <button class="portal-link-copy" onclick="copyPortalLink('${portalUrl}')">Copy</button>
+        </div>
+      </div>`;
+      await loadCurrentProperty(currentProp?.id || 'ta-garden');
+      renderEnquiries();
+    } else {
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;">${d.error || 'Restore failed.'}</div>`;
+    }
+  } catch (err) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `<div style="color:var(--red);font-size:12px;">Network error: ${err.message}</div>`;
+  }
+  btn.textContent = 'Restore Portal Link';
+  btn.disabled = false;
 }
 
 async function archiveEnquiry(id) {

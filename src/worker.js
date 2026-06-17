@@ -119,6 +119,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/booking-link'    && m === 'POST')   return safeCall(() => adminCreateBookingLink(request, env, cors), cors);
     if (p === '/api/admin/booking-links'   && m === 'GET')    return safeCall(() => adminListBookingLinks(request, env, cors), cors);
     if (p === '/api/admin/direct-booking'  && m === 'POST')   return safeCall(() => adminDirectBooking(request, env, cors, ctx), cors);
+    if (p === '/api/admin/restore-guest'   && m === 'POST')   return safeCall(() => adminRestoreGuest(request, env, cors), cors);
     if (p === '/api/admin/activity-log'    && m === 'GET')    return safeCall(() => adminGetActivityLog(request, env, cors), cors);
     if (p === '/api/admin/contract'        && m === 'GET')    return safeCall(() => adminGetContract(request, env, cors), cors);
     if (p === '/api/admin/send-contract'   && m === 'POST')   return safeCall(() => adminSendContract(request, env, cors), cors);
@@ -134,7 +135,7 @@ async function handleFetch(request, env, ctx) {
     if (p.startsWith('/api/booking-link/') && m === 'GET')    return handleBookingLinkGet(request, env, cors);
 
     // Redirect /guest → /guest.html (keeps query string intact)
-    if (p === '/guest') return Response.redirect(`${url.origin}/guest.html${url.search}`, 301);
+    if (p === '/guest') return Response.redirect(`${url.origin}/guest.html${url.search}`, 302);
 
     // Static files are served automatically by Cloudflare before the worker runs.
     // This fallback only triggers for unmatched paths with no static file.
@@ -2234,6 +2235,51 @@ async function adminDirectBooking(request, env, cors, ctx) {
   if (ctx?.waitUntil) ctx.waitUntil(emailWork);
 
   return Response.json({ success: true, enqId, message: `Booking confirmed. Confirmation sent to ${guestEmail}. Send the contract manually once deposit is received.` }, { headers: cors });
+}
+
+// ── Admin: restore deleted guest portal ──────────────────────────────────────
+
+async function adminRestoreGuest(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+
+  const {
+    enquiryId, name, email, phone = '', room, stayType = 'monthly',
+    checkIn, checkOut, rentUsd, status = 'confirmed', propertyId = 'ta-garden',
+  } = await request.json();
+
+  if (!enquiryId || !name || !email || !room || !checkIn) {
+    return Response.json({ error: 'enquiryId, name, email, room, and checkIn are required' }, { status: 400, headers: cors });
+  }
+
+  const key = enquiriesKey(propertyId);
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
+  if (enquiries.find(e => e.id === enquiryId)) {
+    return Response.json({ error: `Enquiry ${enquiryId} already exists — no need to restore.` }, { status: 409, headers: cors });
+  }
+
+  const rates = ROOM_RATES[room] || {};
+  const effectiveRentUsd = rentUsd ? Number(rentUsd) : (rates.monthly || null);
+
+  const enq = {
+    id: enquiryId, propertyId,
+    name, email, phone, room, stayType,
+    checkIn, checkOut: checkOut || null,
+    message: 'Restored by admin (guest portal link recovery).',
+    price: effectiveRentUsd,
+    status,
+    createdAt: new Date().toISOString(),
+    onboarding: { paymentReceived: false, contractSigned: false, passportUploaded: false, visaUploaded: false },
+    rentUsd: effectiveRentUsd,
+    restored: true,
+  };
+
+  enquiries.unshift(enq);
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries.slice(0, 200)));
+  await env.BOOKINGS.put(`enq_idx_${enquiryId}`, propertyId);
+  await appendLog(env, enquiryId, { type: 'booking_confirmed', note: `Enquiry restored by admin (guest portal link recovery). Original ID: ${enquiryId}` });
+
+  return Response.json({ success: true, enquiryId, message: `Guest portal restored. Link: /guest.html?id=${enquiryId}&p=${propertyId}` }, { headers: cors });
 }
 
 // ── Email builders ────────────────────────────────────────────────────────────

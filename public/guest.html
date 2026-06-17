@@ -254,8 +254,9 @@ async function init() {
       history.replaceState(null, '', '/guest.html');
       renderPortal();
       showScreen('portal');
-    } catch {
-      showScreen('login');
+    } catch (e) {
+      document.getElementById('errScreenMsg').textContent = 'We couldn\'t load your portal. Please try the link in your confirmation email, or contact us at hi@soulandlunawellness.com';
+      showScreen('error');
     }
     return;
   }

@@ -3986,6 +3986,7 @@ function renderRecurring() {
       <td class="fin-td-r" style="font-size:12px;color:var(--mid);">${vndCell}</td>
       <td class="fin-td-r" style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:300;">$${Number(r.monthlyUsd||0).toLocaleString()}</td>
       <td class="fin-td-actions">
+        <button class="fin-row-btn" onclick="recurStartEdit('${r.id}')" title="Edit">✎</button>
         <button class="fin-row-btn fin-row-del" onclick="recurDelete('${r.id}')" title="Remove">✕</button>
       </td>
     </tr>`;
@@ -4051,6 +4052,53 @@ async function recurDelete(recurringId) {
     const d = await r.json();
     if (d.success) { allRecurring = d.recurring; renderFinancials(); }
   } catch {}
+}
+
+function recurStartEdit(id) {
+  const rec = allRecurring.find(r => r.id === id);
+  if (!rec) return;
+  const tr = document.querySelector(`#recurTbody tr[data-rid="${id}"]`);
+  if (!tr) return;
+  const catOpts = Object.entries(FIN_CATS).map(([k,v]) => `<option value="${k}" ${rec.category===k?'selected':''}>${v.label}</option>`).join('');
+  tr.classList.add('fin-row-editing');
+  tr.innerHTML = `
+    <td><input type="text" id="redit-desc-${id}" value="${(rec.description||'').replace(/"/g,'&quot;')}" style="min-width:160px;"></td>
+    <td><select id="redit-cat-${id}">${catOpts}</select></td>
+    <td><input type="date" id="redit-start-${id}" value="${rec.startDate||''}"></td>
+    <td><input type="text" id="redit-note-${id}" value="${(rec.note||'').replace(/"/g,'&quot;')}" placeholder="note / range"></td>
+    <td class="fin-td-r"><input type="number" id="redit-vnd-${id}" value="${rec.monthlyVnd||''}" placeholder="VND" style="width:110px;text-align:right;"></td>
+    <td class="fin-td-r"><input type="number" id="redit-usd-${id}" value="${rec.monthlyUsd||''}" placeholder="USD" style="width:80px;text-align:right;"></td>
+    <td class="fin-td-actions">
+      <button class="fin-row-btn fin-row-save" onclick="recurSaveEdit('${id}')">✓</button>
+      <button class="fin-row-btn" onclick="renderRecurring()">✕</button>
+    </td>`;
+  tr.querySelector(`#redit-desc-${id}`)?.focus();
+}
+
+async function recurSaveEdit(id) {
+  const usd = parseFloat(document.getElementById(`redit-usd-${id}`)?.value) || 0;
+  const vnd = parseFloat(document.getElementById(`redit-vnd-${id}`)?.value) || null;
+  const updates = {
+    description: (document.getElementById(`redit-desc-${id}`)?.value  || '').trim(),
+    category:     document.getElementById(`redit-cat-${id}`)?.value   || 'other',
+    startDate:    document.getElementById(`redit-start-${id}`)?.value || '',
+    note:        (document.getElementById(`redit-note-${id}`)?.value  || '').trim(),
+    monthlyUsd: usd,
+    monthlyVnd: vnd,
+  };
+  if (!updates.description) return;
+  const saveBtn = document.querySelector(`#recurTbody tr[data-rid="${id}"] .fin-row-save`);
+  if (saveBtn) { saveBtn.textContent = '…'; saveBtn.disabled = true; }
+  try {
+    const r = await fetch('/api/admin/recurring', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ propertyId: currentProp?.id || 'ta-garden', recurringId: id, updates }),
+    });
+    const d = await r.json();
+    if (d.success) { allRecurring = d.recurring; renderFinancials(); }
+    else { if (saveBtn) { saveBtn.textContent = '✓'; saveBtn.disabled = false; } alert(d.error || 'Save failed.'); }
+  } catch { if (saveBtn) { saveBtn.textContent = '✓'; saveBtn.disabled = false; } alert('Network error.'); }
 }
 
 async function doDeleteExpense(expId) {

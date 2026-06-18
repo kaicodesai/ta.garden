@@ -591,9 +591,9 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
         <div class="fg" style="margin-bottom:12px;">
           <label class="modal-lbl">Room</label>
           <select class="fc" id="bl-room" onchange="blRoomChanged()">
-            <option value="The River Room">The River Room (8,000,000 VND · $320/mo)</option>
-            <option value="The Garden Room">The Garden Room (9,000,000 VND · $360/mo)</option>
-            <option value="The Sky Suite">The Sky Suite (14,000,000 VND · $560/mo)</option>
+            <option value="The River Room">The River Room — 8,000,000 VND/mo</option>
+            <option value="The Garden Room">The Garden Room — 9,000,000 VND/mo</option>
+            <option value="The Sky Suite">The Sky Suite — 14,000,000 VND/mo</option>
             <option value="First Floor Room">First Floor Room — Staff (7,500,000 VND/mo)</option>
           </select>
         </div>
@@ -631,29 +631,30 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           </div>
         </div>
 
-        <!-- Pricing — VND first -->
+        <!-- Pricing — VND primary -->
         <div style="background:rgba(134,162,166,0.07);padding:14px;border-radius:6px;border:1px solid rgba(134,162,166,0.2);margin-bottom:12px;">
-          <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:10px;">Pricing (enter VND → USD auto-calculated)</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--mid,#88917d);margin-bottom:10px;">Pricing</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div class="fg">
               <label class="modal-lbl">Monthly Rent (VND)</label>
-              <input class="fc" id="bl-rentvnd" type="number" placeholder="8500000" oninput="blVndChanged()" style="font-size:13px;padding:8px 10px;">
+              <input class="fc" id="bl-rentvnd" type="number" placeholder="8000000" oninput="blVndChanged()" style="font-size:13px;padding:8px 10px;">
+              <div id="bl-rentusd-display" style="font-size:10px;color:var(--mid);margin-top:4px;"></div>
+              <input type="hidden" id="bl-rentusd">
             </div>
             <div class="fg">
-              <label class="modal-lbl">Monthly Rent (USD equiv.)</label>
-              <input class="fc" id="bl-rentusd" type="number" placeholder="340" oninput="blUsdChanged()" style="font-size:13px;padding:8px 10px;">
-            </div>
-            <div class="fg">
-              <label class="modal-lbl">Security Deposit (USD)</label>
-              <input class="fc" id="bl-deposit" type="number" placeholder="160" style="font-size:13px;padding:8px 10px;">
+              <label class="modal-lbl">Security Deposit (VND)</label>
+              <input class="fc" id="bl-depositvnd" type="number" placeholder="4000000" oninput="blDepositVndChanged()" style="font-size:13px;padding:8px 10px;">
+              <div id="bl-deposit-display" style="font-size:10px;color:var(--mid);margin-top:4px;"></div>
+              <input type="hidden" id="bl-deposit">
             </div>
           </div>
-          <div style="font-size:10px;color:var(--mid);margin-top:6px;">Using ~25,000 VND per $1 USD. Security deposit pre-filled from room rates — edit to override.</div>
+          <div style="font-size:10px;color:var(--mid);margin-top:6px;">Pre-filled from room rates — edit to override. Using ~25,000 VND per $1 USD.</div>
         </div>
 
         <div class="fg" style="margin-bottom:12px;">
-          <label class="modal-lbl">Stripe Payment Link</label>
-          <input class="fc" id="bl-stripe" value="https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02">
+          <label class="modal-lbl">Stripe Payment Link (Security Deposit)</label>
+          <input class="fc" id="bl-stripe" placeholder="Auto-filled from room — edit to override">
+          <div style="font-size:10px;color:var(--mid);margin-top:4px;">Auto-populated with the room's security deposit link. Update for prorated stays.</div>
         </div>
         <div class="fg" style="margin-bottom:16px;">
           <label class="modal-lbl">Personal Note to Guest</label>
@@ -3263,10 +3264,10 @@ async function deleteSanctuaryImage(propId, id) {
 // ── Booking Links ─────────────────────────────────────────────────────────────
 
 const BL_ROOM_VND = {
-  'The River Room':   { vnd: 8000000,  usd: 320, depositVnd: 4000000,  depositUsd: 160 },
-  'The Garden Room':  { vnd: 9000000,  usd: 360, depositVnd: 4500000,  depositUsd: 180 },
-  'The Sky Suite':    { vnd: 14000000, usd: 560, depositVnd: 7000000,  depositUsd: 280 },
-  'First Floor Room': { vnd: 7500000,  usd: 300, depositVnd: 3750000,  depositUsd: 150 },
+  'The River Room':   { vnd: 8000000,  usd: 320, depositVnd: 4000000,  depositUsd: 160, depositLink: 'https://buy.stripe.com/6oUaEX1rO5KR0VTflG53O09' },
+  'The Garden Room':  { vnd: 9000000,  usd: 360, depositVnd: 4500000,  depositUsd: 180, depositLink: 'https://buy.stripe.com/3cI6oH5I42yF341ddy53O07' },
+  'The Sky Suite':    { vnd: 14000000, usd: 560, depositVnd: 7000000,  depositUsd: 280, depositLink: 'https://buy.stripe.com/fZu4gz1rOgpvawt3CY53O05' },
+  'First Floor Room': { vnd: 7500000,  usd: 300, depositVnd: 3750000,  depositUsd: 150, depositLink: '' },
 };
 const VND_RATE = 25000;
 
@@ -3276,7 +3277,11 @@ function blRoomChanged() {
   if (rates) {
     document.getElementById('bl-rentvnd').value = rates.vnd;
     document.getElementById('bl-rentusd').value = rates.usd;
+    document.getElementById('bl-rentusd-display').textContent = rates.usd ? `≈ $${rates.usd} USD` : '';
+    document.getElementById('bl-depositvnd').value = rates.depositVnd;
     document.getElementById('bl-deposit').value = rates.depositUsd;
+    document.getElementById('bl-deposit-display').textContent = rates.depositUsd ? `≈ $${rates.depositUsd} USD` : '';
+    document.getElementById('bl-stripe').value = rates.depositLink || '';
   }
 }
 
@@ -3284,12 +3289,14 @@ function blVndChanged() {
   const vnd = Number(document.getElementById('bl-rentvnd').value) || 0;
   const usd = vnd ? Math.round(vnd / VND_RATE) : '';
   document.getElementById('bl-rentusd').value = usd || '';
+  document.getElementById('bl-rentusd-display').textContent = usd ? `≈ $${usd} USD` : '';
 }
 
-function blUsdChanged() {
-  const usd = Number(document.getElementById('bl-rentusd').value) || 0;
-  const vnd = usd ? Math.round(usd * VND_RATE) : '';
-  document.getElementById('bl-rentvnd').value = vnd || '';
+function blDepositVndChanged() {
+  const vnd = Number(document.getElementById('bl-depositvnd').value) || 0;
+  const usd = vnd ? Math.round(vnd / VND_RATE) : '';
+  document.getElementById('bl-deposit').value = usd || '';
+  document.getElementById('bl-deposit-display').textContent = usd ? `≈ $${usd} USD` : '';
 }
 
 function blSelectEnquiry(id) {

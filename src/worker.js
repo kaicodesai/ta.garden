@@ -3303,10 +3303,10 @@ body{background:#e8e0d5;}
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#3a3a2a;border-radius:6px;padding:20px 24px;">
       <tr><td>
         <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#c8b89a;letter-spacing:0.1em;text-transform:uppercase;">Step 1 — Secure Your Room</p>
-        <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">To move in, your first payment covers:</p>
+        <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">Two payments to complete your booking:</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit (refundable) — <strong style="color:#fff;">${depositStr}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due within 72 hours)</span></td></tr>
-          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${rentStr || '—'}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due 14 days before move-in)</span></td></tr>
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit (refundable) — <strong style="color:#fff;">${depositVnd ? `${Number(depositVnd).toLocaleString()} ₫` : depositStr}</strong>${depositVnd ? ` <span style="color:rgba(255,255,255,0.45);font-size:12px;">≈ ${depositStr} USD</span>` : ''} <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due within 72 hours — locks in your dates)</span></td></tr>
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${rentVnd ? `${Number(rentVnd).toLocaleString()} ₫` : (rentStr || '—')}</strong>${rentVnd ? ` <span style="color:rgba(255,255,255,0.45);font-size:12px;">≈ ${rentStr} USD</span>` : ''} <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due before move-in)</span></td></tr>
         </table>
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="padding:0 6px 0 0;" align="center">

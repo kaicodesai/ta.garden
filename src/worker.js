@@ -2,14 +2,43 @@
 // (Settings → Variables & Secrets → Add Secret → RESEND_API_KEY)
 const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
 const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
-const STRIPE_USD = 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
-const STRIPE_VND = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
+// ── Stripe room-specific payment links (VND fixed-price) ─────────────────────
+// IMPORTANT: Replace PLACEHOLDER URLs with real Stripe payment links.
+// To create: Stripe Dashboard → Payment Links → Create → set fixed VND price.
+const STRIPE_ROOM_LINKS = {
+  'The River Room': {
+    deposit: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',   // 4,000,000 VND
+    balance: 'https://buy.stripe.com/REPLACE_RIVER_BALANCE',   // 8,000,000 VND
+  },
+  'The Garden Room': {
+    deposit: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT',  // 4,500,000 VND
+    balance: 'https://buy.stripe.com/REPLACE_GARDEN_BALANCE',  // 9,000,000 VND
+  },
+  'The Sky Suite': {
+    deposit: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',     // 7,000,000 VND
+    balance: 'https://buy.stripe.com/REPLACE_SKY_BALANCE',     // 14,000,000 VND
+  },
+};
+const STRIPE_FALLBACK = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
+function getStripeLink(room, type = 'deposit') {
+  return STRIPE_ROOM_LINKS[room]?.[type] || STRIPE_FALLBACK;
+}
 
 const ROOM_RATES = {
-  'The River Room':   { monthly: 340, nightly: 25 },
-  'The Balcony Room': { monthly: 400, nightly: 30 },
-  'The Sky Suite':    { monthly: 560, nightly: 50 },
-  'First Floor Room': { monthly: 200, nightly: 0, vndOnly: true, internal: true },
+  'The River Room':   { monthly: 320, vnd: 8000000,  nightly: 38, deposit: 160, depositVnd: 4000000 },
+  'The Garden Room':  { monthly: 360, vnd: 9000000,  nightly: 45, deposit: 180, depositVnd: 4500000 },
+  'The Sky Suite':    { monthly: 560, vnd: 14000000, nightly: 75, deposit: 280, depositVnd: 7000000 },
+  'First Floor Room': { monthly: 300, vnd: 7500000,  nightly: 38, vndOnly: true, internal: true },
+};
+
+const CANCELLATION_POLICY = {
+  text: '30+ days before move-in: fully refundable · 14–29 days: 50% refunded · Under 14 days: non-refundable · Deposit due within 72 hours of confirmation or room is released',
+  html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;">
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>30+ days before move-in:</strong> Fully refundable</td></tr>
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>14–29 days before move-in:</strong> 50% of deposit refunded</td></tr>
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>Under 14 days:</strong> Non-refundable</td></tr>
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#c0392b;">⏱ <strong>Deposit due within 72 hours</strong> of confirmation or your room is released</td></tr>
+</table>`,
 };
 
 const DEFAULT_PROPERTIES = [
@@ -509,6 +538,7 @@ async function adminNotify(request, env, cors) {
     if (rentUsd) enquiries[idx].rentUsd = Number(rentUsd);
     if (rentVnd) enquiries[idx].rentVnd = Number(rentVnd);
     if (depositAmount) enquiries[idx].depositAmount = Number(depositAmount);
+    if (!enquiries[idx].confirmedAt) enquiries[idx].confirmedAt = new Date().toISOString();
   }
   await env.BOOKINGS.put(key, JSON.stringify(enquiries));
 
@@ -670,9 +700,12 @@ async function guestPortalData(enquiryId, propId, env, cors) {
     status: enq.status,
     onboarding: enq.onboarding || {},
     signedAt: enq.signedAt || null,
+    confirmedAt: enq.confirmedAt || null,
     rentUsd: enq.rentUsd || null,
     rentVnd: enq.rentVnd || (enq.rentUsd ? enq.rentUsd * 25000 : null),
     depositAmount: enq.depositAmount || null,
+    depositReceived: !!(enq.onboarding?.depositReceived || enq.onboarding?.paymentReceived),
+    balanceReceived: !!(enq.onboarding?.balanceReceived || enq.onboarding?.paymentReceived),
     profileSubmitted: !!profile,
     profile: profile ? {
       fullName: profile.fullName, nationality: profile.nationality,
@@ -811,7 +844,7 @@ async function adminUpdateOnboarding(request, env, cors) {
   if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
 
   const { id, propertyId = 'ta-garden', field, value } = await request.json();
-  const ALLOWED = ['paymentReceived', 'contractSigned', 'passportUploaded', 'visaUploaded'];
+  const ALLOWED = ['paymentReceived', 'depositReceived', 'balanceReceived', 'contractSigned', 'passportUploaded', 'visaUploaded'];
   if (!ALLOWED.includes(field)) return Response.json({ error: 'Invalid field' }, { status: 400, headers: cors });
 
   const key = enquiriesKey(propertyId);
@@ -1473,7 +1506,7 @@ body{background:#e8e0d5;}
         <a href="${stripeUrl}" style="display:inline-block;padding:15px 28px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in USD →</a>
       </td>
       <td style="padding:0 0 0 6px;" align="center">
-        <a href="${STRIPE_VND}" style="display:inline-block;padding:15px 28px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in VND →</a>
+        <a href="${stripeUrl}" style="display:inline-block;padding:15px 28px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in VND →</a>
       </td>
     </tr></table>
     <p style="margin:20px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#88917d;text-align:center;">Thank you for being part of Ta.Garden 🌿</p>
@@ -1821,7 +1854,7 @@ async function adminPreviewEmail(request, env, cors) {
     html = buildCheckoutReminderEmail(sampleEnq);
     subject = `[PREVIEW] Checkout day — thank you for staying at Ta.Garden`;
   } else if (type === 'monthly') {
-    html = buildMonthlyReminderGuestEmail(sampleEnq, '2026-07-18', sampleEnq.rentUsd, STRIPE_USD);
+    html = buildMonthlyReminderGuestEmail(sampleEnq, '2026-07-18', sampleEnq.rentUsd, getStripeLink(sampleEnq.room, 'balance'));
     subject = `[PREVIEW] Monthly rent due Jul 18, 2026 — Ta.Garden`;
   } else {
     return Response.json({ error: 'Unknown type. Use: arrival, checkout, monthly' }, { status: 400, headers: cors });
@@ -2426,7 +2459,10 @@ function buildConfirmEmail(enq, customMessage, origin, propertyId, rates = {}) {
   const guestPortalUrl = origin ? `${origin}/guest.html?id=${enq.id}&p=${propertyId || 'ta-garden'}` : null;
   const price = calcPrice(enq.room, enq.stayType, enq.checkIn, enq.checkOut);
   const effectiveRentUsd = rates.rentUsd || ROOM_RATES[enq.room]?.monthly;
-  const effectiveDeposit = rates.depositAmount || effectiveRentUsd;
+  const effectiveDeposit = rates.depositAmount || ROOM_RATES[enq.room]?.deposit || effectiveRentUsd;
+  const effectiveDepositVnd = (effectiveDeposit || 0) * 25000;
+  const depositStripeLink = getStripeLink(enq.room, 'deposit');
+  const depositDueDate = new Date(Date.now() + 72 * 3600000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -2523,11 +2559,17 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 
       ${customMessage ? `<div style="padding:16px;background:#fff;border-left:3px solid #86a2a6;margin-bottom:24px;font-size:14px;line-height:1.8;color:#1a1a18;font-family:Arial,sans-serif;">${customMessage.replace(/\n/g,'<br>')}</div>` : ''}
 
+      <!-- Cancellation policy -->
+      <div style="margin-bottom:24px;padding:16px 20px;background:#f5f0eb;border:1px solid rgba(136,145,125,0.2);">
+        <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:10px;font-family:Arial,sans-serif;">Cancellation Policy</div>
+        ${CANCELLATION_POLICY.html}
+      </div>
+
       <!-- Next steps -->
       <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;font-family:Arial,sans-serif;">Next Steps</div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
         ${[
-          effectiveRentUsd ? `Pay your ${price?.total && price.total !== effectiveRentUsd ? `prorated rent ($${price.total})` : `first month's rent ($${effectiveRentUsd})`} + security deposit ($${effectiveDeposit}) to secure your room. Your deposit is fully refunded when you leave.` : 'Complete your first month\'s payment to secure your room.',
+          `Pay your deposit of ${effectiveDepositVnd.toLocaleString()} VND within 72 hours to secure your room. The balance (full month's rent) is due 14 days before your move-in date. Your deposit is fully refunded on departure.`,
           'Review the rental agreement below — by completing payment you confirm your acceptance of these terms. A countersigned copy will be emailed to you once payment is received.',
           'Complete your guest profile — upload passport photo and visa details via your personal link below',
           'We\'ll confirm check-in details closer to your arrival date',
@@ -2563,11 +2605,9 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       <!-- Buttons -->
       ${guestPortalUrl ? `<a href="${guestPortalUrl}" class="btn" style="display:block;text-align:center;padding:16px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;font-family:Arial,sans-serif;">Complete Guest Profile →</a>` : ''}
       ${effectiveDeposit ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px;"><tr>
-        <td style="padding:0 5px 0 0;">
-          <a href="${enq.stripeUrl || STRIPE_USD}" style="display:block;text-align:center;padding:15px;background:#1a1a18;color:#ede0d1;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay in USD${effectiveDeposit ? ` — $${effectiveDeposit}` : ''} →</a>
-        </td>
-        <td style="padding:0 0 0 5px;">
-          <a href="${STRIPE_VND}" style="display:block;text-align:center;padding:15px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay in VND →</a>
+        <td colspan="2">
+          <a href="${depositStripeLink}" style="display:block;text-align:center;padding:15px;background:#2d5a27;color:#fff;text-decoration:none;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;">Pay Deposit — ${effectiveDepositVnd.toLocaleString()} VND${effectiveDeposit ? ` (~$${effectiveDeposit})` : ''} →</a>
+          <div style="font-size:11px;color:#88917d;font-family:Arial,sans-serif;text-align:center;margin-top:6px;">⏱ Due by ${depositDueDate} (within 72 hours)</div>
         </td>
       </tr></table>` : ''}
     </td>
@@ -3258,10 +3298,10 @@ body{background:#e8e0d5;}
         </table>
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="padding:0 6px 0 0;" align="center">
-            <a href="${stripeUrl || STRIPE_USD}" style="display:inline-block;padding:13px 24px;background:#86a2a6;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in USD →</a>
+            <a href="${getStripeLink(room, 'deposit')}" style="display:inline-block;padding:13px 24px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Deposit in VND →</a>
           </td>
           <td style="padding:0 0 0 6px;" align="center">
-            <a href="${STRIPE_VND}" style="display:inline-block;padding:13px 24px;background:#5a7a56;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay in VND →</a>
+          <div style="font-size:11px;color:rgba(255,255,255,0.55);font-family:Arial,sans-serif;padding:6px 0;">Due within 72 hours</div>
           </td>
         </tr></table>
         <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Secure payment via Stripe · Choose your preferred currency</p>

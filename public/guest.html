@@ -303,13 +303,16 @@ function renderPortal() {
     <button class="signout-btn" onclick="doSignOut()">Sign Out</button>`;
 
   const ob = session.onboarding || {};
+  const depositDone = session.depositReceived || ob.depositReceived || ob.paymentReceived;
+  const balanceDone = session.balanceReceived || ob.balanceReceived || ob.paymentReceived;
   const obItems = [
-    { key: 'paymentReceived', label: 'First payment received' },
-    { key: 'contractSigned',  label: 'House agreement signed' },
-    { key: 'passportUploaded', label: 'Passport photo uploaded' },
-    { key: 'visaUploaded',    label: 'Visa document uploaded' },
+    { key: 'depositReceived',  label: 'Deposit received',         done: depositDone },
+    { key: 'balanceReceived',  label: 'Balance received',          done: balanceDone },
+    { key: 'contractSigned',   label: 'House agreement signed',    done: !!ob.contractSigned },
+    { key: 'passportUploaded', label: 'Passport photo uploaded',   done: !!ob.passportUploaded },
+    { key: 'visaUploaded',     label: 'Visa document uploaded',    done: !!ob.visaUploaded },
   ];
-  const obDone = Object.values(ob).filter(Boolean).length;
+  const obDone = obItems.filter(i => i.done).length;
 
   const payments = session.payments || [];
   const sameVND  = payments.every(p => p.currency === 'VND' || !p.currency);
@@ -351,17 +354,56 @@ function renderPortal() {
 
     <!-- Onboarding progress -->
     <div class="section">
-      <div class="section-title">Arrival Checklist — ${obDone}/4 Complete</div>
+      <div class="section-title">Arrival Checklist — ${obDone}/${obItems.length} Complete</div>
       <div class="ob-list">
         ${obItems.map(item => `
           <div class="ob-item">
-            <div class="ob-icon${ob[item.key] ? ' done' : ''}">
-              ${ob[item.key] ? '✓' : ''}
+            <div class="ob-icon${item.done ? ' done' : ''}">
+              ${item.done ? '✓' : ''}
             </div>
-            <span class="ob-label${ob[item.key] ? ' done' : ' pending'}">${item.label}</span>
+            <span class="ob-label${item.done ? ' done' : ' pending'}">${item.label}</span>
           </div>`).join('')}
       </div>
     </div>
+
+    <!-- Payments -->
+    ${(() => {
+      const STRIPE_GUEST = {
+        'The River Room':  { deposit: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',  balance: 'https://buy.stripe.com/REPLACE_RIVER_BALANCE' },
+        'The Garden Room': { deposit: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT', balance: 'https://buy.stripe.com/REPLACE_GARDEN_BALANCE' },
+        'The Sky Suite':   { deposit: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',    balance: 'https://buy.stripe.com/REPLACE_SKY_BALANCE' },
+      };
+      const RATES_G = { 'The River Room': { depositVnd: 4000000, deposit: 160 }, 'The Garden Room': { depositVnd: 4500000, deposit: 180 }, 'The Sky Suite': { depositVnd: 7000000, deposit: 280 } };
+      const links = STRIPE_GUEST[session.room] || {};
+      const rates = RATES_G[session.room] || {};
+      const depVnd = session.depositAmount ? session.depositAmount * 25000 : (rates.depositVnd || 0);
+      const depUsd = session.depositAmount || rates.deposit || 0;
+      const balVnd = session.rentVnd || (session.rentUsd ? session.rentUsd * 25000 : 0);
+      const balUsd = session.rentUsd || 0;
+      if (balanceDone) return `<div class="section"><div class="section-title">Payments</div><div style="color:var(--green,#4caf50);font-weight:600;font-size:14px;">✓ All payments received</div></div>`;
+      if (depositDone) {
+        let balDueHtml = '';
+        if (session.checkIn) {
+          const dueDate = new Date(new Date(session.checkIn).getTime() - 14 * 86400000);
+          const daysLeft = Math.ceil((dueDate - Date.now()) / 86400000);
+          const urgColor = daysLeft <= 7 ? '#e65100' : '#1565c0';
+          balDueHtml = `<div style="margin-bottom:10px;padding:10px 12px;background:#f5f0eb;border-radius:4px;font-size:12px;color:${urgColor};">📅 Balance due by <strong>${dueDate.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</strong>${daysLeft > 0 ? ' ('+daysLeft+' days)' : ' — due now'}</div>`;
+        }
+        return `<div class="section"><div class="section-title">Payments</div><div style="color:var(--green,#4caf50);font-size:13px;margin-bottom:10px;">✓ Deposit received</div>${balDueHtml}${links.balance ? `<a href="${links.balance}" style="display:block;padding:13px 20px;background:var(--dark,#3a3a2a);color:var(--cream,#ede0d1);text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;text-align:center;">Pay Balance — ${balVnd.toLocaleString()} VND${balUsd?' (~$'+balUsd+')':''} →</a>` : ''}</div>`;
+      }
+      let countdownHtml = '';
+      if (session.confirmedAt) {
+        const dueMs = new Date(session.confirmedAt).getTime() + 72 * 3600000;
+        const remMs = dueMs - Date.now();
+        if (remMs > 0) {
+          const hrs = Math.floor(remMs / 3600000); const mins = Math.floor((remMs % 3600000) / 60000);
+          countdownHtml = `<div style="margin:8px 0;padding:10px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:12px;color:#f57f17;">⏱ Due in <strong>${hrs}h ${mins}m</strong> — ${new Date(dueMs).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</div>`;
+        } else {
+          countdownHtml = `<div style="margin:8px 0;padding:10px 12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:4px;font-size:12px;color:#c62828;">⚠️ Deposit overdue — please contact hi@soulandlunawellness.com</div>`;
+        }
+      }
+      return `<div class="section"><div class="section-title">Payments</div><p style="font-size:13px;color:var(--mid);margin:0 0 8px;line-height:1.6;">Pay your deposit to secure your room. Fully refunded on departure.</p><div style="font-size:14px;color:var(--stone,#3a3a2a);margin-bottom:4px;"><strong>${depVnd.toLocaleString()} VND</strong>${depUsd ? `<span style="font-size:11px;color:var(--mid);margin-left:6px;">(~$${depUsd})</span>` : ''}</div>${countdownHtml}${links.deposit ? `<a href="${links.deposit}" style="display:block;margin-top:10px;padding:13px 20px;background:var(--dark,#3a3a2a);color:var(--cream,#ede0d1);text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;text-align:center;">Pay Deposit →</a>` : ''}<div style="margin-top:14px;padding:12px;background:var(--light,#f5f0eb);border-radius:4px;font-size:11px;color:var(--mid);line-height:1.7;"><strong style="display:block;margin-bottom:4px;letter-spacing:0.08em;text-transform:uppercase;font-size:10px;">Cancellation Policy</strong>30+ days: fully refundable · 14–29 days: 50% refunded · Under 14 days: non-refundable</div></div>`;
+    })()}
 
     <!-- Contract Signing -->
     <div class="section" id="contractSection">
@@ -372,7 +414,7 @@ function renderPortal() {
             <span style="font-size:13px;color:var(--mid);">Signed${session.signedAt ? ' on ' + new Date(session.signedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''}. A copy was emailed to you.</span>
             <button onclick="viewGuestContract()" style="padding:7px 16px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Agreement</button>
            </div>`
-        : ob.paymentReceived
+        : depositDone
           ? `<p style="font-size:13px;color:var(--mid);margin:0 0 16px;line-height:1.6;">Your deposit has been received. Please review and sign your rental agreement below.</p>
              <button onclick="viewGuestContract()" style="display:inline-block;margin-bottom:16px;padding:9px 18px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Full Agreement →</button>
              <div style="margin-bottom:12px;">

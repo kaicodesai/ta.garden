@@ -89,6 +89,12 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .status-badge.pending   { border-color: var(--amber); color: var(--amber); }
 .status-badge.confirmed { border-color: var(--green); color: var(--green); }
 .status-badge.cancelled { border-color: var(--red);   color: var(--red); opacity: 0.6; }
+.pay-badge { display: inline-block; margin-top: 4px; padding: 2px 7px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 3px; border: 1px solid; }
+.pay-fully-paid      { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+.pay-deposit-pending { background: #fff8e1; color: #f57f17; border-color: #ffe082; }
+.pay-overdue         { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
+.pay-balance-pending { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+.pay-balance-due     { background: #fff3e0; color: #e65100; border-color: #ffcc80; }
 .act-btn { padding: 5px 12px; border: 1px solid; background: none; font-family: 'Jost', sans-serif; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
 .act-confirm { border-color: rgba(76,175,125,0.45); color: var(--green); }
 .act-confirm:hover { background: rgba(76,175,125,0.12); }
@@ -1335,6 +1341,22 @@ function renderArrivals() {
   </div>`;
 }
 
+function getPaymentStatus(enq) {
+  const ob = enq.onboarding || {};
+  if (ob.paymentReceived || ob.balanceReceived) return { label: 'Fully Paid', cls: 'pay-fully-paid' };
+  if (ob.depositReceived) {
+    if (!enq.checkIn) return { label: 'Balance Pending', cls: 'pay-balance-pending' };
+    const days = Math.ceil((new Date(enq.checkIn) - Date.now()) / 86400000);
+    return days <= 14 ? { label: 'Balance Due', cls: 'pay-balance-due' } : { label: 'Balance Pending', cls: 'pay-balance-pending' };
+  }
+  if (enq.confirmedAt) {
+    const hoursElapsed = (Date.now() - new Date(enq.confirmedAt)) / 3600000;
+    if (hoursElapsed > 72) return { label: 'Deposit Overdue', cls: 'pay-overdue' };
+  }
+  if (enq.status === 'confirmed') return { label: 'Deposit Pending', cls: 'pay-deposit-pending' };
+  return null;
+}
+
 function renderEnquiries() {
   const active   = (filterStatus === 'all' ? allEnquiries : allEnquiries.filter(e => e.status === filterStatus)).filter(e => !e.archived);
   const archived = allEnquiries.filter(e => e.archived);
@@ -1351,7 +1373,13 @@ function renderEnquiries() {
       const profileBtn = `<button class="act-btn act-profile" onclick="openProfileModal('${e.id}')">Profile</button>`;
       const archiveBtn = `<button class="act-btn act-note" onclick="archiveEnquiry('${e.id}')" title="Archive this enquiry" style="opacity:0.7;">Archive</button>`;
       const ob = e.onboarding || {};
-      const obDots = ['paymentReceived','contractSigned','passportUploaded','visaUploaded'].map(k => `<div class="ob-dot${ob[k]?' done':''}" title="${k}"></div>`).join('');
+      const obDots = [
+        ['depositReceived','paymentReceived'], // legacy compat
+        ['balanceReceived','paymentReceived'],
+        ['contractSigned'],
+        ['passportUploaded'],
+        ['visaUploaded'],
+      ].map(keys => { const done = keys.some(k => ob[k]); return `<div class="ob-dot${done?' done':''}" title="${keys[0]}"></div>`; }).join('');
       const noteBubble = e.note ? `<div class="note-bubble">${e.note.replace(/</g,'&lt;')}</div>` : '';
       return `<tr>
       <td>
@@ -1378,7 +1406,8 @@ function renderEnquiries() {
       </td>
       <td>
         <span class="status-badge ${e.status}">${e.status}</span>
-        <div class="onboarding-mini" title="Payment · Contract · Passport · Visa">${obDots}</div>
+        ${(() => { const ps = getPaymentStatus(e); return ps ? `<span class="pay-badge ${ps.cls}">${ps.label}</span>` : ''; })()}
+        <div class="onboarding-mini" title="Deposit · Balance · Contract · Passport · Visa">${obDots}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">
           ${confirmBtn}${declineBtn}${noteBtn}${profileBtn}${waLink}${archiveBtn}
         </div>
@@ -1418,9 +1447,10 @@ function renderEnquiries() {
 let modalEnquiryId = null;
 
 const ROOM_RATES_JS = {
-  'The River Room':   { monthly: 340, vnd: 8500000 },
-  'The Balcony Room': { monthly: 400, vnd: 10000000 },
-  'The Sky Suite':    { monthly: 560, vnd: 14000000 },
+  'The River Room':   { monthly: 320, vnd: 8000000,  deposit: 160, depositVnd: 4000000 },
+  'The Garden Room':  { monthly: 360, vnd: 9000000,  deposit: 180, depositVnd: 4500000 },
+  'The Sky Suite':    { monthly: 560, vnd: 14000000, deposit: 280, depositVnd: 7000000 },
+  'First Floor Room': { monthly: 300, vnd: 7500000,  deposit: 150, depositVnd: 3750000 },
 };
 
 function openConfirmModal(id) {
@@ -1603,7 +1633,8 @@ async function openProfileModal(id) {
   const guestPortalUrl = `${location.origin}/guest.html?id=${enq.id}&p=${currentProp?.id || 'ta-garden'}`;
 
   const checklistItems = [
-    { key: 'paymentReceived',  label: 'Payment Received' },
+    { key: 'depositReceived',  label: 'Deposit Received',        legacyKey: 'paymentReceived' },
+    { key: 'balanceReceived',  label: 'Balance Received',         legacyKey: 'paymentReceived' },
     { key: 'contractSigned',   label: 'Contract Signed' },
     { key: 'passportUploaded', label: 'Passport Uploaded' },
     { key: 'visaUploaded',     label: 'Visa Document Uploaded' },
@@ -1611,15 +1642,18 @@ async function openProfileModal(id) {
 
   const checklistHtml = `<div class="profile-section">
     <div class="profile-section-title">Onboarding Checklist</div>
-    <div class="checklist">${checklistItems.map(item => `
+    <div class="checklist">${checklistItems.map(item => {
+      const isDone = ob[item.key] || (item.legacyKey && ob[item.legacyKey]);
+      return `
       <div class="checklist-item">
         <div class="checklist-label">
-          <div class="checklist-check ${ob[item.key] ? 'done' : ''}">${ob[item.key] ? '✓' : ''}</div>
+          <div class="checklist-check ${isDone ? 'done' : ''}">${isDone ? '✓' : ''}</div>
           <span>${item.label}</span>
         </div>
-        <input type="checkbox" class="checklist-toggle" ${ob[item.key] ? 'checked' : ''}
+        <input type="checkbox" class="checklist-toggle" ${isDone ? 'checked' : ''}
           onchange="toggleOnboarding('${id}','${item.key}',this.checked)">
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
     </div>
   </div>`;
 

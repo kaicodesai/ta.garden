@@ -430,10 +430,11 @@ function renderPortal() {
              <button onclick="submitContractSign()" style="padding:12px 28px;background:var(--dark,#3a3a2a);color:#c8b89a;border:none;border-radius:4px;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;">Sign Agreement</button>
              <div id="contractSignError" style="margin-top:10px;font-size:13px;color:var(--red,#c0392b);display:none;"></div>`
           : `<div style="padding:14px 16px;background:var(--light);border-radius:6px;">
-               <div style="display:flex;align-items:center;gap:10px;">
+               <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                  <span style="font-size:16px;">🔒</span>
                  <span style="font-size:13px;color:var(--mid);">Signing available once your security deposit is confirmed.</span>
                </div>
+               <button onclick="viewGuestContract()" style="padding:7px 16px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Preview Agreement →</button>
              </div>`
       }
     </div>

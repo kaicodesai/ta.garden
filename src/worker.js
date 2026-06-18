@@ -1723,7 +1723,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       </td></tr>
     </table>
 
-    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.8;">Any questions before you arrive? Just reply to this email — we're here.<br><br>See you soon,<br><strong style="color:#1a1a18;">Ashley &amp; the Ta.Garden team</strong></p>
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#4a4a3a;line-height:1.8;">Any questions before you arrive? Just reply to this email — we're here.<br><br>See you soon,<br><strong style="color:#1a1a18;">Kai &amp; The Ta.Garden Team</strong></p>
   </td></tr>
 
   <!-- Footer -->
@@ -1752,14 +1752,14 @@ function buildCheckoutReminderEmail(enq) {
         <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;">Before You Go</div>
         <div style="font-size:13px;color:#2a2520;line-height:2;">
           <div><strong>Checkout time:</strong> By 12:00 PM</div>
-          <div><strong>Keys:</strong> Leave on the kitchen table or hand to Ashley directly</div>
+          <div><strong>Keys:</strong> Leave on the kitchen table or hand to Kai directly</div>
           <div><strong>Anything left behind?</strong> Message us and we'll hold it safely</div>
         </div>
       </div>
 
       <p style="margin:0 0 16px;font-size:14px;color:#5a534c;line-height:1.8;">If you're not quite ready to leave Hội An, we're always happy to store your bags for the day. Just ask.</p>
       <p style="margin:0 0 24px;font-size:14px;color:#5a534c;line-height:1.8;">We hope your time here gave you what you came for. Safe travels wherever you're headed next.</p>
-      <p style="margin:0;font-size:14px;color:#5a534c;">With warmth,<br><span style="color:#2a2520;font-weight:500;">Ashley &amp; the Ta.Garden team</span></p>
+      <p style="margin:0;font-size:14px;color:#5a534c;">With warmth,<br><span style="color:#2a2520;font-weight:500;">Kai &amp; The Ta.Garden Team</span></p>
     </div>
     <div style="padding:20px 36px;border-top:1px solid rgba(136,145,125,0.12);text-align:center;">
       <div style="font-size:11px;color:#88917d;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam<br>A Soul &amp; Luna Property</div>
@@ -1785,7 +1785,7 @@ function buildReviewRequestEmail(enq) {
       </div>
 
       <p style="margin:24px 0 0;font-size:14px;color:#5a534c;line-height:1.8;">And if anything wasn't quite right during your stay, please just reply to this email — we'd always rather hear it directly and have the chance to improve.</p>
-      <p style="margin:16px 0 0;font-size:14px;color:#5a534c;">Until next time,<br><span style="color:#2a2520;font-weight:500;">Ashley &amp; the Ta.Garden team</span></p>
+      <p style="margin:16px 0 0;font-size:14px;color:#5a534c;">Until next time,<br><span style="color:#2a2520;font-weight:500;">Kai &amp; The Ta.Garden Team</span></p>
     </div>
     <div style="padding:20px 36px;border-top:1px solid rgba(136,145,125,0.12);text-align:center;">
       <div style="font-size:11px;color:#88917d;letter-spacing:0.06em;">Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam<br>A Soul &amp; Luna Property</div>

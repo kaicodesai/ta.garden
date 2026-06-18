@@ -3303,20 +3303,15 @@ body{background:#e8e0d5;}
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#3a3a2a;border-radius:6px;padding:20px 24px;">
       <tr><td>
         <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#c8b89a;letter-spacing:0.1em;text-transform:uppercase;">Step 1 — Secure Your Room</p>
-        <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">Two payments to complete your booking:</p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+        <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">Two payments to complete your booking:</p>
+        <div style="margin-bottom:16px;">
+          <a href="${getStripeLink(room, 'depositLink')}" style="display:inline-block;padding:13px 24px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Security Deposit (Refundable) →</a>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);font-family:Arial,sans-serif;margin-top:6px;">Due within 72 hours · Secure payment via Stripe</div>
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
           <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit (refundable) — <strong style="color:#fff;">${depositVnd ? `${Number(depositVnd).toLocaleString()} ₫` : depositStr}</strong>${depositVnd ? ` <span style="color:rgba(255,255,255,0.45);font-size:12px;">≈ ${depositStr} USD</span>` : ''} <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due within 72 hours — locks in your dates)</span></td></tr>
-          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${rentVnd ? `${Number(rentVnd).toLocaleString()} ₫` : (rentStr || '—')}</strong>${rentVnd ? ` <span style="color:rgba(255,255,255,0.45);font-size:12px;">≈ ${rentStr} USD</span>` : ''} <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due before move-in)</span></td></tr>
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${rentVnd ? `${Number(rentVnd).toLocaleString()} ₫` : (rentStr || '—')}</strong>${rentVnd ? ` <span style="color:rgba(255,255,255,0.45);font-size:12px;">≈ ${rentStr} USD</span>` : ''} <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due before move-in — we'll send the link once deposit is received)</span></td></tr>
         </table>
-        <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td style="padding:0 6px 0 0;" align="center">
-            <a href="${getStripeLink(room, 'depositLink')}" style="display:inline-block;padding:13px 24px;background:#2d5a27;color:#fff;text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-family:Arial,sans-serif;border-radius:4px;">Pay Security Deposit (Refundable) →</a>
-          </td>
-          <td style="padding:0 0 0 6px;" align="center">
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);font-family:Arial,sans-serif;padding:6px 0;">Due within 72 hours</div>
-          </td>
-        </tr></table>
-        <p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Secure payment via Stripe · Choose your preferred currency</p>
       </td></tr>
     </table>
   </td></tr>

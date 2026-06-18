@@ -2572,7 +2572,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
         ${[
           `Pay your security deposit of ${effectiveDepositVnd.toLocaleString()} VND within 72 hours to secure your room. This deposit is fully refundable at the end of your stay, provided there is no damage.`,
-          `Pay your first month's rent 14 days before your move-in date via the button in your guest portal. Ongoing monthly rent is due on the 1st of each month.`,
+          `Pay your first month's rent 14 days before your move-in date via the button in your guest portal. Ongoing monthly rent is due one month from your move-in date, then recurring on the same date each month.`,
           'Review the rental agreement below — by completing payment you confirm your acceptance of these terms. A countersigned copy will be emailed to you once payment is received.',
           'Complete your guest profile — upload passport photo and visa details via your personal link below',
         ].map((step, i) => `<tr>

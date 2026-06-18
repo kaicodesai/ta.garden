@@ -7,16 +7,16 @@ const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
 // To create: Stripe Dashboard → Payment Links → Create → set fixed VND price.
 const STRIPE_ROOM_LINKS = {
   'The River Room': {
-    depositLink: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',   // 4,000,000 VND security deposit
-    rentLink:    'https://buy.stripe.com/REPLACE_RIVER_BALANCE',   // 8,000,000 VND first month's rent
+    depositLink: 'https://buy.stripe.com/6oUaEX1rO5KR0VTflG53O09',   // 4,000,000 VND security deposit
+    rentLink:    'https://buy.stripe.com/bJe4gz3zW5KRawtb5q53O08',   // 8,000,000 VND monthly rent
   },
   'The Garden Room': {
-    depositLink: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT',  // 4,500,000 VND security deposit
-    rentLink:    'https://buy.stripe.com/REPLACE_GARDEN_BALANCE',  // 9,000,000 VND first month's rent
+    depositLink: 'https://buy.stripe.com/3cI6oH5I42yF341ddy53O07',   // 4,500,000 VND security deposit
+    rentLink:    'https://buy.stripe.com/5kQeVdfiE0qxeMJ0qM53O06',   // 9,000,000 VND monthly rent
   },
   'The Sky Suite': {
-    depositLink: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',     // 7,000,000 VND security deposit
-    rentLink:    'https://buy.stripe.com/REPLACE_SKY_BALANCE',     // 14,000,000 VND first month's rent
+    depositLink: 'https://buy.stripe.com/fZu4gz1rOgpvawt3CY53O05',   // 7,000,000 VND security deposit
+    rentLink:    'https://buy.stripe.com/4gMfZhgmIflrgUR7Te53O04',   // 14,000,000 VND monthly rent
   },
 };
 const STRIPE_FALLBACK = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';

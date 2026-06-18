@@ -370,9 +370,9 @@ function renderPortal() {
     ${(() => {
       const STRIPE_FALLBACK_G = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
       const STRIPE_GUEST = {
-        'The River Room':  { depositLink: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',  rentLink: 'https://buy.stripe.com/REPLACE_RIVER_BALANCE' },
-        'The Garden Room': { depositLink: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT', rentLink: 'https://buy.stripe.com/REPLACE_GARDEN_BALANCE' },
-        'The Sky Suite':   { depositLink: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',    rentLink: 'https://buy.stripe.com/REPLACE_SKY_BALANCE' },
+        'The River Room':  { depositLink: 'https://buy.stripe.com/6oUaEX1rO5KR0VTflG53O09', rentLink: 'https://buy.stripe.com/bJe4gz3zW5KRawtb5q53O08' },
+        'The Garden Room': { depositLink: 'https://buy.stripe.com/3cI6oH5I42yF341ddy53O07', rentLink: 'https://buy.stripe.com/5kQeVdfiE0qxeMJ0qM53O06' },
+        'The Sky Suite':   { depositLink: 'https://buy.stripe.com/fZu4gz1rOgpvawt3CY53O05', rentLink: 'https://buy.stripe.com/4gMfZhgmIflrgUR7Te53O04' },
       };
       const RATES_G = { 'The River Room': { depositVnd: 4000000, deposit: 160 }, 'The Garden Room': { depositVnd: 4500000, deposit: 180 }, 'The Sky Suite': { depositVnd: 7000000, deposit: 280 } };
       const rawLinks = STRIPE_GUEST[session.room] || {};

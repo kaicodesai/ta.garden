@@ -2579,8 +2579,8 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
       <div style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#88917d;margin-bottom:12px;font-family:Arial,sans-serif;">Next Steps</div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
         ${[
-          `Pay your security deposit of ${effectiveDepositVnd.toLocaleString()} VND within 72 hours to secure your room. This deposit is fully refundable at the end of your stay, provided there is no damage.`,
-          `Pay your first month's rent 14 days before your move-in date via the button in your guest portal. Ongoing monthly rent is due one month from your move-in date, then recurring on the same date each month.`,
+          `Pay your security deposit of ${effectiveDepositVnd.toLocaleString()} VND within 72 hours to lock in your dates. This deposit is fully refundable at the end of your stay, provided there is no damage.`,
+          `Pay your first month's rent before your move-in date to complete your booking. We'll send you the payment link once your deposit is received. Ongoing monthly rent is due one month from your move-in date, then recurring on the same date each month.`,
           'Review the rental agreement below — by completing payment you confirm your acceptance of these terms. A countersigned copy will be emailed to you once payment is received.',
           'Complete your guest profile — upload passport photo and visa details via your personal link below',
         ].map((step, i) => `<tr>
@@ -3349,10 +3349,10 @@ body{background:#e8e0d5;}
     <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">What happens next</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${[
-        ['01', `Pay your first month's rent + security deposit via Stripe to secure your room. Your deposit is fully refunded when you leave.`],
-        ['02', 'Open your Guest Portal to sign your contract and upload your documents'],
-        ['03', 'We\'ll send you a payment reminder a few days before each monthly due date'],
-        ['04', 'We\'ll reach out closer to your move-in date with arrival details'],
+        ['01', `Pay your security deposit via the link below within 72 hours — this locks in your dates. Your deposit is fully refundable at the end of your stay.`],
+        ['02', `Pay your first month's rent before your move-in date to complete your booking. We'll send you the payment link once your deposit is received.`],
+        ['03', 'Open your Guest Portal to sign your contract and upload your documents'],
+        ['04', 'We\'ll reach out closer to your move-in date with arrival details and house info'],
       ].map(([n, t]) => `<tr>
         <td width="32" style="padding:0 10px 12px 0;vertical-align:top;">
           <span style="display:inline-block;background:#3a3a2a;color:#c8b89a;font-size:9px;padding:3px 7px;font-family:Arial,sans-serif;letter-spacing:0.1em;">${n}</span>

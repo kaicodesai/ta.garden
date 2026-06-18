@@ -2191,10 +2191,11 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   const nights = (checkIn && checkOut) ? Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000) : 0;
   const months = link.stayType === 'monthly' ? (Math.round((nights / 30) * 10) / 10) : null;
   const totalStr = price ? `$${price.total}` : 'Monthly';
-  const depositStr = `$${deposit}`;
+  const rentStr    = effectiveRentUsd ? `$${effectiveRentUsd}` : '—';
+  const depositStr = deposit ? `$${deposit}` : '—';
   const effectiveStripe = link.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
 
-  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
+  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, rent: effectiveRentUsd, deposit, rentStr, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml = buildDirectBookingAdminEmail({ name, email, phone, room: link.room, stayType: link.stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId });
 
   const contractRates = { rentUsd: link.rentUsd || rates?.monthly || null, rentVnd: link.rentVnd || null, depositAmount: link.depositAmount || deposit || null };
@@ -2231,7 +2232,7 @@ async function adminDirectBooking(request, env, cors, ctx) {
   const rates = ROOM_RATES[room] || {};
   const effectiveRentUsd = rentUsd ? Number(rentUsd) : (rates.monthly || null);
   const effectiveRentVnd = rentVnd ? Number(rentVnd) : null;
-  const effectiveDeposit = depositAmount ? Number(depositAmount) : effectiveRentUsd;
+  const effectiveDeposit = depositAmount ? Number(depositAmount) : (rates.deposit || null);
   const effectiveStripe  = stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
 
   const enqId = `enq_${Date.now()}`;
@@ -2267,11 +2268,12 @@ async function adminDirectBooking(request, env, cors, ctx) {
   const origin = new URL(request.url).origin;
   const guestPortalUrl = `${origin}/guest.html?id=${enqId}&p=ta-garden`;
   const dateRange = checkIn && checkOut ? `${fmt(checkIn)} → ${fmt(checkOut)}` : (checkIn ? `From ${fmt(checkIn)} (ongoing)` : 'TBD');
-  const depositStr = `$${effectiveDeposit || effectiveRentUsd || '?'}`;
+  const rentStr    = effectiveRentUsd ? `$${effectiveRentUsd}` : '—';
+  const depositStr = effectiveDeposit ? `$${effectiveDeposit}` : '—';
   const totalStr   = stayType === 'monthly' ? 'Monthly' : depositStr;
   const price      = calcPrice(room, stayType, checkIn, checkOut);
 
-  const guestHtml  = buildDirectBookingGuestEmail({ name: guestName, room, stayType, checkIn, checkOut, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
+  const guestHtml  = buildDirectBookingGuestEmail({ name: guestName, room, stayType, checkIn, checkOut, dateRange, price, rent: effectiveRentUsd, deposit: effectiveDeposit, rentStr, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml  = buildDirectBookingAdminEmail({ name: guestName, email: guestEmail, phone: guestPhone, room, stayType, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, signature: guestName, enqId });
   const contractRates = { rentUsd: effectiveRentUsd, rentVnd: effectiveRentVnd, depositAmount: effectiveDeposit };
   const contractHtml  = room === 'First Floor Room'
@@ -3231,7 +3233,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 </html>`;
 }
 
-function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, deposit, totalStr, depositStr, stripeUrl, guestPortalUrl }) {
+function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, rent, deposit, rentStr, totalStr, depositStr, stripeUrl, guestPortalUrl }) {
   const firstName = name.split(' ')[0];
   const stayLabel = stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
 
@@ -3270,16 +3272,15 @@ body{background:#e8e0d5;}
   <tr><td style="padding:0 32px 24px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
       ${(() => {
-        const rentAmt = typeof deposit === 'number' ? deposit : 0;
-        const firstMonthTotal = deposit && price?.total ? deposit + (price.total - deposit) : (deposit ? deposit * 2 : null);
+        const moveInTotal = (rent && deposit) ? rent + deposit : (rent ? rent : null);
         const rows = [
           ['Room', room],
           ['Stay Type', stayLabel],
           ['Dates', dateRange],
-          ['Monthly Rent', depositStr],
+          ['Monthly Rent', rentStr || '—'],
           ['Security Deposit', `${depositStr} <span style="font-size:11px;color:#88917d;">(fully refunded on departure)</span>`],
         ];
-        if (deposit) rows.push(['Total Due to Move In', `<strong style="font-size:17px;color:#3a3a2a;">$${(deposit * 2).toLocaleString()}</strong> <span style="font-size:11px;color:#88917d;">first month + deposit</span>`]);
+        if (moveInTotal) rows.push(['Total Due to Move In', `<strong style="font-size:17px;color:#3a3a2a;">$${moveInTotal.toLocaleString()}</strong> <span style="font-size:11px;color:#88917d;">first month + deposit</span>`]);
         return rows.map(([k, v], i, a) => `<tr><td style="padding:16px 20px;${i < a.length-1 ? 'border-bottom:1px solid #e0d9d0;' : ''}${i === a.length-1 ? 'background:rgba(0,0,0,0.04);border-radius:0 0 6px 6px;' : ''}">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">${k}</p></td>
@@ -3297,8 +3298,8 @@ body{background:#e8e0d5;}
         <p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;color:#c8b89a;letter-spacing:0.1em;text-transform:uppercase;">Step 1 — Secure Your Room</p>
         <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;">To move in, your first payment covers:</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${depositStr}</strong></td></tr>
-          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit — <strong style="color:#fff;">${depositStr}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(fully refunded when you leave)</span></td></tr>
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• Security deposit (refundable) — <strong style="color:#fff;">${depositStr}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due within 72 hours)</span></td></tr>
+          <tr><td style="padding:3px 0;font-family:Arial,sans-serif;font-size:13px;color:rgba(255,255,255,0.75);">• First month's rent — <strong style="color:#fff;">${rentStr || '—'}</strong> <span style="color:rgba(255,255,255,0.45);font-size:12px;">(due 14 days before move-in)</span></td></tr>
         </table>
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="padding:0 6px 0 0;" align="center">

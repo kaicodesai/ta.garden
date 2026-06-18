@@ -1254,7 +1254,9 @@ async function guestGetElectricity(request, env, cors) {
 async function handleGalleryGet(request, env, cors) {
   const room = new URL(request.url).searchParams.get('room') || 'river-room';
   if (!env.BOOKINGS) return Response.json({ images: [] }, { headers: cors });
-  const raw = await env.BOOKINGS.get(`gallery__${room}`);
+  let raw = await env.BOOKINGS.get(`gallery__${room}`);
+  // Fallback: garden-room was previously stored as balcony-room
+  if (!raw && room === 'garden-room') raw = await env.BOOKINGS.get('gallery__balcony-room');
   const images = safeJsonParse(raw);
   return Response.json({ images }, { headers: cors });
 }

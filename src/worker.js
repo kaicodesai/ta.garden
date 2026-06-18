@@ -3272,15 +3272,14 @@ body{background:#e8e0d5;}
   <tr><td style="padding:0 32px 24px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
       ${(() => {
-        const moveInTotal = (rent && deposit) ? rent + deposit : (rent ? rent : null);
         const rows = [
           ['Room', room],
           ['Stay Type', stayLabel],
           ['Dates', dateRange],
           ['Monthly Rent', rentStr || '—'],
-          ['Security Deposit', `${depositStr} <span style="font-size:11px;color:#88917d;">(fully refunded on departure)</span>`],
+          ['Security Deposit', `${depositStr} <span style="font-size:11px;color:#88917d;">(refundable — due within 72 hours to secure room)</span>`],
         ];
-        if (moveInTotal) rows.push(['Total Due to Move In', `<strong style="font-size:17px;color:#3a3a2a;">$${moveInTotal.toLocaleString()}</strong> <span style="font-size:11px;color:#88917d;">first month + deposit</span>`]);
+        if (rent) rows.push(['First Month\'s Rent Due', `<strong style="font-size:17px;color:#3a3a2a;">${rentStr}</strong> <span style="font-size:11px;color:#88917d;">due 14 days before move-in</span>`]);
         return rows.map(([k, v], i, a) => `<tr><td style="padding:16px 20px;${i < a.length-1 ? 'border-bottom:1px solid #e0d9d0;' : ''}${i === a.length-1 ? 'background:rgba(0,0,0,0.04);border-radius:0 0 6px 6px;' : ''}">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">${k}</p></td>

@@ -21,7 +21,8 @@ const STRIPE_ROOM_LINKS = {
 };
 const STRIPE_FALLBACK = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
 function getStripeLink(room, type = 'deposit') {
-  return STRIPE_ROOM_LINKS[room]?.[type] || STRIPE_FALLBACK;
+  const link = STRIPE_ROOM_LINKS[room]?.[type];
+  return (link && !link.includes('REPLACE')) ? link : STRIPE_FALLBACK;
 }
 
 const ROOM_RATES = {

@@ -368,13 +368,18 @@ function renderPortal() {
 
     <!-- Payments -->
     ${(() => {
+      const STRIPE_FALLBACK_G = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
       const STRIPE_GUEST = {
         'The River Room':  { deposit: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',  balance: 'https://buy.stripe.com/REPLACE_RIVER_BALANCE' },
         'The Garden Room': { deposit: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT', balance: 'https://buy.stripe.com/REPLACE_GARDEN_BALANCE' },
         'The Sky Suite':   { deposit: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',    balance: 'https://buy.stripe.com/REPLACE_SKY_BALANCE' },
       };
       const RATES_G = { 'The River Room': { depositVnd: 4000000, deposit: 160 }, 'The Garden Room': { depositVnd: 4500000, deposit: 180 }, 'The Sky Suite': { depositVnd: 7000000, deposit: 280 } };
-      const links = STRIPE_GUEST[session.room] || {};
+      const rawLinks = STRIPE_GUEST[session.room] || {};
+      const links = {
+        deposit: rawLinks.deposit && !rawLinks.deposit.includes('REPLACE') ? rawLinks.deposit : STRIPE_FALLBACK_G,
+        balance: rawLinks.balance && !rawLinks.balance.includes('REPLACE') ? rawLinks.balance : STRIPE_FALLBACK_G,
+      };
       const rates = RATES_G[session.room] || {};
       const depVnd = session.depositAmount ? session.depositAmount * 25000 : (rates.depositVnd || 0);
       const depUsd = session.depositAmount || rates.deposit || 0;

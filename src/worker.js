@@ -50,7 +50,7 @@ const DEFAULT_PROPERTIES = [
     location: 'Cam Nam Island, Hội An, Vietnam',
     type: 'coliving',
     color: '#86a2a6',
-    rooms: ['The River Room', 'The Balcony Room', 'The Sky Suite', 'First Floor Room'],
+    rooms: ['The River Room', 'The Garden Room', 'The Sky Suite', 'First Floor Room'],
     icalUrl: null,
     active: true,
   },
@@ -3495,9 +3495,9 @@ function calcPrice(room, stayType, checkIn, checkOut) {
 function roomKey(name) {
   if (!name) return 'all';
   const n = name.toLowerCase();
-  if (n.includes('river'))   return 'river-room';
-  if (n.includes('balcony')) return 'balcony-room';
-  if (n.includes('sky'))     return 'sky-suite';
+  if (n.includes('river'))  return 'river-room';
+  if (n.includes('garden')) return 'garden-room';
+  if (n.includes('sky'))    return 'sky-suite';
   return 'all';
 }
 

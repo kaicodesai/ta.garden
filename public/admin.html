@@ -537,7 +537,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <span style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--mid);">Room</span>
           <select class="fc" id="galleryRoomSel" onchange="loadGallery()" style="width:auto;padding:6px 12px;">
             <option value="river-room">The River Room</option>
-            <option value="balcony-room">The Balcony Room</option>
+            <option value="garden-room">The Garden Room</option>
             <option value="sky-suite">The Sky Suite</option>
           </select>
         </div>
@@ -2417,7 +2417,7 @@ function populateRoomSelect() {
 function renderBlocked() {
   const c = document.getElementById('blkContainer');
   if (!allBlocked.length) { c.innerHTML = '<div class="empty">No blocked dates for this property.</div>'; return; }
-  const ROOM_LABELS = { all:'All Rooms','river-room':'River Room','balcony-room':'Balcony Room','sky-suite':'Sky Suite' };
+  const ROOM_LABELS = { all:'All Rooms','river-room':'River Room','garden-room':'Garden Room','sky-suite':'Sky Suite' };
   c.innerHTML = `<div class="blk-list">${allBlocked.map(b => `<div class="blk-item">
     <div>
       <div class="blk-rsn">${b.reason} <span class="blk-tag">${ROOM_LABELS[b.roomId]||b.roomId}</span></div>
@@ -2575,9 +2575,9 @@ function fmtDt(iso) {
 }
 function roomKey(n='') {
   const s = n.toLowerCase();
-  if (s.includes('river'))   return 'river-room';
-  if (s.includes('balcony')) return 'balcony-room';
-  if (s.includes('sky'))     return 'sky-suite';
+  if (s.includes('river'))  return 'river-room';
+  if (s.includes('garden')) return 'garden-room';
+  if (s.includes('sky'))    return 'sky-suite';
   return 'all';
 }
 function set(id, v) { document.getElementById(id).textContent = v; }

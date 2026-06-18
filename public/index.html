@@ -493,10 +493,10 @@ details.faq-item[open] summary::after { content: '\2212'; }
           </div>
           <div>
             <div class="room-price">
-              <span class="price-num serif">8,500,000</span>
+              <span class="price-num serif">8,000,000</span>
               <span class="price-period">&nbsp;VND / month</span>
             </div>
-            <div class="price-vnd">≈ $340 USD · billed monthly</div>
+            <div class="price-vnd">≈ $320 USD · billed monthly</div>
             <button class="btn-book-room" onclick="openBooking('The River Room')">Enquire / Book This Room &rarr;</button>
           </div>
         </div>
@@ -506,12 +506,12 @@ details.faq-item[open] summary::after { content: '\2212'; }
         </div>
       </div>
 
-      <div class="room-card wide" data-room="balcony-room">
+      <div class="room-card wide" data-room="garden-room">
         <div class="room-card-main">
           <div>
             <div class="room-floor">Floor 2</div>
-            <h3 class="room-name serif">The Balcony Room</h3>
-            <p class="room-desc">Second-floor bedroom with a private balcony — a rare feature for a monthly rental in Hội An. Lovely for morning tea, golden hour, and a breath of river air before bed.</p>
+            <h3 class="room-name serif">The Garden Room</h3>
+            <p class="room-desc">Garden-view bedroom with earthy tones, natural textures, and lush indoor plants. A calm, grounded space with its own distinct character and private en-suite.</p>
             <div class="room-features">
               <span class="tag">Private balcony</span>
               <span class="tag">En-suite bath</span>
@@ -520,16 +520,16 @@ details.faq-item[open] summary::after { content: '\2212'; }
           </div>
           <div>
             <div class="room-price">
-              <span class="price-num serif">10,000,000</span>
+              <span class="price-num serif">9,000,000</span>
               <span class="price-period">&nbsp;VND / month</span>
             </div>
-            <div class="price-vnd">≈ $400 USD · billed monthly</div>
-            <button class="btn-book-room" onclick="openBooking('The Balcony Room')">Enquire / Book This Room &rarr;</button>
+            <div class="price-vnd">≈ $360 USD · billed monthly</div>
+            <button class="btn-book-room" onclick="openBooking('The Garden Room')">Enquire / Book This Room &rarr;</button>
           </div>
         </div>
         <!-- Photo gallery -->
-        <div class="room-gallery" id="balconyRoomGallery" style="display:none">
-          <div class="rgrid" id="balconyRoomStrip"></div>
+        <div class="room-gallery" id="gardenRoomGallery" style="display:none">
+          <div class="rgrid" id="gardenRoomStrip"></div>
         </div>
       </div>
 
@@ -684,7 +684,7 @@ details.faq-item[open] summary::after { content: '\2212'; }
         <p class="testi-quote">WiFi was great, the neighbourhood is proper local, and the home itself is just really beautiful. Got more done here in 6 weeks than I had in months.</p>
         <div class="testi-author">
           <div class="testi-name">Sofía A.</div>
-          <div class="testi-detail">Barcelona &nbsp;·&nbsp; The Balcony Room &nbsp;·&nbsp; 2 months</div>
+          <div class="testi-detail">Barcelona &nbsp;·&nbsp; The Garden Room &nbsp;·&nbsp; 2 months</div>
         </div>
       </div>
 
@@ -803,8 +803,8 @@ details.faq-item[open] summary::after { content: '\2212'; }
           <label class="form-label">Which room interests you?</label>
           <select class="form-control" id="sf-room">
             <option value="">Select a room...</option>
-            <option value="The River Room">The River Room &mdash; Floor 2 (8,500,000 VND/mo)</option>
-            <option value="The Balcony Room">The Balcony Room &mdash; Floor 2 ($400/mo)</option>
+            <option value="The River Room">The River Room — Floor 2 (8,000,000 VND/mo)</option>
+            <option value="The Garden Room">The Garden Room &mdash; Floor 2 (9,000,000 VND/mo)</option>
             <option value="The Sky Suite">The Sky Suite &mdash; Floor 3 ($560/mo)</option>
           </select>
         </div>
@@ -1278,7 +1278,7 @@ let lightboxIndex = 0;
 
 const GALLERIES = [
   { slug: 'river-room',   gridId: 'riverRoomStrip',   wrapId: 'riverRoomGallery',   label: 'River Room' },
-  { slug: 'balcony-room', gridId: 'balconyRoomStrip', wrapId: 'balconyRoomGallery', label: 'Balcony Room' },
+  { slug: 'garden-room', gridId: 'gardenRoomStrip', wrapId: 'gardenRoomGallery', label: 'Garden Room' },
   { slug: 'sky-suite',    gridId: 'skySuiteStrip',    wrapId: 'skySuiteGallery',    label: 'Sky Suite' },
 ];
 

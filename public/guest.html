@@ -58,7 +58,8 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
 .booking-card { background: var(--dark); color: var(--cream); padding: 24px 28px; margin-bottom: 28px; }
 .booking-room { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; margin-bottom: 4px; }
 .booking-meta { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); margin-bottom: 16px; }
-.booking-dates { display: flex; gap: 32px; font-size: 13px; }
+.booking-dates { display: flex; gap: 20px; font-size: 13px; flex-wrap: wrap; }
+.booking-dates > div { min-width: 70px; }
 .booking-date-lbl { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(237,224,209,0.4); margin-bottom: 3px; }
 .status-pill { display: inline-block; padding: 3px 10px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid; border-radius: 1px; }
 .status-pill.confirmed { border-color: var(--green); color: var(--green); }
@@ -332,11 +333,11 @@ function renderPortal() {
       <div class="booking-dates">
         <div><div class="booking-date-lbl">Check-in</div><div>${fmt(session.checkIn)}</div></div>
         <div><div class="booking-date-lbl">Check-out</div><div>${fmt(session.checkOut)}</div></div>
-        ${session.rentUsd ? `<div><div class="booking-date-lbl">Monthly Rent</div><div>$${session.rentUsd}</div>${session.rentVnd ? `<div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">${Number(session.rentVnd).toLocaleString()} VND</div>` : ''}</div>` : ''}
+        ${session.rentUsd ? `<div><div class="booking-date-lbl">Monthly Rent</div>${session.rentVnd ? `<div>${Number(session.rentVnd).toLocaleString()} ₫</div><div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">≈ $${session.rentUsd} USD</div>` : `<div>$${session.rentUsd}</div>`}</div>` : ''}
         ${(() => {
           if (!session.depositAmount) return '';
           const depVnd = session.depositAmount * 25000;
-          return `<div><div class="booking-date-lbl">Security Deposit</div><div>$${session.depositAmount}</div><div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">${depVnd.toLocaleString()} VND</div></div>`;
+          return `<div><div class="booking-date-lbl">Security Deposit</div><div>${depVnd.toLocaleString()} ₫</div><div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">≈ $${session.depositAmount} USD</div></div>`;
         })()}
         ${(() => {
           if (!session.rentUsd || !session.checkIn || !session.checkOut) return '';
@@ -429,11 +430,10 @@ function renderPortal() {
              <button onclick="submitContractSign()" style="padding:12px 28px;background:var(--dark,#3a3a2a);color:#c8b89a;border:none;border-radius:4px;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;">Sign Agreement</button>
              <div id="contractSignError" style="margin-top:10px;font-size:13px;color:var(--red,#c0392b);display:none;"></div>`
           : `<div style="padding:14px 16px;background:var(--light);border-radius:6px;">
-               <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+               <div style="display:flex;align-items:center;gap:10px;">
                  <span style="font-size:16px;">🔒</span>
-                 <span style="font-size:13px;color:var(--mid);">Signing available once your deposit payment is confirmed.</span>
+                 <span style="font-size:13px;color:var(--mid);">Signing available once your security deposit is confirmed.</span>
                </div>
-               <button onclick="viewGuestContract()" style="padding:7px 16px;background:var(--teal,#86a2a6);color:#fff;border:none;border-radius:4px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">View Agreement →</button>
              </div>`
       }
     </div>

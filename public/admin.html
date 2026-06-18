@@ -1345,15 +1345,15 @@ function getPaymentStatus(enq) {
   const ob = enq.onboarding || {};
   if (ob.paymentReceived || ob.balanceReceived) return { label: 'Fully Paid', cls: 'pay-fully-paid' };
   if (ob.depositReceived) {
-    if (!enq.checkIn) return { label: 'Balance Pending', cls: 'pay-balance-pending' };
+    if (!enq.checkIn) return { label: "First Month's Rent Pending", cls: 'pay-balance-pending' };
     const days = Math.ceil((new Date(enq.checkIn) - Date.now()) / 86400000);
-    return days <= 14 ? { label: 'Balance Due', cls: 'pay-balance-due' } : { label: 'Balance Pending', cls: 'pay-balance-pending' };
+    return days <= 14 ? { label: 'Rent Due', cls: 'pay-balance-due' } : { label: "First Month's Rent Pending", cls: 'pay-balance-pending' };
   }
   if (enq.confirmedAt) {
     const hoursElapsed = (Date.now() - new Date(enq.confirmedAt)) / 3600000;
-    if (hoursElapsed > 72) return { label: 'Deposit Overdue', cls: 'pay-overdue' };
+    if (hoursElapsed > 72) return { label: 'Security Deposit Overdue', cls: 'pay-overdue' };
   }
-  if (enq.status === 'confirmed') return { label: 'Deposit Pending', cls: 'pay-deposit-pending' };
+  if (enq.status === 'confirmed') return { label: 'Security Deposit Pending', cls: 'pay-deposit-pending' };
   return null;
 }
 
@@ -1633,8 +1633,8 @@ async function openProfileModal(id) {
   const guestPortalUrl = `${location.origin}/guest.html?id=${enq.id}&p=${currentProp?.id || 'ta-garden'}`;
 
   const checklistItems = [
-    { key: 'depositReceived',  label: 'Deposit Received',        legacyKey: 'paymentReceived' },
-    { key: 'balanceReceived',  label: 'Balance Received',         legacyKey: 'paymentReceived' },
+    { key: 'depositReceived',  label: 'Security Deposit Received',    legacyKey: 'paymentReceived' },
+    { key: 'balanceReceived',  label: "First Month's Rent Received",  legacyKey: 'paymentReceived' },
     { key: 'contractSigned',   label: 'Contract Signed' },
     { key: 'passportUploaded', label: 'Passport Uploaded' },
     { key: 'visaUploaded',     label: 'Visa Document Uploaded' },

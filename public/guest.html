@@ -370,15 +370,15 @@ function renderPortal() {
     ${(() => {
       const STRIPE_FALLBACK_G = 'https://buy.stripe.com/28E6oHeeA3CJ9spehC53O03';
       const STRIPE_GUEST = {
-        'The River Room':  { deposit: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',  balance: 'https://buy.stripe.com/REPLACE_RIVER_BALANCE' },
-        'The Garden Room': { deposit: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT', balance: 'https://buy.stripe.com/REPLACE_GARDEN_BALANCE' },
-        'The Sky Suite':   { deposit: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',    balance: 'https://buy.stripe.com/REPLACE_SKY_BALANCE' },
+        'The River Room':  { depositLink: 'https://buy.stripe.com/REPLACE_RIVER_DEPOSIT',  rentLink: 'https://buy.stripe.com/REPLACE_RIVER_BALANCE' },
+        'The Garden Room': { depositLink: 'https://buy.stripe.com/REPLACE_GARDEN_DEPOSIT', rentLink: 'https://buy.stripe.com/REPLACE_GARDEN_BALANCE' },
+        'The Sky Suite':   { depositLink: 'https://buy.stripe.com/REPLACE_SKY_DEPOSIT',    rentLink: 'https://buy.stripe.com/REPLACE_SKY_BALANCE' },
       };
       const RATES_G = { 'The River Room': { depositVnd: 4000000, deposit: 160 }, 'The Garden Room': { depositVnd: 4500000, deposit: 180 }, 'The Sky Suite': { depositVnd: 7000000, deposit: 280 } };
       const rawLinks = STRIPE_GUEST[session.room] || {};
       const links = {
-        deposit: rawLinks.deposit && !rawLinks.deposit.includes('REPLACE') ? rawLinks.deposit : STRIPE_FALLBACK_G,
-        balance: rawLinks.balance && !rawLinks.balance.includes('REPLACE') ? rawLinks.balance : STRIPE_FALLBACK_G,
+        depositLink: rawLinks.depositLink && !rawLinks.depositLink.includes('REPLACE') ? rawLinks.depositLink : STRIPE_FALLBACK_G,
+        rentLink: rawLinks.rentLink && !rawLinks.rentLink.includes('REPLACE') ? rawLinks.rentLink : STRIPE_FALLBACK_G,
       };
       const rates = RATES_G[session.room] || {};
       const depVnd = session.depositAmount ? session.depositAmount * 25000 : (rates.depositVnd || 0);
@@ -392,9 +392,9 @@ function renderPortal() {
           const dueDate = new Date(new Date(session.checkIn).getTime() - 14 * 86400000);
           const daysLeft = Math.ceil((dueDate - Date.now()) / 86400000);
           const urgColor = daysLeft <= 7 ? '#e65100' : '#1565c0';
-          balDueHtml = `<div style="margin-bottom:10px;padding:10px 12px;background:#f5f0eb;border-radius:4px;font-size:12px;color:${urgColor};">📅 Balance due by <strong>${dueDate.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</strong>${daysLeft > 0 ? ' ('+daysLeft+' days)' : ' — due now'}</div>`;
+          balDueHtml = `<div style="margin-bottom:10px;padding:10px 12px;background:#f5f0eb;border-radius:4px;font-size:12px;color:${urgColor};">📅 First month's rent due by <strong>${dueDate.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'})}</strong>${daysLeft > 0 ? ' ('+daysLeft+' days)' : ' — due now'}</div>`;
         }
-        return `<div class="section"><div class="section-title">Payments</div><div style="color:var(--green,#4caf50);font-size:13px;margin-bottom:10px;">✓ Deposit received</div>${balDueHtml}${links.balance ? `<a href="${links.balance}" style="display:block;padding:13px 20px;background:var(--dark,#3a3a2a);color:var(--cream,#ede0d1);text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;text-align:center;">Pay Balance — ${balVnd.toLocaleString()} VND${balUsd?' (~$'+balUsd+')':''} →</a>` : ''}</div>`;
+        return `<div class="section"><div class="section-title">Payments</div><div style="color:var(--green,#4caf50);font-size:13px;margin-bottom:10px;">✓ Security deposit received</div>${balDueHtml}${links.rentLink ? `<a href="${links.rentLink}" style="display:block;padding:13px 20px;background:var(--dark,#3a3a2a);color:var(--cream,#ede0d1);text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;text-align:center;">Pay First Month's Rent — ${balVnd.toLocaleString()} VND${balUsd?' (~$'+balUsd+')':''} →</a>` : ''}</div>`;
       }
       let countdownHtml = '';
       if (session.confirmedAt) {
@@ -404,10 +404,10 @@ function renderPortal() {
           const hrs = Math.floor(remMs / 3600000); const mins = Math.floor((remMs % 3600000) / 60000);
           countdownHtml = `<div style="margin:8px 0;padding:10px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:12px;color:#f57f17;">⏱ Due in <strong>${hrs}h ${mins}m</strong> — ${new Date(dueMs).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</div>`;
         } else {
-          countdownHtml = `<div style="margin:8px 0;padding:10px 12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:4px;font-size:12px;color:#c62828;">⚠️ Deposit overdue — please contact hi@soulandlunawellness.com</div>`;
+          countdownHtml = `<div style="margin:8px 0;padding:10px 12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:4px;font-size:12px;color:#c62828;">⚠️ Security deposit overdue — please contact hi@soulandlunawellness.com</div>`;
         }
       }
-      return `<div class="section"><div class="section-title">Payments</div><p style="font-size:13px;color:var(--mid);margin:0 0 8px;line-height:1.6;">Pay your deposit to secure your room. Fully refunded on departure.</p><div style="font-size:14px;color:var(--stone,#3a3a2a);margin-bottom:4px;"><strong>${depVnd.toLocaleString()} VND</strong>${depUsd ? `<span style="font-size:11px;color:var(--mid);margin-left:6px;">(~$${depUsd})</span>` : ''}</div>${countdownHtml}${links.deposit ? `<a href="${links.deposit}" style="display:block;margin-top:10px;padding:13px 20px;background:var(--dark,#3a3a2a);color:var(--cream,#ede0d1);text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;text-align:center;">Pay Deposit →</a>` : ''}<div style="margin-top:14px;padding:12px;background:var(--light,#f5f0eb);border-radius:4px;font-size:11px;color:var(--mid);line-height:1.7;"><strong style="display:block;margin-bottom:4px;letter-spacing:0.08em;text-transform:uppercase;font-size:10px;">Cancellation Policy</strong>30+ days: fully refundable · 14–29 days: 50% refunded · Under 14 days: non-refundable</div></div>`;
+      return `<div class="section"><div class="section-title">Payments</div><p style="font-size:13px;color:var(--mid);margin:0 0 8px;line-height:1.6;">Pay your security deposit to secure your room. This deposit is fully refundable at the end of your stay, provided there is no damage.</p><div style="font-size:14px;color:var(--stone,#3a3a2a);margin-bottom:4px;"><strong>${depVnd.toLocaleString()} VND</strong>${depUsd ? `<span style="font-size:11px;color:var(--mid);margin-left:6px;">(~$${depUsd})</span>` : ''}</div>${countdownHtml}${links.depositLink ? `<a href="${links.depositLink}" style="display:block;margin-top:10px;padding:13px 20px;background:var(--dark,#3a3a2a);color:var(--cream,#ede0d1);text-decoration:none;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;text-align:center;">Pay Security Deposit (Refundable) →</a>` : ''}<div style="margin-top:14px;padding:12px;background:var(--light,#f5f0eb);border-radius:4px;font-size:11px;color:var(--mid);line-height:1.7;"><strong style="display:block;margin-bottom:4px;letter-spacing:0.08em;text-transform:uppercase;font-size:10px;">Cancellation Policy</strong>Security deposit: 30+ days: fully refunded · 14–29 days: 50% refunded · Under 14 days: non-refundable. First month's rent is only charged if cancelled within 14 days of move-in.</div></div>`;
     })()}
 
     <!-- Contract Signing -->

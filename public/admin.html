@@ -768,11 +768,16 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
       <!-- Monthly Snapshot -->
       <div style="margin-bottom:20px;">
         <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--mid);margin-bottom:10px;">Monthly Snapshot</div>
-        <div class="fin-overview" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;">
+        <div class="fin-overview" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:12px;">
           <div class="fin-card">
-            <div class="fin-card-lbl">Monthly Revenue</div>
+            <div class="fin-card-lbl">This Month</div>
+            <div class="fin-card-n" id="snap-thismonth">—</div>
+            <div class="fin-card-sub" id="snap-thismonth-sub">current month</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-card-lbl">Run Rate</div>
             <div class="fin-card-n" id="snap-revenue">—</div>
-            <div class="fin-card-sub" id="snap-revenue-sub">confirmed bookings</div>
+            <div class="fin-card-sub" id="snap-revenue-sub">at full occupancy</div>
           </div>
           <div class="fin-card">
             <div class="fin-card-lbl">Monthly Operating</div>
@@ -3840,10 +3845,21 @@ function renderFinancials() {
   const pendingExp   = allExpenses.filter(e => !e.paid).reduce((s,e) => s + (e.amountUsd||0), 0);
   const net          = totalRevenue - totalExp;
 
-  // Monthly revenue from active confirmed stays
-  const monthlyRev = confirmed.reduce((s,e) => {
+  // Run Rate: all confirmed monthly rents at full occupancy
+  const runRate = confirmed.reduce((s,e) => {
     const rate = e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0;
     return s + rate;
+  }, 0);
+
+  // This Month: only bookings whose stay overlaps the current calendar month
+  const _now = new Date();
+  const _mStart = new Date(_now.getFullYear(), _now.getMonth(), 1);
+  const _mEnd   = new Date(_now.getFullYear(), _now.getMonth() + 1, 0);
+  const thisMonthRev = confirmed.reduce((s, e) => {
+    if (!e.checkIn || !e.checkOut) return s;
+    const ci = new Date(e.checkIn), co = new Date(e.checkOut);
+    if (ci <= _mEnd && co >= _mStart) return s + (e.rentUsd || ROOM_RATES_JS[e.room]?.monthly || 0);
+    return s;
   }, 0);
 
   document.getElementById('fin-revenue').textContent  = totalRevenue ? '$' + totalRevenue.toLocaleString() : '—';
@@ -3857,9 +3873,13 @@ function renderFinancials() {
 
   // ── Monthly snapshot ──
   const monthlyOpex = allRecurring.reduce((s, r) => s + (r.monthlyUsd || 0), 0);
-  const monthlyNet  = monthlyRev - monthlyOpex;
-  document.getElementById('snap-revenue').textContent = monthlyRev  ? '$' + monthlyRev.toLocaleString()           : '—';
-  document.getElementById('snap-opex').textContent    = monthlyOpex ? '$' + Math.round(monthlyOpex).toLocaleString() : '—';
+  const monthlyNet  = runRate - monthlyOpex;
+  const _mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const _mLabel = `${_mNames[_now.getMonth()]} ${_now.getFullYear()}`;
+  document.getElementById('snap-thismonth').textContent    = thisMonthRev ? '$' + thisMonthRev.toLocaleString() : '—';
+  document.getElementById('snap-thismonth-sub').textContent = _mLabel;
+  document.getElementById('snap-revenue').textContent      = runRate ? '$' + runRate.toLocaleString() : '—';
+  document.getElementById('snap-opex').textContent         = monthlyOpex ? '$' + Math.round(monthlyOpex).toLocaleString() : '—';
   const snapNetEl = document.getElementById('snap-net');
   snapNetEl.textContent  = monthlyNet >= 0 ? '+$' + Math.round(monthlyNet).toLocaleString() : '-$' + Math.abs(Math.round(monthlyNet)).toLocaleString();
   snapNetEl.style.color  = monthlyNet >= 0 ? 'var(--green)' : 'var(--red)';
@@ -3875,7 +3895,7 @@ function renderFinancials() {
     const months = Math.ceil(Math.abs(net) / monthlyNet);
     beEl.textContent = `${months} mo`; beEl.style.color = 'var(--dark)';
     beSub.textContent = `at $${Math.round(monthlyNet).toLocaleString()}/mo net`;
-  } else if (monthlyRev > 0 && monthlyNet <= 0) {
+  } else if (runRate > 0 && monthlyNet <= 0) {
     beEl.textContent = '∞'; beEl.style.color = 'var(--red)';
     beSub.textContent = 'operating costs exceed revenue';
   } else {

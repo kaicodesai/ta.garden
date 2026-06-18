@@ -2194,8 +2194,10 @@ async function handleBookingLinkConfirm(request, env, cors, ctx) {
   const rentStr    = effectiveRentUsd ? `$${effectiveRentUsd}` : '—';
   const depositStr = deposit ? `$${deposit}` : '—';
   const effectiveStripe = link.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+  const rentVnd1    = link.rentVnd || rates.vnd || null;
+  const depositVnd1 = rates.depositVnd || null;
 
-  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, rent: effectiveRentUsd, deposit, rentStr, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
+  const guestHtml = buildDirectBookingGuestEmail({ name, room: link.room, stayType: link.stayType, checkIn, checkOut, dateRange, price, rent: effectiveRentUsd, deposit, rentStr, totalStr, depositStr, rentVnd: rentVnd1, depositVnd: depositVnd1, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml = buildDirectBookingAdminEmail({ name, email, phone, room: link.room, stayType: link.stayType, dateRange, price, deposit, totalStr, depositStr, signature, enqId });
 
   const contractRates = { rentUsd: link.rentUsd || rates?.monthly || null, rentVnd: link.rentVnd || null, depositAmount: link.depositAmount || deposit || null };
@@ -2272,8 +2274,10 @@ async function adminDirectBooking(request, env, cors, ctx) {
   const depositStr = effectiveDeposit ? `$${effectiveDeposit}` : '—';
   const totalStr   = stayType === 'monthly' ? 'Monthly' : depositStr;
   const price      = calcPrice(room, stayType, checkIn, checkOut);
+  const rentVnd2    = effectiveRentVnd || rates.vnd || null;
+  const depositVnd2 = rates.depositVnd || null;
 
-  const guestHtml  = buildDirectBookingGuestEmail({ name: guestName, room, stayType, checkIn, checkOut, dateRange, price, rent: effectiveRentUsd, deposit: effectiveDeposit, rentStr, totalStr, depositStr, stripeUrl: effectiveStripe, guestPortalUrl });
+  const guestHtml  = buildDirectBookingGuestEmail({ name: guestName, room, stayType, checkIn, checkOut, dateRange, price, rent: effectiveRentUsd, deposit: effectiveDeposit, rentStr, totalStr, depositStr, rentVnd: rentVnd2, depositVnd: depositVnd2, stripeUrl: effectiveStripe, guestPortalUrl });
   const adminHtml  = buildDirectBookingAdminEmail({ name: guestName, email: guestEmail, phone: guestPhone, room, stayType, dateRange, price, deposit: effectiveDeposit, totalStr, depositStr, signature: guestName, enqId });
   const contractRates = { rentUsd: effectiveRentUsd, rentVnd: effectiveRentVnd, depositAmount: effectiveDeposit };
   const contractHtml  = room === 'First Floor Room'
@@ -3233,7 +3237,7 @@ body{background:#e8e0d5;font-family:Georgia,serif;}
 </html>`;
 }
 
-function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, rent, deposit, rentStr, totalStr, depositStr, stripeUrl, guestPortalUrl }) {
+function buildDirectBookingGuestEmail({ name, room, stayType, checkIn, checkOut, dateRange, price, rent, deposit, rentStr, totalStr, depositStr, rentVnd, depositVnd, stripeUrl, guestPortalUrl }) {
   const firstName = name.split(' ')[0];
   const stayLabel = stayType === 'monthly' ? 'Monthly Stay' : 'Short Stay';
 
@@ -3272,14 +3276,18 @@ body{background:#e8e0d5;}
   <tr><td style="padding:0 32px 24px;" class="pad">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ebe4;border-radius:6px;">
       ${(() => {
+        const fmtVnd = v => v ? `${Number(v).toLocaleString()} ₫` : null;
+        const rentDisplay    = rentVnd    ? `${fmtVnd(rentVnd)}<br><span style="font-size:11px;color:#88917d;">≈ ${rentStr} USD</span>`    : (rentStr || '—');
+        const depositDisplay = depositVnd ? `${fmtVnd(depositVnd)}<br><span style="font-size:11px;color:#88917d;">≈ ${depositStr} USD</span>` : (depositStr || '—');
+        const rentDueDisplay = rentVnd    ? `<strong style="font-size:17px;color:#3a3a2a;">${fmtVnd(rentVnd)}</strong><br><span style="font-size:11px;color:#88917d;">≈ ${rentStr} USD &nbsp;·&nbsp; due 14 days before move-in</span>` : `<strong style="font-size:17px;color:#3a3a2a;">${rentStr}</strong> <span style="font-size:11px;color:#88917d;">due 14 days before move-in</span>`;
         const rows = [
           ['Room', room],
           ['Stay Type', stayLabel],
           ['Dates', dateRange],
-          ['Monthly Rent', rentStr || '—'],
-          ['Security Deposit', `${depositStr} <span style="font-size:11px;color:#88917d;">(refundable — due within 72 hours to secure room)</span>`],
+          ['Monthly Rent', rentDisplay],
+          ['Security Deposit', `${depositDisplay} <span style="font-size:11px;color:#88917d;">(refundable — due within 72 hours to secure room)</span>`],
         ];
-        if (rent) rows.push(['First Month\'s Rent Due', `<strong style="font-size:17px;color:#3a3a2a;">${rentStr}</strong> <span style="font-size:11px;color:#88917d;">due 14 days before move-in</span>`]);
+        if (rent) rows.push(['First Month\'s Rent Due', rentDueDisplay]);
         return rows.map(([k, v], i, a) => `<tr><td style="padding:16px 20px;${i < a.length-1 ? 'border-bottom:1px solid #e0d9d0;' : ''}${i === a.length-1 ? 'background:rgba(0,0,0,0.04);border-radius:0 0 6px 6px;' : ''}">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td><p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#88917d;letter-spacing:0.1em;text-transform:uppercase;">${k}</p></td>

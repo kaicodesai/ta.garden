@@ -320,7 +320,9 @@ async function handleEnquiry(request, env, cors, ctx) {
 
 async function handleAvailability(request, env, cors) {
   try {
-    const propId = new URL(request.url).searchParams.get('property') || 'ta-garden';
+    const url    = new URL(request.url);
+    const propId = url.searchParams.get('property') || 'ta-garden';
+    const roomFilter = url.searchParams.get('room') || null; // e.g. 'river-room'
     if (!env.BOOKINGS) return Response.json({ blocked: [] }, { headers: cors });
 
     const [bVal, eVal, iVal] = await Promise.all([
@@ -334,7 +336,7 @@ async function handleAvailability(request, env, cors) {
     const icalEvts  = iVal ? JSON.parse(iVal) : [];
 
     const confirmedBlocks = enquiries
-      .filter(e => e.status === 'confirmed' && e.checkIn && e.checkOut)
+      .filter(e => e.status === 'confirmed' && e.checkIn && e.checkOut && !ROOM_RATES[e.room]?.internal)
       .map(e => ({ id: e.id, start: e.checkIn, end: e.checkOut, reason: `Booked — ${e.name}`, roomId: roomKey(e.room) }));
 
     const icalBlocks = icalEvts.map(e => ({
@@ -342,7 +344,12 @@ async function handleAvailability(request, env, cors) {
       reason: e.summary || 'Airbnb Booking', roomId: 'all',
     }));
 
-    return Response.json({ blocked: [...blocked, ...confirmedBlocks, ...icalBlocks] }, { headers: cors });
+    const allBlocks = [...blocked, ...confirmedBlocks, ...icalBlocks];
+    const filtered = roomFilter
+      ? allBlocks.filter(b => !b.roomId || b.roomId === roomFilter || b.roomId === 'all')
+      : allBlocks;
+
+    return Response.json({ blocked: filtered }, { headers: cors });
   } catch {
     return Response.json({ blocked: [] }, { headers: cors });
   }

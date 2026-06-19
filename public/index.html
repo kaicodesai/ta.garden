@@ -1049,9 +1049,12 @@ details.faq-item[open] summary::after { content: '\2212'; }
     return y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
   }
 
+  const ROOM_SLUGS = { 'The River Room': 'river-room', 'The Garden Room': 'garden-room', 'The Sky Suite': 'sky-suite' };
+
   function isBlocked(y, m, d) {
     const s = d2s(y, m, d);
-    return blocked.some(r => s >= r.start && s <= r.end);
+    const slug = ROOM_SLUGS[currentRoom] || '';
+    return blocked.some(r => s >= r.start && s <= r.end && (!r.roomId || !slug || r.roomId === slug || r.roomId === 'all'));
   }
 
   function isPast(y, m, d) {
@@ -1144,7 +1147,8 @@ details.faq-item[open] summary::after { content: '\2212'; }
 
   async function fetchBlocked() {
     try {
-      const r = await fetch('/api/availability');
+      const slug = ROOM_SLUGS[currentRoom] || '';
+      const r = await fetch(slug ? `/api/availability?room=${slug}` : '/api/availability');
       const data = await r.json();
       blocked = data.blocked || [];
       renderCal();

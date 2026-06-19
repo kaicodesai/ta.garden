@@ -1038,7 +1038,7 @@ details.faq-item[open] summary::after { content: '\2212'; }
   function isBlocked(y, m, d) {
     const s = d2s(y, m, d);
     const slug = ROOM_SLUGS[currentRoom] || '';
-    return blocked.some(r => s >= r.start && s <= r.end && (!r.roomId || !slug || r.roomId === slug || r.roomId === 'all'));
+    return blocked.some(r => s >= r.start && (r.end == null || s <= r.end) && (!r.roomId || !slug || r.roomId === slug || r.roomId === 'all'));
   }
 
   function isPast(y, m, d) {

@@ -337,10 +337,11 @@ async function handleAvailability(request, env, cors) {
     const enquiries = eVal ? JSON.parse(eVal) : [];
     const icalEvts  = iVal ? JSON.parse(iVal) : [];
 
+    const FAR_FUTURE = '2099-12-31';
     const confirmedBlocks = enquiries
-      .filter(e => e.status === 'confirmed' && e.checkIn && e.checkOut && !ROOM_RATES[e.room]?.internal
+      .filter(e => e.status === 'confirmed' && e.checkIn && !ROOM_RATES[e.room]?.internal
         && (e.onboarding?.paymentReceived || e.onboarding?.depositReceived))
-      .map(e => ({ id: e.id, start: e.checkIn, end: e.checkOut, reason: `Booked — ${e.name}`, roomId: roomKey(e.room) }));
+      .map(e => ({ id: e.id, start: e.checkIn, end: e.checkOut || FAR_FUTURE, reason: `Booked — ${e.name}`, roomId: roomKey(e.room) }));
 
     const icalBlocks = icalEvts.map(e => ({
       id: `ical_${e.start}`, start: e.start, end: e.end,

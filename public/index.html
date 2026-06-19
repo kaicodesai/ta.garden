@@ -854,8 +854,20 @@ details.faq-item[open] summary::after { content: '\2212'; }
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Desired Move-Out Date <span style="font-size:11px;color:var(--mid);">(optional)</span></label>
-          <input type="date" class="form-control" id="sf-checkout">
+          <label class="form-label">Desired Move-Out Date</label>
+          <div class="sf-date-trigger" id="sfco-trigger" onclick="sfcoToggleCal()" style="opacity:0.45;pointer-events:none;">
+            <span id="sfco-display">Select move-in date first</span>
+            <span style="font-size:11px;opacity:0.45;">▼</span>
+          </div>
+          <input type="hidden" id="sf-checkout">
+          <div class="sf-cal-popup" id="sfco-cal-popup" style="display:none;">
+            <div class="sf-cal-nav">
+              <button class="sf-cal-nav-btn" type="button" onclick="sfcoNavCal(-1)">‹</button>
+              <span class="sf-cal-month-lbl" id="sfco-cal-month"></span>
+              <button class="sf-cal-nav-btn" type="button" onclick="sfcoNavCal(1)">›</button>
+            </div>
+            <div class="cal-grid" id="sfco-cal-grid"></div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Tell us a little about yourself</label>
@@ -1222,7 +1234,8 @@ details.faq-item[open] summary::after { content: '\2212'; }
 
     if (!name || !email || !room) { setStatus(st, 'err', 'Please fill in your name, email, and select a room.'); return; }
     if (!date) { setStatus(st, 'err', 'Please select a move-in date.'); return; }
-    if (checkout && checkout <= date) { setStatus(st, 'err', 'Move-out date must be after move-in date.'); return; }
+    if (!checkout) { setStatus(st, 'err', 'Please select a move-out date.'); return; }
+    if (checkout <= date) { setStatus(st, 'err', 'Move-out date must be after move-in date.'); return; }
 
     btn.textContent = 'Sending…'; btn.disabled = true; st.textContent = '';
 
@@ -1255,22 +1268,26 @@ details.faq-item[open] summary::after { content: '\2212'; }
   }
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeBooking(); closeLightbox(); sfCloseCal(); }
+    if (e.key === 'Escape') { closeBooking(); closeLightbox(); sfCloseCal(); sfcoCloseCal(); }
     if (e.key === 'ArrowLeft')  lightboxStep(-1);
     if (e.key === 'ArrowRight') lightboxStep(1);
   });
 
   /* ── Section form calendar ── */
   let sfBlocked = [], sfCalY2, sfCalM2, sfSelDate = null, sfCalOpen = false;
+  let sfcoCalY, sfcoCalM, sfSelCo = null, sfcoOpen = false;
 
   window.sfRoomChanged = function() {
     const room = document.getElementById('sf-room').value;
-    sfSelDate = null;
+    sfSelDate = null; sfSelCo = null;
     document.getElementById('sf-date').value = '';
-    const disp = document.getElementById('sf-date-display');
-    disp.textContent = 'Select a date';
+    document.getElementById('sf-checkout').value = '';
+    document.getElementById('sf-date-display').textContent = 'Select a date';
     document.getElementById('sf-date-trigger').classList.remove('has-val');
-    sfCloseCal();
+    document.getElementById('sfco-display').textContent = 'Select move-in date first';
+    const coTrigger = document.getElementById('sfco-trigger');
+    coTrigger.classList.remove('has-val'); coTrigger.style.opacity = '0.45'; coTrigger.style.pointerEvents = 'none';
+    sfCloseCal(); sfcoCloseCal();
     if (!room) { sfBlocked = []; return; }
     const slug = ROOM_SLUGS[room] || '';
     fetch(slug ? '/api/availability?room=' + slug : '/api/availability')
@@ -1335,21 +1352,90 @@ details.faq-item[open] summary::after { content: '\2212'; }
   window.sfPickDay = function(y, m, d) {
     sfSelDate = d2s(y, m, d);
     document.getElementById('sf-date').value = sfSelDate;
-    const disp = document.getElementById('sf-date-display');
-    disp.textContent = MONTHS[m].slice(0,3) + ' ' + d + ', ' + y;
+    document.getElementById('sf-date-display').textContent = MONTHS[m].slice(0,3) + ' ' + d + ', ' + y;
     document.getElementById('sf-date-trigger').classList.add('has-val');
-    const co = document.getElementById('sf-checkout');
-    if (co) co.min = sfSelDate;
+    // Reset & unlock checkout calendar
+    sfSelCo = null;
+    document.getElementById('sf-checkout').value = '';
+    document.getElementById('sfco-display').textContent = 'Select a date';
+    const coTrigger = document.getElementById('sfco-trigger');
+    coTrigger.classList.remove('has-val'); coTrigger.style.opacity = '1'; coTrigger.style.pointerEvents = 'auto';
+    const [yr, mo] = sfSelDate.split('-');
+    sfcoCalY = +yr; sfcoCalM = +mo - 1;
     sfRenderCal2();
     sfCloseCal();
+    setTimeout(sfcoToggleCal, 80);
   };
 
-  // Close sf calendar when clicking outside
-  document.addEventListener('click', function(e) {
-    if (!document.getElementById('sf-date-trigger')?.contains(e.target) &&
-        !document.getElementById('sf-cal-popup')?.contains(e.target)) {
-      sfCloseCal();
+  /* ── Section form checkout calendar ── */
+  window.sfcoToggleCal = function() {
+    sfcoOpen = !sfcoOpen;
+    const popup = document.getElementById('sfco-cal-popup');
+    const trigger = document.getElementById('sfco-trigger');
+    if (sfcoOpen) {
+      if (!sfcoCalY) { const now = new Date(); sfcoCalY = now.getFullYear(); sfcoCalM = now.getMonth(); }
+      sfcoRenderCal();
+      popup.style.display = 'block';
+      trigger.classList.add('open');
+    } else {
+      popup.style.display = 'none';
+      trigger.classList.remove('open');
     }
+  };
+
+  window.sfcoCloseCal = function() {
+    sfcoOpen = false;
+    const popup = document.getElementById('sfco-cal-popup');
+    const trigger = document.getElementById('sfco-trigger');
+    if (popup) popup.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+  };
+
+  window.sfcoNavCal = function(dir) {
+    sfcoCalM += dir;
+    if (sfcoCalM < 0)  { sfcoCalM = 11; sfcoCalY--; }
+    if (sfcoCalM > 11) { sfcoCalM = 0;  sfcoCalY++; }
+    sfcoRenderCal();
+  };
+
+  function sfcoRenderCal() {
+    document.getElementById('sfco-cal-month').textContent = MONTHS[sfcoCalM] + ' ' + sfcoCalY;
+    let h = DAYS.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+    const first = new Date(sfcoCalY, sfcoCalM, 1).getDay();
+    const total = new Date(sfcoCalY, sfcoCalM + 1, 0).getDate();
+    for (let i = 0; i < first; i++) h += '<div class="cal-day cal-empty"></div>';
+    for (let d = 1; d <= total; d++) {
+      const s = d2s(sfcoCalY, sfcoCalM, d);
+      const blk = sfBlocked.some(r => s >= r.start && (r.end == null || s <= r.end));
+      const beforeMoveIn = sfSelDate && s <= sfSelDate;
+      const sel = s === sfSelCo;
+      const today = isToday(sfcoCalY, sfcoCalM, d);
+      let cls = 'cal-day';
+      if (blk) cls += ' cal-blocked';
+      else if (beforeMoveIn) cls += ' cal-past';
+      if (today) cls += ' cal-today';
+      if (sel) cls += ' cal-sel';
+      const click = (!blk && !beforeMoveIn) ? ' onclick="sfcoPickDay(' + sfcoCalY + ',' + sfcoCalM + ',' + d + ')"' : '';
+      h += '<div class="' + cls + '"' + click + '>' + d + '</div>';
+    }
+    document.getElementById('sfco-cal-grid').innerHTML = h;
+  }
+
+  window.sfcoPickDay = function(y, m, d) {
+    sfSelCo = d2s(y, m, d);
+    document.getElementById('sf-checkout').value = sfSelCo;
+    document.getElementById('sfco-display').textContent = MONTHS[m].slice(0,3) + ' ' + d + ', ' + y;
+    document.getElementById('sfco-trigger').classList.add('has-val');
+    sfcoRenderCal();
+    sfcoCloseCal();
+  };
+
+  // Close calendars when clicking outside
+  document.addEventListener('click', function(e) {
+    const inMoveIn  = document.getElementById('sf-date-trigger')?.contains(e.target) || document.getElementById('sf-cal-popup')?.contains(e.target);
+    const inMoveOut = document.getElementById('sfco-trigger')?.contains(e.target) || document.getElementById('sfco-cal-popup')?.contains(e.target);
+    if (!inMoveIn) sfCloseCal();
+    if (!inMoveOut) sfcoCloseCal();
   });
 })();
 </script>

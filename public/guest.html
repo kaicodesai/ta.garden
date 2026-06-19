@@ -351,6 +351,9 @@ function renderPortal() {
           return `<div><div class="booking-date-lbl">Cost of Stay</div><div>$${totalUsd}</div><div style="font-size:10px;color:rgba(237,224,209,0.5);margin-top:2px;">${totalVnd.toLocaleString()} VND</div>${isProrated ? `<div style="font-size:10px;color:rgba(237,224,209,0.4);margin-top:1px;">$${proratedUsd} rent + $${dep} dep</div>` : ''}</div>`;
         })()}
       </div>
+      <div style="margin-top:14px;padding:12px 16px;background:rgba(134,162,166,0.1);border-left:2px solid rgba(134,162,166,0.4);border-radius:0 4px 4px 0;">
+        <p style="font-size:12px;color:rgba(237,224,209,0.6);line-height:1.7;margin:0;">Need to extend your stay? Contact us via WhatsApp or email and we'll update your booking dates — the calendar will reflect the change automatically.</p>
+      </div>
     </div>
 
     <!-- Onboarding progress -->

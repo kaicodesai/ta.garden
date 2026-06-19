@@ -627,7 +627,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
             <input class="fc" id="bl-checkin" type="date">
           </div>
           <div class="fg">
-            <label class="modal-lbl">Check-out Date</label>
+            <label class="modal-lbl">Check-out Date <span style="color:var(--red)">*</span></label>
             <input class="fc" id="bl-checkout" type="date">
           </div>
         </div>
@@ -1097,7 +1097,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
             <input class="fc" id="rg-checkin" type="date" style="font-size:13px;padding:8px 10px;">
           </div>
           <div>
-            <label class="modal-lbl">Check-out</label>
+            <label class="modal-lbl">Check-out <span style="color:var(--red)">*</span></label>
             <input class="fc" id="rg-checkout" type="date" style="font-size:13px;padding:8px 10px;">
           </div>
           <div>
@@ -2077,7 +2077,8 @@ async function saveDates() {
   const checkOut = document.getElementById('editCheckOut').value;
   const status = document.getElementById('datesStatus');
   if (!checkIn) { status.textContent = 'Move-in date required.'; status.style.color = 'var(--red)'; return; }
-  if (checkOut && checkOut <= checkIn) { status.textContent = 'Move-out must be after move-in.'; status.style.color = 'var(--red)'; return; }
+  if (!checkOut) { status.textContent = 'Move-out date required.'; status.style.color = 'var(--red)'; return; }
+  if (checkOut <= checkIn) { status.textContent = 'Move-out must be after move-in.'; status.style.color = 'var(--red)'; return; }
   status.textContent = 'Saving…'; status.style.color = 'var(--mid)';
   try {
     const r = await fetch('/api/admin/enquiry', {
@@ -3366,9 +3367,10 @@ async function blSendEmail() {
   const guestEmail = document.getElementById('bl-guestemail').value.trim();
   const checkIn    = document.getElementById('bl-checkin').value;
   const room       = document.getElementById('bl-room').value;
-  if (!guestName || !guestEmail || !checkIn || !room) {
+  const checkOut = document.getElementById('bl-checkout').value;
+  if (!guestName || !guestEmail || !checkIn || !checkOut || !room) {
     status.style.color = 'var(--red,#c0392b)';
-    status.textContent = 'Guest name, email, room, and check-in date are required.';
+    status.textContent = 'Guest name, email, room, check-in, and check-out date are all required.';
     return;
   }
 
@@ -3386,7 +3388,7 @@ async function blSendEmail() {
     guestEmail,
     guestPhone:    document.getElementById('bl-guestphone').value.trim(),
     checkIn,
-    checkOut:      document.getElementById('bl-checkout').value || null,
+    checkOut:      checkOut || null,
     stripeUrl:     document.getElementById('bl-stripe').value.trim(),
     notes:         document.getElementById('bl-notes').value.trim(),
     rentUsd:       rentUsd ? Number(rentUsd) : undefined,
@@ -3646,8 +3648,8 @@ async function doRestoreGuest() {
   const rentUsd   = document.getElementById('rg-rent').value;
   const resultEl  = document.getElementById('rg-result');
 
-  if (!enquiryId || !name || !email || !room || !checkIn) {
-    alert('Please fill in all required fields (ID, Name, Email, Room, Check-in).');
+  if (!enquiryId || !name || !email || !room || !checkIn || !checkOut) {
+    alert('Please fill in all required fields (ID, Name, Email, Room, Check-in, Check-out).');
     return;
   }
 

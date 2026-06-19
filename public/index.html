@@ -372,6 +372,15 @@ details.faq-item[open] summary::after { content: '\2212'; }
   .testimonials-grid { grid-template-columns: 1fr; }
   .faq-grid { grid-template-columns: 1fr; gap: 0; }
 }
+/* Section form date picker */
+.sf-date-trigger { display:flex; justify-content:space-between; align-items:center; padding:11px 14px; border:1px solid rgba(136,145,125,0.35); border-radius:4px; cursor:pointer; background:#fff; font-size:14px; color:var(--mid); transition:border-color 0.15s; }
+.sf-date-trigger:hover, .sf-date-trigger.open { border-color:var(--terra); }
+.sf-date-trigger.has-val { color:var(--dark); }
+.sf-cal-popup { border:1px solid rgba(136,145,125,0.25); border-radius:6px; padding:14px; background:#fff; margin-top:4px; box-shadow:0 4px 20px rgba(0,0,0,0.1); }
+.sf-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.sf-cal-nav-btn { background:none; border:1px solid rgba(136,145,125,0.3); padding:4px 12px; cursor:pointer; border-radius:3px; color:var(--mid); font-size:14px; line-height:1; }
+.sf-cal-nav-btn:hover { border-color:var(--terra); color:var(--terra); }
+.sf-cal-month-lbl { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; color:var(--dark); }
 </style>
 </head>
 <body>
@@ -821,7 +830,7 @@ details.faq-item[open] summary::after { content: '\2212'; }
           <p style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-top:6px;">We'll reach out via WhatsApp</p>
         <div class="form-group">
           <label class="form-label">Which room interests you?</label>
-          <select class="form-control" id="sf-room">
+          <select class="form-control" id="sf-room" onchange="sfRoomChanged()">
             <option value="">Select a room...</option>
             <option value="The River Room">The River Room — Floor 2 (8,000,000 VND/mo)</option>
             <option value="The Garden Room">The Garden Room &mdash; Floor 2 (9,000,000 VND/mo)</option>
@@ -830,11 +839,23 @@ details.faq-item[open] summary::after { content: '\2212'; }
         </div>
         <div class="form-group">
           <label class="form-label">Desired Move-In Date</label>
-          <input type="date" class="form-control" id="sf-date" required>
+          <div class="sf-date-trigger" id="sf-date-trigger" onclick="sfToggleCal()">
+            <span id="sf-date-display">Select a date</span>
+            <span style="font-size:11px;opacity:0.45;">▼</span>
+          </div>
+          <input type="hidden" id="sf-date">
+          <div class="sf-cal-popup" id="sf-cal-popup" style="display:none;">
+            <div class="sf-cal-nav">
+              <button class="sf-cal-nav-btn" type="button" onclick="sfNavCal(-1)">‹</button>
+              <span class="sf-cal-month-lbl" id="sf-cal-month"></span>
+              <button class="sf-cal-nav-btn" type="button" onclick="sfNavCal(1)">›</button>
+            </div>
+            <div class="cal-grid" id="sf-cal-grid"></div>
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Desired Move-Out Date</label>
-          <input type="date" class="form-control" id="sf-checkout" required>
+          <label class="form-label">Desired Move-Out Date <span style="font-size:11px;color:var(--mid);">(optional)</span></label>
+          <input type="date" class="form-control" id="sf-checkout">
         </div>
         <div class="form-group">
           <label class="form-label">Tell us a little about yourself</label>
@@ -1201,8 +1222,7 @@ details.faq-item[open] summary::after { content: '\2212'; }
 
     if (!name || !email || !room) { setStatus(st, 'err', 'Please fill in your name, email, and select a room.'); return; }
     if (!date) { setStatus(st, 'err', 'Please select a move-in date.'); return; }
-    if (!checkout) { setStatus(st, 'err', 'Please select a move-out date.'); return; }
-    if (checkout <= date) { setStatus(st, 'err', 'Move-out date must be after move-in date.'); return; }
+    if (checkout && checkout <= date) { setStatus(st, 'err', 'Move-out date must be after move-in date.'); return; }
 
     btn.textContent = 'Sending…'; btn.disabled = true; st.textContent = '';
 
@@ -1235,9 +1255,101 @@ details.faq-item[open] summary::after { content: '\2212'; }
   }
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeBooking(); closeLightbox(); }
+    if (e.key === 'Escape') { closeBooking(); closeLightbox(); sfCloseCal(); }
     if (e.key === 'ArrowLeft')  lightboxStep(-1);
     if (e.key === 'ArrowRight') lightboxStep(1);
+  });
+
+  /* ── Section form calendar ── */
+  let sfBlocked = [], sfCalY2, sfCalM2, sfSelDate = null, sfCalOpen = false;
+
+  window.sfRoomChanged = function() {
+    const room = document.getElementById('sf-room').value;
+    sfSelDate = null;
+    document.getElementById('sf-date').value = '';
+    const disp = document.getElementById('sf-date-display');
+    disp.textContent = 'Select a date';
+    document.getElementById('sf-date-trigger').classList.remove('has-val');
+    sfCloseCal();
+    if (!room) { sfBlocked = []; return; }
+    const slug = ROOM_SLUGS[room] || '';
+    fetch(slug ? '/api/availability?room=' + slug : '/api/availability')
+      .then(r => r.json()).then(d => { sfBlocked = d.blocked || []; })
+      .catch(() => { sfBlocked = []; });
+  };
+
+  window.sfToggleCal = function() {
+    sfCalOpen = !sfCalOpen;
+    const popup = document.getElementById('sf-cal-popup');
+    const trigger = document.getElementById('sf-date-trigger');
+    if (sfCalOpen) {
+      const now = new Date();
+      if (!sfCalY2) { sfCalY2 = now.getFullYear(); sfCalM2 = now.getMonth(); }
+      sfRenderCal2();
+      popup.style.display = 'block';
+      trigger.classList.add('open');
+    } else {
+      popup.style.display = 'none';
+      trigger.classList.remove('open');
+    }
+  };
+
+  window.sfCloseCal = function() {
+    sfCalOpen = false;
+    const popup = document.getElementById('sf-cal-popup');
+    const trigger = document.getElementById('sf-date-trigger');
+    if (popup) popup.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+  };
+
+  window.sfNavCal = function(dir) {
+    sfCalM2 += dir;
+    if (sfCalM2 < 0)  { sfCalM2 = 11; sfCalY2--; }
+    if (sfCalM2 > 11) { sfCalM2 = 0;  sfCalY2++; }
+    sfRenderCal2();
+  };
+
+  function sfRenderCal2() {
+    document.getElementById('sf-cal-month').textContent = MONTHS[sfCalM2] + ' ' + sfCalY2;
+    let h = DAYS.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+    const first = new Date(sfCalY2, sfCalM2, 1).getDay();
+    const total = new Date(sfCalY2, sfCalM2 + 1, 0).getDate();
+    for (let i = 0; i < first; i++) h += '<div class="cal-day cal-empty"></div>';
+    for (let d = 1; d <= total; d++) {
+      const s = d2s(sfCalY2, sfCalM2, d);
+      const blk = sfBlocked.some(r => s >= r.start && (r.end == null || s <= r.end));
+      const past = isPast(sfCalY2, sfCalM2, d);
+      const today = isToday(sfCalY2, sfCalM2, d);
+      const sel = s === sfSelDate;
+      let cls = 'cal-day';
+      if (blk) cls += ' cal-blocked';
+      else if (past) cls += ' cal-past';
+      if (today) cls += ' cal-today';
+      if (sel) cls += ' cal-sel';
+      const click = (!blk && !past) ? ' onclick="sfPickDay(' + sfCalY2 + ',' + sfCalM2 + ',' + d + ')"' : '';
+      h += '<div class="' + cls + '"' + click + '>' + d + '</div>';
+    }
+    document.getElementById('sf-cal-grid').innerHTML = h;
+  }
+
+  window.sfPickDay = function(y, m, d) {
+    sfSelDate = d2s(y, m, d);
+    document.getElementById('sf-date').value = sfSelDate;
+    const disp = document.getElementById('sf-date-display');
+    disp.textContent = MONTHS[m].slice(0,3) + ' ' + d + ', ' + y;
+    document.getElementById('sf-date-trigger').classList.add('has-val');
+    const co = document.getElementById('sf-checkout');
+    if (co) co.min = sfSelDate;
+    sfRenderCal2();
+    sfCloseCal();
+  };
+
+  // Close sf calendar when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('sf-date-trigger')?.contains(e.target) &&
+        !document.getElementById('sf-cal-popup')?.contains(e.target)) {
+      sfCloseCal();
+    }
   });
 })();
 </script>

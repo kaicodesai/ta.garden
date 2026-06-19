@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Policy — Ta.Garden</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --dark: #1a1a18;
+    --cream: #ede0d1;
+    --teal: #86a2a6;
+    --mid: #88917d;
+    --light: #f5f0eb;
+    --white: #faf8f5;
+    --green: #2d5a27;
+    --red: #c0392b;
+    --border: rgba(136,145,125,0.18);
+  }
+  body { font-family: 'Jost', Arial, sans-serif; background: var(--white); color: var(--dark); line-height: 1.7; }
+
+  /* Nav */
+  nav { background: var(--dark); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-brand { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--cream); text-decoration: none; }
+  .nav-back { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal); text-decoration: none; }
+  .nav-back:hover { color: var(--cream); }
+
+  /* Hero */
+  .hero { background: var(--dark); padding: 52px 32px 48px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .hero-label { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--teal); margin-bottom: 12px; }
+  .hero-title { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 300; color: var(--cream); margin-bottom: 16px; }
+  .hero-sub { font-size: 14px; color: rgba(237,224,209,0.55); max-width: 480px; margin: 0 auto; line-height: 1.8; }
+
+  /* Content */
+  .content { max-width: 720px; margin: 0 auto; padding: 60px 24px 80px; }
+
+  .section { margin-bottom: 52px; }
+  .section-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; font-family: Arial, sans-serif; }
+  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: var(--dark); margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .section p { font-size: 14px; color: #4a4a3a; line-height: 1.85; margin-bottom: 12px; }
+  .section p:last-child { margin-bottom: 0; }
+
+  /* Tiers grid */
+  .tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+  .tier { padding: 16px 18px; background: var(--light); border-left: 3px solid var(--teal); border-radius: 2px; }
+  .tier.red { border-left-color: var(--red); }
+  .tier.green { border-left-color: var(--green); }
+  .tier-when { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); font-family: Arial, sans-serif; margin-bottom: 5px; }
+  .tier-outcome { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: var(--dark); }
+
+  /* Highlight box */
+  .highlight { background: #fff8f0; border: 1px solid rgba(192,57,43,0.2); border-left: 3px solid var(--red); padding: 18px 20px; border-radius: 2px; margin: 20px 0; }
+  .highlight p { font-size: 13px; color: #4a4a3a; margin: 0; line-height: 1.8; }
+  .highlight strong { color: var(--dark); }
+
+  .info-box { background: var(--light); border: 1px solid var(--border); padding: 18px 20px; border-radius: 2px; margin: 20px 0; }
+  .info-box p { font-size: 13px; color: #4a4a3a; margin: 0; line-height: 1.8; }
+
+  /* Table */
+  .policy-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+  .policy-table th { text-align: left; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); font-family: Arial, sans-serif; font-weight: 400; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .policy-table td { padding: 13px 12px; border-bottom: 1px solid var(--border); color: #4a4a3a; vertical-align: top; }
+  .policy-table td:first-child { font-weight: 500; color: var(--dark); width: 46%; }
+  .policy-table tr:last-child td { border-bottom: none; }
+
+  /* Footer */
+  footer { background: var(--dark); text-align: center; padding: 32px 20px; }
+  footer p { font-size: 11px; color: rgba(237,224,209,0.35); font-family: Arial, sans-serif; }
+  footer a { color: var(--teal); text-decoration: none; }
+
+  @media (max-width: 560px) {
+    .tiers { grid-template-columns: 1fr; }
+    .hero-title { font-size: 32px; }
+    nav { padding: 14px 20px; }
+    .content { padding: 40px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">Ta.Garden</a>
+  <a class="nav-back" href="/">← Back to site</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">Ta.Garden · Hội An</div>
+  <h1 class="hero-title">Booking &amp; Cancellation Policy</h1>
+  <p class="hero-sub">Everything you need to know, written plainly. If you have questions, just ask us.</p>
+</div>
+
+<div class="content">
+
+  <!-- SECURITY DEPOSIT -->
+  <div class="section">
+    <div class="section-label">Security Deposit</div>
+    <h2 class="section-title">Your Security Deposit</h2>
+    <p>When you confirm a booking, a refundable security deposit equal to <strong>50% of one month's rent</strong> is required within <strong>72 hours</strong> to hold your room. If payment is not received within 72 hours, the room is released.</p>
+    <p>The deposit is held during your stay and returned to you within <strong>7 days of checkout</strong>, provided the room is in good condition. You will need to provide an electronic payment method — PayPal, Wise, or similar — to receive your refund.</p>
+    <div class="info-box">
+      <p>⚠️ If there is damage to the room beyond normal wear and tear, we may partially or fully withhold the deposit. We will always provide photo evidence of any damage before making a deduction.</p>
+    </div>
+  </div>
+
+  <!-- CANCELLATION BEFORE MOVE-IN -->
+  <div class="section">
+    <div class="section-label">Before Move-In</div>
+    <h2 class="section-title">Cancelling Before You Arrive</h2>
+    <p>If you need to cancel before your move-in date, the following applies to your security deposit:</p>
+    <div class="tiers">
+      <div class="tier green">
+        <div class="tier-when">30+ days before move-in</div>
+        <div class="tier-outcome">Full deposit refunded</div>
+      </div>
+      <div class="tier">
+        <div class="tier-when">14–29 days before move-in</div>
+        <div class="tier-outcome">50% of deposit refunded</div>
+      </div>
+      <div class="tier red">
+        <div class="tier-when">Under 14 days before move-in</div>
+        <div class="tier-outcome">Deposit non-refundable</div>
+      </div>
+      <div class="tier red">
+        <div class="tier-when">No-show (no contact)</div>
+        <div class="tier-outcome">Deposit non-refundable</div>
+      </div>
+    </div>
+    <p>If you have already paid your first month's rent and then cancel:</p>
+    <table class="policy-table">
+      <thead><tr><th>When you cancel</th><th>What happens to first month's rent</th></tr></thead>
+      <tbody>
+        <tr><td>30+ days before move-in</td><td>First month's rent fully refunded</td></tr>
+        <tr><td>Under 14 days before move-in</td><td>First month's rent fully refunded — only the deposit is kept</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- LAST MINUTE -->
+  <div class="section">
+    <div class="section-label">Last-Minute Bookings</div>
+    <h2 class="section-title">Booking Within 14 Days of Move-In</h2>
+    <p>If your move-in date is within 14 days of when you book, your deposit is <strong>non-refundable from the moment of booking</strong>. This is because we have very little time to find a replacement guest if you cancel.</p>
+    <div class="highlight">
+      <p><strong>We will always tell you this clearly before you pay.</strong> You will see a notice in your booking confirmation and on the payment screen. We want you to feel confident before committing — if you have any doubts, please reach out first.</p>
+    </div>
+    <p>If you have extenuating circumstances (see Force Majeure below), we will always consider your situation with care.</p>
+  </div>
+
+  <!-- AFTER MOVE-IN -->
+  <div class="section">
+    <div class="section-label">After Move-In</div>
+    <h2 class="section-title">Leaving Early or Ending Your Stay</h2>
+    <p>If you decide to leave before your agreed move-out date, we ask for <strong>7 days written notice</strong>. Written notice means a WhatsApp message, email, or any written communication sent directly to us — the 7 days starts from the moment we receive it.</p>
+    <table class="policy-table">
+      <thead><tr><th>Situation</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>You give 7 days written notice</td><td>You pay through the end of the 7-day notice period (prorated if mid-month). Deposit returned within 7 days of checkout.</td></tr>
+        <tr><td>You leave physically before the notice period ends</td><td>You are still liable for rent through the full 7-day notice period.</td></tr>
+        <tr><td>Partial last month</td><td>You only pay for the days you stay through the end of the notice period — calculated daily.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FORCE MAJEURE -->
+  <div class="section">
+    <div class="section-label">Exceptional Circumstances</div>
+    <h2 class="section-title">Force Majeure</h2>
+    <p>Life happens. If you need to cancel due to a serious illness, visa denial, family emergency, or other circumstances genuinely outside your control, we will issue a <strong>full refund of your deposit and any rent paid</strong> — at our discretion, with supporting documentation (medical certificate, visa rejection letter, etc.).</p>
+    <p>Please contact us as soon as possible if you find yourself in this situation. We will always try to find a fair solution.</p>
+  </div>
+
+  <!-- HOST CANCELLATION -->
+  <div class="section">
+    <div class="section-label">If We Cancel</div>
+    <h2 class="section-title">Host Cancellation</h2>
+    <p>If Ta.Garden needs to cancel your booking for any reason, you will receive a <strong>full refund of your deposit and any rent paid</strong>, promptly and without question.</p>
+  </div>
+
+  <!-- QUICK REFERENCE -->
+  <div class="section">
+    <div class="section-label">Quick Reference</div>
+    <h2 class="section-title">At a Glance</h2>
+    <table class="policy-table">
+      <thead><tr><th>Scenario</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr><td>Cancel 30+ days before move-in</td><td>Full deposit refund</td></tr>
+        <tr><td>Cancel 14–29 days before move-in</td><td>50% deposit refund</td></tr>
+        <tr><td>Cancel under 14 days before move-in</td><td>Deposit non-refundable</td></tr>
+        <tr><td>Booked within 14 days of move-in</td><td>Deposit non-refundable from booking (disclosed upfront)</td></tr>
+        <tr><td>No-show</td><td>Deposit non-refundable</td></tr>
+        <tr><td>First month's rent paid, cancel anytime before move-in</td><td>Rent refunded; deposit per tiers above</td></tr>
+        <tr><td>Cancel after move-in</td><td>7 days written notice, pay through notice period (prorated), deposit returned within 7 days</td></tr>
+        <tr><td>Force majeure with proof</td><td>Full refund of deposit and rent</td></tr>
+        <tr><td>Room damage at checkout</td><td>Deposit partially or fully withheld; photo evidence provided</td></tr>
+        <tr><td>Host cancels</td><td>Full refund of deposit and rent</td></tr>
+        <tr><td>Deposit return method</td><td>Electronic payment (PayPal, Wise, etc.) within 7 days of checkout</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-box">
+    <p>Questions about this policy? Reach us at <a href="mailto:hi@soulandlunawellness.com" style="color:var(--teal);">hi@soulandlunawellness.com</a> or via WhatsApp. We're always happy to talk through any concerns before you commit.</p>
+  </div>
+
+</div>
+
+<footer>
+  <p>Ta.Garden &nbsp;·&nbsp; Cam Nam Island, Hội An, Vietnam &nbsp;·&nbsp; <a href="/">ta-garden.soulandlunawellness.com</a></p>
+</footer>
+
+</body>
+</html>

@@ -33,13 +33,15 @@ const ROOM_RATES = {
 };
 
 const CANCELLATION_POLICY = {
-  text: 'Security deposit refunds: 30+ days before move-in: fully refunded · 14–29 days: 50% refunded · Under 14 days: non-refundable. First month\'s rent is only charged if you cancel within 14 days of move-in. Security deposit due within 72 hours of confirmation or room is released.',
+  text: 'Security deposit refunds: 30+ days before move-in: fully refunded · 14–29 days: 50% refunded · Under 14 days: non-refundable · No-show: non-refundable. If you book within 14 days of move-in, your deposit is non-refundable from the moment of booking — we will always tell you this before you pay. After move-in, 7 days written notice required; you pay through the notice period (prorated). Security deposit returned within 7 days of checkout via electronic payment. Full policy at ta-garden.soulandlunawellness.com/policy.html',
   html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;">
   <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;"><strong style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#88917d;">Security Deposit Refunds</strong></td></tr>
   <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>30+ days before move-in:</strong> Security deposit fully refunded</td></tr>
   <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>14–29 days before move-in:</strong> 50% of security deposit refunded</td></tr>
-  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>Under 14 days:</strong> Security deposit non-refundable. First month's rent also charged.</td></tr>
-  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#c0392b;">⏱ <strong>Security deposit due within 72 hours</strong> of confirmation or your room is released</td></tr>
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">📅 <strong>Under 14 days / no-show:</strong> Deposit non-refundable</td></tr>
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">⚡ <strong>Booking within 14 days of move-in:</strong> Deposit non-refundable from moment of booking (disclosed before payment)</td></tr>
+  <tr><td style="padding:4px 0;font-family:Arial,sans-serif;font-size:13px;color:#4a4a3a;">🏠 <strong>After move-in:</strong> 7 days written notice required. You pay through the notice period (prorated daily). Deposit returned within 7 days of checkout.</td></tr>
+  <tr><td style="padding:6px 0 2px;font-family:Arial,sans-serif;font-size:12px;color:#88917d;">Full policy: <a href="https://ta-garden.soulandlunawellness.com/policy.html" style="color:#86a2a6;">ta-garden.soulandlunawellness.com/policy.html</a></td></tr>
 </table>`,
 };
 

@@ -225,14 +225,34 @@ footer { background: var(--dark); text-align: center; padding: 32px 20px; }
 footer p { font-size: 11px; color: rgba(237,224,209,0.35); font-family: Arial, sans-serif; }
 footer a { color: var(--teal); text-decoration: none; }
 
+/* Map toggle button — mobile only */
+.map-toggle-wrap { display: none; }
 @media (max-width: 640px) {
   .hero-title { font-size: 34px; }
   nav { padding: 14px 20px; }
   .hero { padding: 40px 20px 36px; }
-  #map { height: 300px; }
   .cards-wrap { padding: 16px 16px 60px; }
   .search-bar { padding: 0 16px; }
   .count-bar { padding: 0 16px; }
+
+  /* Hide map by default on mobile */
+  #map { height: 0 !important; overflow: hidden; transition: height 0.3s ease; }
+  #map.map-open { height: 260px !important; }
+
+  /* Show the toggle button on mobile */
+  .map-toggle-wrap {
+    display: flex; justify-content: center;
+    padding: 10px 16px 4px;
+    background: var(--white);
+  }
+  .map-toggle-btn {
+    background: none; border: 1px solid rgba(134,162,166,0.4);
+    color: var(--teal); font-family: 'Jost', Arial, sans-serif;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 8px 20px; border-radius: 2px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; transition: all 0.15s;
+  }
+  .map-toggle-btn:hover { border-color: var(--teal); color: var(--dark); }
 }
 </style>
 </head>
@@ -261,6 +281,13 @@ footer a { color: var(--teal); text-decoration: none; }
     <button class="filter-btn" data-cat="culture">🗺️ Explore</button>
     <button class="filter-btn" data-cat="grocery">🛒 Groceries</button>
   </div>
+</div>
+
+<div class="map-toggle-wrap">
+  <button class="map-toggle-btn" id="mapToggleBtn" onclick="toggleMap()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    Show Map
+  </button>
 </div>
 
 <div id="map"></div>
@@ -519,6 +546,17 @@ document.getElementById('searchInput').addEventListener('input', e => {
 
 // Render cards immediately — independent of map
 render();
+
+// ── Map toggle (mobile only) ──────────────────────────────────────
+function toggleMap() {
+  const mapEl = document.getElementById('map');
+  const btn = document.getElementById('mapToggleBtn');
+  const isOpen = mapEl.classList.toggle('map-open');
+  btn.innerHTML = isOpen
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Hide Map`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Show Map`;
+  if (isOpen && map) setTimeout(() => map.invalidateSize(), 310);
+}
 
 // ── Place modal ───────────────────────────────────────────────────
 function openPlace(idx) {

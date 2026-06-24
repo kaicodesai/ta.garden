@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hội An Guide — Ta.Garden</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --dark: #1a1a18;
+  --cream: #ede0d1;
+  --teal: #86a2a6;
+  --mid: #88917d;
+  --light: #f5f0eb;
+  --white: #faf8f5;
+  --green: #2d5a27;
+  --red: #c0392b;
+  --border: rgba(136,145,125,0.18);
+  --cafe: #c8873a;
+  --eat: #b84c4c;
+  --vegan: #4a8c52;
+  --wellness: #7b6fa0;
+  --fitness: #2d6b8c;
+  --shop: #8c6b2d;
+  --culture: #2d7a6e;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Jost', Arial, sans-serif; background: var(--white); color: var(--dark); line-height: 1.7; }
+
+/* Nav */
+nav { background: var(--dark); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 400; }
+.nav-brand { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--cream); text-decoration: none; }
+.nav-back { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal); text-decoration: none; }
+.nav-back:hover { color: var(--cream); }
+
+/* Hero */
+.hero { background: var(--dark); padding: 52px 32px 48px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.hero-label { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--teal); margin-bottom: 12px; }
+.hero-title { font-family: 'Cormorant Garamond', serif; font-size: 46px; font-weight: 300; color: var(--cream); margin-bottom: 16px; line-height: 1.1; }
+.hero-sub { font-size: 14px; color: rgba(237,224,209,0.55); max-width: 520px; margin: 0 auto; line-height: 1.9; }
+
+/* Filter bar */
+.filter-wrap { background: var(--dark); border-bottom: 1px solid rgba(255,255,255,0.07); position: sticky; top: 57px; z-index: 300; }
+.filter-bar { display: flex; gap: 4px; padding: 12px 28px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.filter-bar::-webkit-scrollbar { display: none; }
+.filter-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid rgba(134,162,166,0.25);
+  color: rgba(237,224,209,0.55);
+  font-family: 'Jost', Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-btn:hover { color: var(--cream); border-color: var(--teal); }
+.filter-btn.active { background: var(--teal); border-color: var(--teal); color: var(--dark); font-weight: 500; }
+
+/* Map */
+#map { width: 100%; height: 420px; background: #2a2e2a; }
+.leaflet-popup-content-wrapper { background: var(--dark); border: 1px solid rgba(134,162,166,0.3); border-radius: 3px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.leaflet-popup-tip { background: var(--dark); }
+.leaflet-popup-content { margin: 12px 14px; }
+.popup-name { font-family: 'Jost', Arial, sans-serif; font-size: 13px; font-weight: 500; color: var(--cream); margin-bottom: 4px; }
+.popup-cat { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; }
+.popup-link { display: inline-block; font-size: 11px; color: var(--teal); text-decoration: none; border-bottom: 1px solid rgba(134,162,166,0.4); padding-bottom: 1px; transition: color 0.1s; }
+.popup-link:hover { color: var(--cream); }
+.leaflet-container a.leaflet-popup-close-button { color: var(--teal); top: 8px; right: 10px; }
+
+/* Search */
+.search-bar { max-width: 1240px; margin: 32px auto 0; padding: 0 24px; }
+.search-input {
+  width: 100%;
+  background: var(--light);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 12px 18px;
+  font-family: 'Jost', Arial, sans-serif;
+  font-size: 14px;
+  color: var(--dark);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input::placeholder { color: rgba(26,26,24,0.35); }
+.search-input:focus { border-color: var(--teal); }
+
+/* Count */
+.count-bar { max-width: 1240px; margin: 16px auto 0; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
+.count-lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); }
+
+/* Cards */
+.cards-wrap { max-width: 1240px; margin: 0 auto; padding: 20px 24px 80px; }
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.place-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+.place-card:hover { border-color: var(--teal); box-shadow: 0 2px 12px rgba(134,162,166,0.12); }
+.card-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: Arial, sans-serif;
+  color: var(--white);
+  background: var(--teal);
+  padding: 3px 8px;
+  border-radius: 2px;
+  width: fit-content;
+}
+.card-cat.cafe    { background: var(--cafe); }
+.card-cat.eat     { background: var(--eat); }
+.card-cat.vegan   { background: var(--vegan); }
+.card-cat.wellness{ background: var(--wellness); }
+.card-cat.fitness { background: var(--fitness); }
+.card-cat.shop    { background: var(--shop); }
+.card-cat.culture { background: var(--culture); }
+.card-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--dark);
+  line-height: 1.3;
+}
+.card-note {
+  font-size: 12px;
+  color: rgba(26,26,24,0.55);
+  line-height: 1.6;
+  flex: 1;
+}
+.card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--teal);
+  text-decoration: none;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  transition: color 0.15s;
+}
+.card-link:hover { color: var(--dark); }
+.card-link svg { width: 12px; height: 12px; transition: transform 0.15s; }
+.place-card:hover .card-link svg { transform: translateX(2px); }
+
+.no-results { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--mid); font-size: 14px; }
+
+/* Footer */
+footer { background: var(--dark); text-align: center; padding: 32px 20px; }
+footer p { font-size: 11px; color: rgba(237,224,209,0.35); font-family: Arial, sans-serif; }
+footer a { color: var(--teal); text-decoration: none; }
+
+@media (max-width: 640px) {
+  .hero-title { font-size: 34px; }
+  nav { padding: 14px 20px; }
+  .hero { padding: 40px 20px 36px; }
+  #map { height: 300px; }
+  .cards-wrap { padding: 16px 16px 60px; }
+  .search-bar { padding: 0 16px; }
+  .count-bar { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand">Ta.Garden</a>
+  <a href="/" class="nav-back">← Back to Home</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">Guest Guide</div>
+  <h1 class="hero-title">Hội An, Curated</h1>
+  <p class="hero-sub">Our favourite spots for coffee, food, wellness, and culture — all within reach of home.</p>
+</div>
+
+<div class="filter-wrap">
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-btn active" data-cat="all">All</button>
+    <button class="filter-btn" data-cat="cafe">☕ Coffee</button>
+    <button class="filter-btn" data-cat="eat">🍜 Eat Out</button>
+    <button class="filter-btn" data-cat="vegan">🌱 Plant-Based</button>
+    <button class="filter-btn" data-cat="wellness">💆 Wellness</button>
+    <button class="filter-btn" data-cat="fitness">💪 Fitness</button>
+    <button class="filter-btn" data-cat="shop">🛍️ Shop</button>
+    <button class="filter-btn" data-cat="culture">🗺️ Explore</button>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<div class="search-bar">
+  <input class="search-input" id="searchInput" type="text" placeholder="Search places…" autocomplete="off">
+</div>
+
+<div class="count-bar">
+  <span class="count-lbl" id="countLbl">100 places</span>
+</div>
+
+<div class="cards-wrap">
+  <div class="cards-grid" id="cardsGrid"></div>
+</div>
+
+<footer>
+  <p>Ta.Garden · Hội An, Vietnam · <a href="/">ta.garden</a></p>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLs=" crossorigin=""></script>
+<script>
+const CAT_LABELS = {
+  cafe:     { label: '☕ Coffee',      color: '#c8873a' },
+  eat:      { label: '🍜 Eat Out',     color: '#b84c4c' },
+  vegan:    { label: '🌱 Plant-Based', color: '#4a8c52' },
+  wellness: { label: '💆 Wellness',    color: '#7b6fa0' },
+  fitness:  { label: '💪 Fitness',     color: '#2d6b8c' },
+  shop:     { label: '🛍️ Shop',       color: '#8c6b2d' },
+  culture:  { label: '🗺️ Explore',    color: '#2d7a6e' },
+};
+
+const PLACES = [
+  // ── Coffee & Cafes ─────────────────────────────────────────────
+  { name: 'Trốn Hội An Coffee & Brunch',        cat: 'cafe',    note: 'Cosy hidden gem with good brunch options.',                   lat: 15.8895, lng: 108.3367, url: 'https://www.google.com/maps/place/Tr%E1%BB%91n+H%E1%BB%99i+An+Coffee+%26+Brunch/data=!4m2!3m1!1s0x31420f2a75ac7785:0x96cab44c31be356f' },
+  { name: 'Naia Cafe + Kitchen',                 cat: 'cafe',    note: 'Relaxed all-day café near the ancient town.',                 lat: 15.8780, lng: 108.3372, url: 'https://www.google.com/maps/place/Naia+Cafe+%2B+Kitchen/data=!4m2!3m1!1s0x31420db9f92998f1:0x8ecbd7a19d7903c8' },
+  { name: 'Little Nook Hội An',                  cat: 'cafe',    note: 'Charming little spot with great coffee.',                     lat: 15.8783, lng: 108.3315, url: 'https://www.google.com/maps/place/Little+Nook+H%E1%BB%99i+An/data=!4m2!3m1!1s0x31420d29dc18959b:0xddc8c3ece94797b5' },
+  { name: 'RICE PADDY HOUSE · Breakfast & Brunch', cat: 'cafe', note: 'Countryside setting, morning all-day menu.',                 lat: 15.8786, lng: 108.3322, url: 'https://www.google.com/maps/place/RICE+PADDY+HOUSE.+%7C+Breakfast+%26+Brunch/data=!4m2!3m1!1s0x31420d41d7c27b37:0x6494882e1ef35e8d' },
+  { name: 'Next Door by The Hill Station',       cat: 'cafe',    note: 'Hill Station sibling — artisan coffee and Vietnamese snacks.',lat: 15.8803, lng: 108.3341, url: 'https://www.google.com/maps/place/Next+Door+by+The+Hill+Station/data=!4m2!3m1!1s0x31420d81ed935851:0x5652ead5443bf63c' },
+  { name: 'Secret Garden',                       cat: 'cafe',    note: 'Hidden courtyard café with leafy atmosphere.',                lat: 15.8812, lng: 108.3353, url: 'https://www.google.com/maps/place/Secret+Garden/data=!4m2!3m1!1s0x31420f0075ca0ac3:0xb705da57fa90b7d7' },
+  { name: 'Piatti Cafe Hoi An',                  cat: 'cafe',    note: 'Italian-influenced café with great espresso.',                lat: 15.8784, lng: 108.3312, url: 'https://www.google.com/maps/place/Piatti+Cafe+Hoi+An/data=!4m2!3m1!1s0x31420d28e063ebc3:0x48c0f9f0aba9faf6' },
+  { name: 'Café Slow Hội An',                    cat: 'cafe',    note: 'Exactly as named — slow, calm and unhurried.',               lat: 15.8779, lng: 108.3329, url: 'https://www.google.com/maps/place/Caf%C3%A9+Slow+H%E1%BB%99i+An/data=!4m2!3m1!1s0x31420d3aa9b1d727:0x9f8560cfeaaa004a' },
+  { name: 'MISS HOI AN CAFE',                    cat: 'cafe',    note: 'Stylish café with a great vibe.',                            lat: 15.8804, lng: 108.3328, url: 'https://www.google.com/maps/place/MISS+HOI+AN+CAFE/data=!4m2!3m1!1s0x31420d5b6c4e3c89:0x58f29bd41dc0e5cc' },
+  { name: 'Vii Cafe',                            cat: 'cafe',    note: 'Quiet neighbourhood café with quality filter coffee.',        lat: 15.8793, lng: 108.3334, url: 'https://www.google.com/maps/place/Vii+Cafe/data=!4m2!3m1!1s0x31420db2c1b7a59d:0x706fb44751ee342e' },
+  { name: 'Bông Son Hội An Cafe',                cat: 'cafe',    note: 'Flower-filled café in a traditional house.',                 lat: 15.8806, lng: 108.3346, url: 'https://www.google.com/maps/place/B%C3%B4ng+Son+H%E1%BB%99i+An+Cafe/data=!4m2!3m1!1s0x31420d8015e0f971:0xd9d5089888fc115' },
+  { name: 'Silent Cafe & Food',                  cat: 'cafe',    note: 'Low-key and peaceful.',                                       lat: 15.8797, lng: 108.3327, url: 'https://www.google.com/maps/place/Silent+Cafe+%26+Food/data=!4m2!3m1!1s0x31420d8835c4b121:0xfacd069a8f8a22e' },
+  { name: 'LAGOM — Bakery & Cafe',               cat: 'cafe',    note: 'Scandinavian-inspired bakery with excellent pastries.',       lat: 15.8826, lng: 108.3385, url: 'https://www.google.com/maps/place/LAGOM+-+Bakery+%26+Cafe/data=!4m2!3m1!1s0x31420dfb06ad6783:0x1acdbce3cdaef2ec' },
+  { name: 'Old Rice Field / Coffee & Brunch',    cat: 'cafe',    note: 'Rice paddy views with good morning plates.',                  lat: 15.8778, lng: 108.3316, url: 'https://www.google.com/maps/place/Old+Rice+Field+%2F+Coffee+%26+Brunch/data=!4m2!3m1!1s0x31420d96b4afd6e5:0x4be34b1146c64fa5' },
+  { name: 'NGHÉ Rice Paddy Cafe',                cat: 'cafe',    note: 'Idyllic rice field setting outside the town centre.',         lat: 15.8776, lng: 108.3304, url: 'https://www.google.com/maps/place/NGH%C3%89+Rice+Paddy+Cafe/data=!4m2!3m1!1s0x31420d0076b56b4f:0x7a68b09f7c3d350c' },
+  { name: 'Sen House Garden Coffee & Tea',       cat: 'cafe',    note: 'Garden café with lotus pond — a tranquil escape.',            lat: 15.8960, lng: 108.3465, url: 'https://www.google.com/maps/place/Sen+House+Garden+Coffee+%26+Tea/data=!4m2!3m1!1s0x31420962ca6fbe31:0xfee78a41eaca4ee' },
+  { name: 'Rivia Coffee — Breakfast & Brunch',   cat: 'cafe',    note: 'Popular brunch spot with riverside location.',               lat: 15.8794, lng: 108.3374, url: 'https://www.google.com/maps/place/Rivia+Coffee+-+Breakfast+%26+Brunch/data=!4m2!3m1!1s0x31420dd2ad1e7b29:0x650e2920784b900b' },
+  { name: 'Mia Coffee',                          cat: 'cafe',    note: 'Small and lovely — great espresso drinks.',                   lat: 15.8796, lng: 108.3375, url: 'https://www.google.com/maps/place/Mia+Coffee/data=!4m2!3m1!1s0x31420dd5bc90441d:0xf1ec48e2a0360af5' },
+  { name: 'Le Locust Café',                      cat: 'cafe',    note: 'Shaded terrace, good single-origin coffee.',                  lat: 15.8795, lng: 108.3357, url: 'https://www.google.com/maps/place/Le+Locust+Caf%C3%A9/data=!4m2!3m1!1s0x31420daff0814a6f:0x1e2f2a1dc156b2f2' },
+  { name: 'Lady Buddha Coffee & Tea Co.',        cat: 'cafe',    note: 'Carefully curated teas and specialty coffee.',                lat: 15.8872, lng: 108.3433, url: 'https://www.google.com/maps/place/Lady+Buddha+Coffee+%26+Tea+Co./data=!4m2!3m1!1s0x31420f44f78d8cc1:0x6ab8928e2a790400' },
+  { name: 'Tu Tam Book Café',                    cat: 'cafe',    note: 'Books + coffee = a perfect rainy-day hideout.',               lat: 15.8892, lng: 108.3365, url: 'https://www.google.com/maps/place/Tu+Tam+Book+Caf%C3%A9/data=!4m2!3m1!1s0x31420f223c1d702f:0xd6f1c1b834548fab' },
+  { name: 'Hít Hà Cafe',                         cat: 'cafe',    note: 'Minimalist design, excellent filter coffee.',                 lat: 15.8777, lng: 108.3304, url: 'https://www.google.com/maps/place/H%C3%ADt+H%C3%A0+Cafe/data=!4m2!3m1!1s0x31420d004b6d2481:0x619f952943546f88' },
+  { name: 'Roving Chill House',                  cat: 'cafe',    note: 'Relaxed loungy café with good playlists.',                    lat: 15.8792, lng: 108.3347, url: 'https://www.google.com/maps/place/Roving+Chill+house/data=!4m2!3m1!1s0x31420da45adf7b5f:0x5538f7fc5de6c093' },
+  { name: 'Tropical Cafe & Bistro',              cat: 'cafe',    note: 'Airy bistro with fruit coffees and western menu.',            lat: 15.8808, lng: 108.3389, url: 'https://www.google.com/maps/place/Tropical+Cafe+%26+Bistro/data=!4m2!3m1!1s0x31420deeea076b41:0x775f78b118594bc1' },
+  { name: 'Olivier Coffee',                      cat: 'cafe',    note: 'French-Vietnamese café, lovely pastries.',                    lat: 15.8802, lng: 108.3371, url: 'https://www.google.com/maps/place/Olivier+Coffee/data=!4m2!3m1!1s0x31420e7c78d3f849:0xe3dd5677ba57524e' },
+  { name: 'U Cafe Hoi An',                       cat: 'cafe',    note: 'Chill independent café in the town centre.',                  lat: 15.8792, lng: 108.3372, url: 'https://www.google.com/maps/place/U+Cafe+Hoi+An/data=!4m2!3m1!1s0x31420dd215fad001:0x5a292057b9a5a307' },
+  { name: 'Hoachampa Coffee & Tea House',        cat: 'cafe',    note: 'Riverside café with champa flower decor.',                   lat: 15.8802, lng: 108.3373, url: 'https://www.google.com/maps/place/Hoachampa+Coffee+%26+Tea+House/data=!4m2!3m1!1s0x31420e7edf3cd7d7:0x9eaca6b2e17b13a6' },
+  { name: 'Mê Hội An Rooftop Coffee & Kitchen',  cat: 'cafe',    note: 'Rooftop views over the ancient town.',                        lat: 15.8836, lng: 108.3415, url: 'https://www.google.com/maps/place/M%C3%AA+H%E1%BB%99i+An+Rooftop+Coffee+%26+Kitchen/data=!4m2!3m1!1s0x31420fb139ebf16f:0xc6d29fcb4f5ef7eb' },
+  { name: 'Rio Garden Coffee Hội An',            cat: 'cafe',    note: 'Garden café, great for afternoon reading.',                   lat: 15.8775, lng: 108.3300, url: 'https://www.google.com/maps/place/Rio+Garden+Coffee+H%E1%BB%99i+An/data=!4m2!3m1!1s0x31420d0016772f15:0xea59f7191651835b' },
+  { name: 'La.Kao Teahouse',                     cat: 'cafe',    note: 'Traditional Vietnamese tea ceremony experience.',             lat: 15.8825, lng: 108.3432, url: 'https://www.google.com/maps/place/La.Kao+Teahouse/data=!4m2!3m1!1s0x31420f63be2b3ddd:0xf9acdf22291e72aa' },
+  { name: 'Zen Library',                         cat: 'cafe',    note: 'Minimalist tea library — bring a book.',                      lat: 15.8779, lng: 108.3302, url: 'https://www.google.com/maps/place/Zen+Library/data=!4m2!3m1!1s0x31420d002d8f7fa1:0x76906d446ddb4969' },
+  { name: 'Ren Rứa Cafe',                        cat: 'cafe',    note: 'Quirky décor, strong Vietnamese coffee.',                     lat: 15.8882, lng: 108.3435, url: 'https://www.google.com/maps/place/Ren+R%E1%BB%A9a+Cafe/data=!4m2!3m1!1s0x31420f4ab6edb20d:0x2ae1321283cfb1db' },
+  { name: 'tầm.tea retreat',                     cat: 'cafe',    note: 'Serene tea retreat space for slow mornings.',                 lat: 15.8893, lng: 108.3368, url: 'https://www.google.com/maps/place/t%E1%BA%A7m.tea+retreat/data=!4m2!3m1!1s0x31420f186272adb9:0x22b6bc055ac4e3da' },
+  { name: 'Egg Tiramisu Coffee Class',           cat: 'cafe',    note: 'Learn to make Vietnamese egg coffee — a unique class.',       lat: 15.8792, lng: 108.3350, url: 'https://www.google.com/maps/place/Egg+Tiramisu+Coffee+Class+and+Restaurant/data=!4m2!3m1!1s0x31420da51208eb25:0xdb1b896d9c65af78' },
+  { name: 'Avocado Bookstore & Cafe',            cat: 'cafe',    note: 'Independent bookshop + espresso bar.',                        lat: 15.8842, lng: 108.3418, url: 'https://www.google.com/maps/place/Avocado+Bookstore+%26+Cafe/data=!4m2!3m1!1s0x31420f81ddf7f1df:0x550271cbc57538e2' },
+  { name: 'Bibo Caphe and Restaurant',           cat: 'cafe',    note: 'Family-friendly café with an all-day menu.',                  lat: 15.8841, lng: 108.3441, url: 'https://www.google.com/maps/place/Bibo+Caphe+and+Restaurant+(+Breakfast+-+Brunch+-+Dinner)/data=!4m2!3m1!1s0x31420fc5f8ab8db1:0x8d606305684842e' },
+  { name: 'Memories Bistro & Cafe',              cat: 'cafe',    note: 'Old-town ambience with a curated food menu.',                 lat: 15.8815, lng: 108.3375, url: 'https://www.google.com/maps/place/Memories+Bistro+%26+Cafe+Hoi+An/data=!4m2!3m1!1s0x31420de10450665b:0xf9b113cddbab1bca' },
+  { name: 'Quán Cafe Win',                       cat: 'cafe',    note: 'Local favourite with simple Vietnamese coffee.',               lat: 15.8852, lng: 108.3422, url: 'https://www.google.com/maps/place/Qu%C3%A1n+cafe+Win/data=!4m2!3m1!1s0x31420f51a8e09fbf:0xa2e6b9559757d611' },
+  { name: 'Hoi An Ancient Remedy — Dim Sum Tea House', cat: 'cafe', note: 'Dim sum and traditional tea in a beautiful heritage space.', lat: 15.8892, lng: 108.3369, url: 'https://www.google.com/maps/place/Hoi+An+Ancient+Remedy+-+Dim+Sum+Tea+House/data=!4m2!3m1!1s0x31420f21fbbf7403:0x8da1a8c5d64e0a7d' },
+
+  // ── Eat Out ────────────────────────────────────────────────────
+  { name: 'Madam Khanh — The Bánh Mì Queen',    cat: 'eat',     note: "Hội An's most famous bánh mì. Worth the queue.",              lat: 15.8807, lng: 108.3357, url: 'https://www.google.com/maps/place/Madam+Khanh+-+The+Banh+Mi+Queen/data=!4m2!3m1!1s0x31420e7943de2173:0x4296bf40af5321a7' },
+  { name: 'Hiên Sushi Bar',                      cat: 'eat',     note: 'Japanese-Vietnamese fusion sushi bar.',                       lat: 15.8834, lng: 108.3381, url: 'https://www.google.com/maps/place/Hi%C3%AAn+Sushi+Bar/data=!4m2!3m1!1s0x31420f7765ac8081:0x8dbacf35cade74dc' },
+  { name: 'Wooden House Cafe & Restaurant',      cat: 'eat',     note: 'Traditional wooden house setting, local Vietnamese dishes.',  lat: 15.8792, lng: 108.3373, url: 'https://www.google.com/maps/place/Wooden+House+cafe+%26+restaurant/data=!4m2!3m1!1s0x31420dd111ab68d1:0xb160d484033213b3' },
+  { name: 'Vina Ngon Hoi An Restaurant',         cat: 'eat',     note: 'Solid Vietnamese restaurant, great for locals-style eating.',  lat: 15.8793, lng: 108.3376, url: 'https://www.google.com/maps/place/Vina+Ngon+Hoi+An+Restaurant/data=!4m2!3m1!1s0x31420dd1a7276b79:0xa8e33db2ceb79166' },
+  { name: 'Mai Fish Restaurant',                 cat: 'eat',     note: 'Fresh seafood restaurant near the market.',                   lat: 15.8803, lng: 108.3377, url: 'https://www.google.com/maps/place/Mai+Fish+Restaurant/data=!4m2!3m1!1s0x31420e7c584d941d:0xad32578ae84784e' },
+  { name: 'Lam Kitchen',                         cat: 'eat',     note: 'Honest home-cooking, popular with long-termers.',             lat: 15.8817, lng: 108.3382, url: 'https://www.google.com/maps/place/Lam+Kitchen/data=!4m2!3m1!1s0x31420decd8ec900b:0xc2b4d0faf3aedca' },
+  { name: 'Son Hoian',                           cat: 'eat',     note: 'Vietnamese comfort food and local classics.',                  lat: 15.8793, lng: 108.3367, url: 'https://www.google.com/maps/place/Son+Hoian/data=!4m2!3m1!1s0x31420dc72ad51db1:0x79bd36c370d859f6' },
+  { name: 'FAMILY RESTAURANT & CAFE',            cat: 'eat',     note: 'Vietnamese and Italian fusion in a homey setting.',           lat: 15.8814, lng: 108.3372, url: 'https://www.google.com/maps/place/FAMILY+RESTAURANT+%26+CAFE+_+Vietnamese+cuisine+%26+Italian+cuisine/data=!4m2!3m1!1s0x31420df0d14aaecd:0xd3a75b0e64a8bff6' },
+  { name: 'The Noodle House',                    cat: 'eat',     note: 'Handmade noodles and Vietnamese soups.',                      lat: 15.8852, lng: 108.3412, url: 'https://www.google.com/maps/place/The+Noodle+House/data=!4m2!3m1!1s0x31420ff11414be09:0x75f55dbf75db546' },
+  { name: "MINH'S KITCHEN RESTAURANT",           cat: 'eat',     note: 'Classic Hội An dishes in a welcoming kitchen.',               lat: 15.8778, lng: 108.3303, url: "https://www.google.com/maps/place/MINH'S+KITCHEN+RESTAURANT/data=!4m2!3m1!1s0x31420d007c9c0a8d:0xd701d6d95ecd19" },
+  { name: 'Good Eats',                           cat: 'eat',     note: 'Exactly what it says — solid, unpretentious food.',           lat: 15.8776, lng: 108.3302, url: 'https://www.google.com/maps/place/Good+Eats/data=!4m2!3m1!1s0x6f488504a65da3ab:0xd0d5f8b167b74ec' },
+  { name: 'Dingo Deli',                          cat: 'eat',     note: 'Australian-run deli and café, excellent sandwiches.',          lat: 15.8793, lng: 108.3364, url: 'https://www.google.com/maps/place/Dingo+Deli/data=!4m2!3m1!1s0x31420dc58125eba7:0x165183fc5b1bdca0' },
+  { name: 'nourish eatery — Café & Restaurant',  cat: 'eat',     note: 'Health-forward menu, clean ingredients.',                     lat: 15.8782, lng: 108.3337, url: 'https://www.google.com/maps/place/nourish+eatery.+%2F+Caf%C3%A9+%26+Restaurant/data=!4m2!3m1!1s0x31420d9b7e624b2f:0x1d7a4339ecc5e3b1' },
+  { name: 'All Day Bánh Mì',                     cat: 'eat',     note: 'Bánh mì all day — a worthy rival to Madam Khanh.',            lat: 15.8857, lng: 108.3422, url: 'https://www.google.com/maps/place/All+Day+B%C3%A1nh+M%C3%AC+-+Serving+History+in+Every+Bite+-+Hoi+An/data=!4m2!3m1!1s0x31420f54dc6196cb:0x9e6a6076c17857eb' },
+  { name: 'Quán Cá Đuối Nướng Cô Huê',          cat: 'eat',     note: 'Grilled stingray — a Hội An street food institution.',        lat: 15.8814, lng: 108.3383, url: 'https://www.google.com/maps/place/Qu%C3%A1n+C%C3%A1+%C4%90u%E1%BB%91i+N%C6%B0%E1%BB%9Bng+C%C3%B4+Hu%C3%AA/data=!4m2!3m1!1s0x31420e9ac909085b:0x3f133b2711a88c17' },
+  { name: 'TRIÊM TÂY XÓM',                      cat: 'eat',     note: 'Village-side local eatery across the Thu Bon.',               lat: 15.8822, lng: 108.3305, url: 'https://www.google.com/maps/place/TRI%C3%8AM+T%C3%82Y+X%C3%93M/data=!4m2!3m1!1s0x31420f001d831957:0xcacf2bf62b3b707f' },
+  { name: 'The Inner Hoian by Àla',              cat: 'eat',     note: 'Modern Vietnamese cuisine in a boutique space.',              lat: 15.8769, lng: 108.3283, url: 'https://www.google.com/maps/place/The+Inner+Hoian+by+%C3%80la/data=!4m2!3m1!1s0x31420d627d864137:0x8dea04eaac5477d5' },
+  { name: 'Sakura',                              cat: 'eat',     note: 'Japanese restaurant in the ancient town.',                    lat: 15.8803, lng: 108.3382, url: 'https://www.google.com/maps/place/Sakura/data=!4m2!3m1!1s0x31420e7fa869268d:0x9fd3ef1b5e33ff45' },
+  { name: 'M&D\'s Farm Shop Hội An',             cat: 'eat',     note: 'Organic farm shop with homemade products.',                   lat: 15.8845, lng: 108.3453, url: "https://www.google.com/maps/place/M%26D's+Farm+Shop+H%E1%BB%99i+AN/data=!4m2!3m1!1s0x31420fe946293979:0xb3358de4612a9925" },
+
+  // ── Plant-Based ────────────────────────────────────────────────
+  { name: 'PlantLab Restaurant',                 cat: 'vegan',   note: 'Upscale plant-based dining — a must for vegans.',             lat: 15.8795, lng: 108.3353, url: 'https://www.google.com/maps/place/PlantLab+Restaurant/data=!4m2!3m1!1s0x31420dade3e57a95:0xf34befaa04dcafc5' },
+  { name: 'Rau Ơi Eatery — Vegan & Cooking Classes', cat: 'vegan', note: 'Vegan Vietnamese food + hands-on cooking classes.',        lat: 15.8782, lng: 108.3328, url: 'https://www.google.com/maps/place/Rau+%C6%A0i+Eatery+-+Vegan+Food+and+Cooking+Classes/data=!4m2!3m1!1s0x31420d98647a49d1:0xa61592650a5dd105' },
+  { name: 'Chickpea Eatery — Vietnamese Vegan',  cat: 'vegan',   note: 'Popular spot for vegan cooking classes and street food.',    lat: 15.8822, lng: 108.3432, url: 'https://www.google.com/maps/place/Chickpea+Eatery:+Vietnamese+Vegan+Restaurant+%26+H%E1%BB%99i+An+Vegan+Cooking+Class+%7C+%0ANh%C3%A0+H%C3%A0ng+Chay+H%E1%BB%99i+An/data=!4m2!3m1!1s0x31420f62dce160bf:0x43a1a8c2698ac90e' },
+  { name: 'KURUMI — Healthy Vegan Food & Desserts', cat: 'vegan', note: 'Japanese-inspired vegan desserts and healthy bowls.',       lat: 15.8844, lng: 108.3441, url: 'https://www.google.com/maps/place/KURUMI+-+Healthy+Vegan+Food+%26+Desserts+-+Hoi+An/data=!4m2!3m1!1s0x31420fc911a38d5f:0x84eaca8ec0b0dd35' },
+  { name: 'MẸT Hội An — Vietnamese & Vegetarian', cat: 'vegan',  note: 'Casual spot with great vegetarian street food.',             lat: 15.8843, lng: 108.3407, url: 'https://www.google.com/maps/place/M%E1%BA%B8T+H%E1%BB%99i+An+-+Vietnamese+restaurant+%26+Vegetarian+Food+MET+9/data=!4m2!3m1!1s0x31420fb803717867:0x50377c5375a75183' },
+  { name: 'V Vegan — Vegan Cafe & Restaurant',   cat: 'vegan',   note: 'Inventive vegan menu with Asian and Western fusion.',        lat: 15.8819, lng: 108.3415, url: 'https://www.google.com/maps/place/V+Vegan+-+Vegan+Cafe+%26+Restaurant/data=!4m2!3m1!1s0x31420f3c57724e51:0x8a5b34bc71eecf3d' },
+  { name: 'The Seeds Plant-Based Foods & Desserts', cat: 'vegan', note: 'Vegan desserts, smoothie bowls and snacks.',                lat: 15.8820, lng: 108.3412, url: 'https://www.google.com/maps/place/The+Seeds+Plant-Based+Foods+%26+Desserts%2FTi%E1%BB%87m+Chay/data=!4m2!3m1!1s0x31420f3b3db47e8b:0xe404915f032ef2e1' },
+  { name: 'An Hy Vegetarian Restaurant',         cat: 'vegan',   note: 'Buddhist-style Vietnamese vegetarian food.',                  lat: 15.8822, lng: 108.3428, url: 'https://www.google.com/maps/place/An+Hy+Vegetarian+Restaurant/data=!4m2!3m1!1s0x31420f6430ecd6ed:0xa04f7ac416ac9430' },
+  { name: 'Pháp Hoà Vegan',                      cat: 'vegan',   note: 'Humble vegan temple food.',                                   lat: 15.8845, lng: 108.3442, url: 'https://www.google.com/maps/place/Ph%C3%A1p+Ho%C3%A0+Vegan/data=!4m2!3m1!1s0x31420fae215ab07b:0x9b352e11a4ca4369' },
+  { name: 'Hoa Sen — Vegetarian Bánh Mì',        cat: 'vegan',   note: 'Vegan bánh mì — a rare and excellent find.',                 lat: 15.8843, lng: 108.3444, url: 'https://www.google.com/maps/place/Hoa+Sen+-+vegetarian+Bahn+Mi/data=!4m2!3m1!1s0x31420fc578a554bf:0x8f7263127ba8809c' },
+  { name: 'Lê Hội Bánh Mì Chay',                cat: 'vegan',   note: 'Vegan bánh mì done right.',                                  lat: 15.8803, lng: 108.3383, url: 'https://www.google.com/maps/place/L%C3%AA+H%E1%BB%99i+B%C3%A1nh+M%C3%8C+Chay+(Le+Hoi+Vegan+Banh+Mi)/data=!4m2!3m1!1s0x31420e7f389dfd25:0x9fed9119bc259f85' },
+  { name: 'Ivegan Supershop Hoi An',             cat: 'vegan',   note: 'Plant-based café and health food shop.',                      lat: 15.8773, lng: 108.3283, url: 'https://www.google.com/maps/place/Ivegan+Supershop+Hoi+An+-+Healthy+Plant-based+Cafe/data=!4m2!3m1!1s0x31420d6b3eb07f91:0x1fec2d707f3a6605' },
+  { name: 'VEGAN SHOP HỘI AN',                   cat: 'vegan',   note: 'Vegan grocery and prepared foods.',                           lat: 15.8832, lng: 108.3430, url: 'https://www.google.com/maps/place/VEGAN+SHOP+H%E1%BB%98I+AN/data=!4m2!3m1!1s0x31420f7042c3315d:0xa2a6676d7e2df51d' },
+  { name: 'Ba Dam Vegetarian Restaurant',        cat: 'vegan',   note: 'Long-standing vegetarian restaurant with a loyal following.', lat: 15.8803, lng: 108.3380, url: 'https://www.google.com/maps/place/Ba+Dam+Vegetarian+Restaurant/data=!4m2!3m1!1s0x31420e7e95593db7:0x9366838b2cf8563e' },
+  { name: 'Peanuts — Vegan Vietnamese Food',     cat: 'vegan',   note: 'Casual vegan Vietnamese comfort food.',                       lat: 15.8771, lng: 108.3272, url: 'https://www.google.com/maps/place/Peanuts+-+Vegan+Vietnamese+Food/data=!4m2!3m1!1s0x31420d53c0a4829f:0x7237c9715ed18c65' },
+  { name: 'Chay Ngọc Mẫn — Tuy Duyên',          cat: 'vegan',   note: 'Traditional Buddhist vegan cooking.',                         lat: 15.8777, lng: 108.3303, url: 'https://www.google.com/maps/place/Chay+Ngoc+Man+-+Tuy+Duyen/data=!4m2!3m1!1s0x31420f0037e6d403:0x2a87c0b82c6b7f2c' },
+  { name: 'Quán Chay Phúc An',                   cat: 'vegan',   note: 'Affordable Buddhist-style vegetarian dishes.',                lat: 15.8843, lng: 108.3440, url: 'https://www.google.com/maps/place/Qu%C3%A1n+Chay+Ph%C3%BAc+An/data=!4m2!3m1!1s0x31420fa075239e75:0xa19247b815960e2f' },
+
+  // ── Wellness ──────────────────────────────────────────────────
+  { name: 'The Sandy Spa & Nail — An Bàng Beach', cat: 'wellness', note: 'Beachside spa — the perfect end to a beach day.',          lat: 15.9027, lng: 108.3626, url: 'https://www.google.com/maps/place/The+Sandy+Spa+%26+Nail+-+Massage+An+Bang+beach+Hoi+An/data=!4m2!3m1!1s0x31420dd1fe2c3103:0xe656255c36b15e3e' },
+  { name: 'Mong Spa',                             cat: 'wellness', note: 'Traditional Vietnamese massage and spa treatments.',        lat: 15.8847, lng: 108.3492, url: 'https://www.google.com/maps/place/Mong+Spa/data=!4m2!3m1!1s0x31420f949e5188f9:0x22163d165850c355' },
+  { name: 'Hoian Vela Candle & Spa',              cat: 'wellness', note: 'Candlelit spa with handmade candle collections.',           lat: 15.8778, lng: 108.3302, url: 'https://www.google.com/maps/place/Hoian+Vela+Candle+%26+Spa/data=!4m2!3m1!1s0x31420f00007882e7:0x33ec49b2de4de5d5' },
+  { name: 'Herbal Spa Hoi An',                    cat: 'wellness', note: 'Traditional herbal treatments and massages.',               lat: 15.8779, lng: 108.3303, url: 'https://www.google.com/maps/place/Herbal+Spa+Hoi+An/data=!4m2!3m1!1s0x31420f006d87a289:0x38d8dd6095ce4704' },
+  { name: 'Lee Spa Nail',                         cat: 'wellness', note: 'Nails and beauty treatments at great value.',               lat: 15.8778, lng: 108.3301, url: 'https://www.google.com/maps/place/Lee+Spa+Nail/data=!4m2!3m1!1s0x31420d00271df26d:0x45e426155d192f1a' },
+  { name: 'Moon Nails',                           cat: 'wellness', note: 'Nail salon with a calm, unhurried atmosphere.',             lat: 15.8823, lng: 108.3362, url: 'https://www.google.com/maps/place/Moon+Nails/data=!4m2!3m1!1s0x31420f0046292091:0xc4b3f3f5387459ae' },
+  { name: 'Epic Reset',                           cat: 'wellness', note: 'Recovery and reset — massages, stretch and bodywork.',      lat: 15.8793, lng: 108.3325, url: 'https://www.google.com/maps/place/Epic+Reset/data=!4m2!3m1!1s0x31420d8e2025856b:0x4ae083a907a3a25b' },
+
+  // ── Fitness ───────────────────────────────────────────────────
+  { name: 'Superfit Gym & Yoga Hoi An',          cat: 'fitness', note: 'Full gym with daily yoga classes.',                           lat: 15.8793, lng: 108.3375, url: 'https://www.google.com/maps/place/Superfit+Gym+%26+Yoga+Hoi+An/data=!4m2!3m1!1s0x31420dd86b2f0863:0x2bbbd5e07b0cacd7' },
+  { name: 'HealthFit Gym & Yoga Center',         cat: 'fitness', note: 'Well-equipped gym plus yoga and fitness classes.',            lat: 15.8815, lng: 108.3375, url: 'https://www.google.com/maps/place/HealthFit+Gym+%26+Yoga+Center+Hoi+An/data=!4m2!3m1!1s0x31420dcaac750905:0xf3c8a0706773c669' },
+
+  // ── Shop ──────────────────────────────────────────────────────
+  { name: 'Chi Chi Secondhand & More',           cat: 'shop',    note: 'Curated secondhand finds — great for slow fashion.',          lat: 15.8777, lng: 108.3302, url: 'https://www.google.com/maps/place/Chi+Chi+Secondhand+%26+More/data=!4m2!3m1!1s0x31420d0021bec6d7:0x55ae2c02503badfb' },
+  { name: 'TALO 2HAND — Secondhand & Vintage',  cat: 'shop',    note: 'Vintage and preloved pieces in a lovely space.',              lat: 15.8773, lng: 108.3282, url: 'https://www.google.com/maps/place/TALO+2HAND+%E2%80%93+Secondhand+%26+Vintage+H%E1%BB%99i+An/data=!4m2!3m1!1s0x31420d4ac9cdf239:0xdd04f17e7172f6de' },
+  { name: 'Hien 2 Hand',                         cat: 'shop',    note: 'Good-value secondhand clothing shop.',                        lat: 15.8770, lng: 108.3260, url: 'https://www.google.com/maps/place/Hien+2+Hand/data=!4m2!3m1!1s0x31420d559548e499:0x998f6b0eab14aae5' },
+  { name: 'Hart Hoi An — Upcycled Home Decor',  cat: 'shop',    note: 'Creative upcycled homeware and art.',                         lat: 15.8795, lng: 108.3352, url: 'https://www.google.com/maps/place/Hart+Hoi+An+-+Upcycled+Home+Decor/data=!4m2!3m1!1s0x31420dad85b9c1f1:0x959c1f8d243ca667' },
+  { name: 'Handmadee — Indigo & Natural Dye',   cat: 'shop',    note: 'Stunning natural-dye indigo textiles and handicrafts.',       lat: 15.8779, lng: 108.3303, url: 'https://www.google.com/maps/place/Handmadee+-+Indigo+%26+Natural+Dye+Handicrafts+in+Hoi+An/data=!4m2!3m1!1s0x31420f0052e57121:0x81ca07b2dfd2913a' },
+  { name: 'Bric à Broc Home Décor',              cat: 'shop',    note: 'Antique furniture and vintage home décor.',                   lat: 15.8912, lng: 108.3373, url: 'https://www.google.com/maps/place/Bric+%C3%A0+Broc+Home+D%C3%A9cor+-+C%E1%BB%ADa+H%C3%A0ng+N%E1%BB%99i+Th%E1%BA%A5t+X%C6%B0a/data=!4m2!3m1!1s0x314211bc6a01a96b:0x3ce2fdd3993c56c2' },
+  { name: 'Bee Mộc Gốm',                         cat: 'shop',    note: 'Handmade ceramics and pottery.',                              lat: 15.8780, lng: 108.3002, url: 'https://www.google.com/maps/place/Bee+M%E1%BB%99c+G%E1%BB%91m/data=!4m2!3m1!1s0x31420d002b9b70e1:0xc0d0381ef9a8a334' },
+  { name: 'Tiệm Gốm Việt Hội An',               cat: 'shop',    note: 'Traditional Vietnamese ceramics, beautiful gifts.',           lat: 15.8783, lng: 108.3326, url: 'https://www.google.com/maps/place/Ti%E1%BB%87m+G%E1%BB%91m+Vi%E1%BB%87t+H%E1%BB%99i+An/data=!4m2!3m1!1s0x31420d3ffb6ae417:0xf3bc7281ef536986' },
+  { name: 'Brocade Color — Thổ Cẩm Sắc Màu',   cat: 'shop',    note: 'Vibrant brocade textiles made by local artisans.',            lat: 15.8832, lng: 108.3432, url: 'https://www.google.com/maps/place/Brocade+Color+-Th%E1%BB%95+C%E1%BA%A9m+S%E1%BA%AFc+M%C3%A0u/data=!4m2!3m1!1s0x31420f5f981b5acb:0x1ca7ca022ee07fc5' },
+  { name: 'The Vy — Custom Tailor',              cat: 'shop',    note: 'Custom suits, shirts and dresses — allow 48–72 hrs.',         lat: 15.8802, lng: 108.3377, url: 'https://www.google.com/maps/place/The+Vy+-+Custom+Tailor,+Suits,+Shirts+and+Dresses/data=!4m2!3m1!1s0x31420e7cbfd80f1d:0xfd27c14e63d014a6' },
+  { name: 'BOHIN Vietnam Silk',                  cat: 'shop',    note: 'Quality Vietnamese silk fabric and accessories.',             lat: 15.8812, lng: 108.3354, url: 'https://www.google.com/maps/place/BOHIN+Viet+Nam+Silk/data=!4m2!3m1!1s0x31420f004ca515a5:0x650418e2d7343cb7' },
+  { name: 'Shimai',                              cat: 'shop',    note: 'Japanese-inspired design and lifestyle goods.',               lat: 15.8779, lng: 108.3002, url: 'https://www.google.com/maps/place/Shimai/data=!4m2!3m1!1s0x31420d0074542573:0xc2de25326d546862' },
+
+  // ── Culture & Explore ─────────────────────────────────────────
+  { name: 'Basket Boat — Mr Thong',              cat: 'culture', note: 'Iconic coconut palm forest basket boat tour. Book in advance.', lat: 15.8637, lng: 108.3758, url: 'https://www.google.com/maps/place/Basket+Boat+Mr+Thong/data=!4m2!3m1!1s0x31420da24b08b56b:0xc6731efdd0dccbc2' },
+  { name: 'Precious Heritage Art Gallery Museum', cat: 'culture', note: 'Réhahn\'s stunning photography of Vietnam\'s ethnic minorities — free entry.', lat: 15.8773, lng: 108.3309, url: 'https://www.google.com/maps/place/Precious+Heritage+Art+Gallery+Museum/data=!4m2!3m1!1s0x31420dd5b5b29c61:0xf09543eb25ba142f' },
+  { name: 'Hội An Lune Center for the Performing Arts', cat: 'culture', note: 'World-class performances in a stunning riverside venue.', lat: 15.8793, lng: 108.3363, url: 'https://www.google.com/maps/place/H%E1%BB%99i+An+Lune+Center+for+the+Performing+Arts/data=!4m2!3m1!1s0x31420e7e38509d01:0x6bc5e7726a81b4c5' },
+  { name: 'Hội An Ancient Town (Old Town)',      cat: 'culture', note: 'The UNESCO-listed ancient town. Explore on foot at sunrise or dusk.', lat: 15.8800, lng: 108.3360, url: 'https://www.google.com/maps/place/Old+Town/data=!4m2!3m1!1s0x31420e7efc19667d:0x2f53b38bfba265bc' },
+  { name: 'Cổng Chùa Bà Mụ',                    cat: 'culture', note: 'Ancient temple gate — a quiet, photogenic spot off the tourist trail.', lat: 15.8779, lng: 108.3303, url: 'https://www.google.com/maps/place/C%E1%BB%95ng+ch%C3%B9a+B%C3%A0+M%E1%BB%A5/data=!4m2!3m1!1s0x31420f000b629463:0xf1bd317bef32799f' },
+];
+
+// ── Map ──────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([15.8820, 108.3380], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+function catColor(cat) { return (CAT_LABELS[cat] || {}).color || '#86a2a6'; }
+
+function makeIcon(cat) {
+  const c = catColor(cat);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32"><path fill="${c}" stroke="rgba(0,0,0,0.4)" stroke-width="1" d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20C24 5.373 18.627 0 12 0z"/><circle cx="12" cy="12" r="5" fill="white" opacity="0.9"/></svg>`;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [24, 32],
+    iconAnchor: [12, 32],
+    popupAnchor: [0, -34],
+  });
+}
+
+const markers = {};
+PLACES.forEach((p, i) => {
+  if (!p.lat || !p.lng) return;
+  const m = L.marker([p.lat, p.lng], { icon: makeIcon(p.cat) }).addTo(map);
+  const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
+  m.bindPopup(`
+    <div class="popup-name">${p.name}</div>
+    <div class="popup-cat">${catLabel}</div>
+    <a class="popup-link" href="${p.url}" target="_blank" rel="noopener">View on Google Maps →</a>
+  `);
+  markers[i] = m;
+});
+
+// ── Cards + Filter + Search ───────────────────────────────────────
+let activeCat = 'all';
+let searchVal = '';
+
+function render() {
+  const grid = document.getElementById('cardsGrid');
+  const filtered = PLACES.filter((p, i) => {
+    const matchCat = activeCat === 'all' || p.cat === activeCat;
+    const matchSearch = !searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal);
+    return matchCat && matchSearch;
+  });
+
+  document.getElementById('countLbl').textContent = filtered.length + ' place' + (filtered.length !== 1 ? 's' : '');
+
+  // update map markers
+  PLACES.forEach((p, i) => {
+    if (!markers[i]) return;
+    const show = (activeCat === 'all' || p.cat === activeCat) && (!searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal));
+    if (show) markers[i].addTo(map);
+    else markers[i].remove();
+  });
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="no-results">No places found. Try a different search or category.</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => {
+    const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
+    return `<div class="place-card" data-cat="${p.cat}">
+      <span class="card-cat ${p.cat}">${catLabel}</span>
+      <div class="card-name">${p.name}</div>
+      ${p.note ? `<div class="card-note">${p.note}</div>` : ''}
+      <a class="card-link" href="${p.url}" target="_blank" rel="noopener">
+        View on Maps
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 9.5l7-7M4 2.5h5.5V8"/></svg>
+      </a>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('filterBar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  activeCat = btn.dataset.cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+  render();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchVal = e.target.value.trim().toLowerCase();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

@@ -357,47 +357,15 @@ const PLACES = [
   { name: 'Cổng Chùa Bà Mụ',                    cat: 'culture', note: 'Ancient temple gate — a quiet, photogenic spot off the tourist trail.', lat: 15.8779, lng: 108.3303, url: 'https://www.google.com/maps/place/C%E1%BB%95ng+ch%C3%B9a+B%C3%A0+M%E1%BB%A5/data=!4m2!3m1!1s0x31420f000b629463:0xf1bd317bef32799f' },
 ];
 
-// ── Map ──────────────────────────────────────────────────────────
-const map = L.map('map', { zoomControl: true }).setView([15.8820, 108.3380], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 19,
-}).addTo(map);
-
-function catColor(cat) { return (CAT_LABELS[cat] || {}).color || '#86a2a6'; }
-
-function makeIcon(cat) {
-  const c = catColor(cat);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32"><path fill="${c}" stroke="rgba(0,0,0,0.4)" stroke-width="1" d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20C24 5.373 18.627 0 12 0z"/><circle cx="12" cy="12" r="5" fill="white" opacity="0.9"/></svg>`;
-  return L.divIcon({
-    html: svg,
-    className: '',
-    iconSize: [24, 32],
-    iconAnchor: [12, 32],
-    popupAnchor: [0, -34],
-  });
-}
-
-const markers = {};
-PLACES.forEach((p, i) => {
-  if (!p.lat || !p.lng) return;
-  const m = L.marker([p.lat, p.lng], { icon: makeIcon(p.cat) }).addTo(map);
-  const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
-  m.bindPopup(`
-    <div class="popup-name">${p.name}</div>
-    <div class="popup-cat">${catLabel}</div>
-    <a class="popup-link" href="${p.url}" target="_blank" rel="noopener">View on Google Maps →</a>
-  `);
-  markers[i] = m;
-});
-
 // ── Cards + Filter + Search ───────────────────────────────────────
 let activeCat = 'all';
 let searchVal = '';
+let map = null;
+const markers = {};
 
 function render() {
   const grid = document.getElementById('cardsGrid');
-  const filtered = PLACES.filter((p, i) => {
+  const filtered = PLACES.filter(p => {
     const matchCat = activeCat === 'all' || p.cat === activeCat;
     const matchSearch = !searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal);
     return matchCat && matchSearch;
@@ -405,13 +373,15 @@ function render() {
 
   document.getElementById('countLbl').textContent = filtered.length + ' place' + (filtered.length !== 1 ? 's' : '');
 
-  // update map markers
-  PLACES.forEach((p, i) => {
-    if (!markers[i]) return;
-    const show = (activeCat === 'all' || p.cat === activeCat) && (!searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal));
-    if (show) markers[i].addTo(map);
-    else markers[i].remove();
-  });
+  // update map markers if map loaded
+  if (map) {
+    PLACES.forEach((p, i) => {
+      if (!markers[i]) return;
+      const show = (activeCat === 'all' || p.cat === activeCat) && (!searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal));
+      if (show) markers[i].addTo(map);
+      else markers[i].remove();
+    });
+  }
 
   if (!filtered.length) {
     grid.innerHTML = '<div class="no-results">No places found. Try a different search or category.</div>';
@@ -445,7 +415,39 @@ document.getElementById('searchInput').addEventListener('input', e => {
   render();
 });
 
+// Render cards immediately — independent of map
 render();
+
+// ── Map (initialised after cards, wrapped in try/catch) ──────────
+function catColor(cat) { return (CAT_LABELS[cat] || {}).color || '#86a2a6'; }
+
+function makeIcon(cat) {
+  const c = catColor(cat);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32"><path fill="${c}" stroke="rgba(0,0,0,0.4)" stroke-width="1" d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20C24 5.373 18.627 0 12 0z"/><circle cx="12" cy="12" r="5" fill="white" opacity="0.9"/></svg>`;
+  return L.divIcon({ html: svg, className: '', iconSize: [24, 32], iconAnchor: [12, 32], popupAnchor: [0, -34] });
+}
+
+try {
+  map = L.map('map', { zoomControl: true }).setView([15.8820, 108.3380], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  PLACES.forEach((p, i) => {
+    if (!p.lat || !p.lng) return;
+    const m = L.marker([p.lat, p.lng], { icon: makeIcon(p.cat) }).addTo(map);
+    const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
+    m.bindPopup(`
+      <div class="popup-name">${p.name}</div>
+      <div class="popup-cat">${catLabel}</div>
+      <a class="popup-link" href="${p.url}" target="_blank" rel="noopener">View on Google Maps →</a>
+    `);
+    markers[i] = m;
+  });
+} catch(e) {
+  document.getElementById('map').style.display = 'none';
+}
 </script>
 </body>
 </html>

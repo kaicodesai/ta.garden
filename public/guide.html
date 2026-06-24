@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hội An Guide — Ta.Garden</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -228,7 +228,7 @@ footer a { color: var(--teal); text-decoration: none; }
   <p>Ta.Garden · Hội An, Vietnam · <a href="/">ta.garden</a></p>
 </footer>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLs=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
 const CAT_LABELS = {
   cafe:     { label: '☕ Coffee',      color: '#c8873a' },
@@ -418,7 +418,7 @@ document.getElementById('searchInput').addEventListener('input', e => {
 // Render cards immediately — independent of map
 render();
 
-// ── Map (initialised after cards, wrapped in try/catch) ──────────
+// ── Map (init after full page load) ─────────────────────────────
 function catColor(cat) { return (CAT_LABELS[cat] || {}).color || '#86a2a6'; }
 
 function makeIcon(cat) {
@@ -427,27 +427,32 @@ function makeIcon(cat) {
   return L.divIcon({ html: svg, className: '', iconSize: [24, 32], iconAnchor: [12, 32], popupAnchor: [0, -34] });
 }
 
-try {
-  map = L.map('map', { zoomControl: true }).setView([15.8820, 108.3380], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-  }).addTo(map);
+window.addEventListener('load', function() {
+  try {
+    if (typeof L === 'undefined') throw new Error('Leaflet not loaded');
+    map = L.map('map', { zoomControl: true }).setView([15.8820, 108.3380], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
 
-  PLACES.forEach((p, i) => {
-    if (!p.lat || !p.lng) return;
-    const m = L.marker([p.lat, p.lng], { icon: makeIcon(p.cat) }).addTo(map);
-    const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
-    m.bindPopup(`
-      <div class="popup-name">${p.name}</div>
-      <div class="popup-cat">${catLabel}</div>
-      <a class="popup-link" href="${p.url}" target="_blank" rel="noopener">View on Google Maps →</a>
-    `);
-    markers[i] = m;
-  });
-} catch(e) {
-  document.getElementById('map').style.display = 'none';
-}
+    PLACES.forEach((p, i) => {
+      if (!p.lat || !p.lng) return;
+      const m = L.marker([p.lat, p.lng], { icon: makeIcon(p.cat) }).addTo(map);
+      const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
+      m.bindPopup(`
+        <div class="popup-name">${p.name}</div>
+        <div class="popup-cat">${catLabel}</div>
+        <a class="popup-link" href="${p.url}" target="_blank" rel="noopener">View on Google Maps →</a>
+      `);
+      markers[i] = m;
+    });
+
+    setTimeout(() => map.invalidateSize(), 100);
+  } catch(e) {
+    document.getElementById('map').style.display = 'none';
+  }
+});
 </script>
 </body>
 </html>

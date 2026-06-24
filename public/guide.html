@@ -542,7 +542,7 @@ function openPlace(idx) {
 
   document.getElementById('modalMapsBtn').href = p.url;
 
-  const dirUrl = `https://www.google.com/maps/dir/${HOME_LAT},${HOME_LNG}/${p.lat || ''},${p.lng || ''}/${encodeURIComponent(p.name + ' Hoi An')}`;
+  const dirUrl = `https://www.google.com/maps/dir/?api=1&origin=${HOME_LAT},${HOME_LNG}&destination=${encodeURIComponent(p.name + ' Hội An Vietnam')}`;
   document.getElementById('modalDirBtn').href = dirUrl;
 
   const modal = document.getElementById('placeModal');

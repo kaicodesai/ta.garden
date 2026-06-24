@@ -1440,24 +1440,31 @@ async function runEmailAutomation(env) {
       const dueDay = enq.checkIn ? new Date(enq.checkIn + 'T00:00:00Z').getUTCDate() : 1;
       const reminderDay = dueDay <= 5 ? (dueDay - 5 + 28) : (dueDay - 5); // send 5 days before
       if (enq.stayType === 'monthly' && isOngoing && today.getUTCDate() === reminderDay) {
-        // Due date is dueDay of next month (or this month if dueDay > today)
         const nm = today.getUTCDate() < dueDay ? today.getUTCMonth() + 1 : today.getUTCMonth() + 2;
         const nextYear  = nm > 12 ? today.getUTCFullYear() + 1 : today.getUTCFullYear();
         const normNm    = nm > 12 ? 1 : nm;
         const reminderKey = `payReminder_${nextYear}_${String(normNm).padStart(2,'0')}`;
         if (!ae[reminderKey]) {
-          try {
-            const dueDate = `${nextYear}-${String(normNm).padStart(2,'0')}-${String(dueDay).padStart(2,'0')}`;
-            const rentUsd = enq.rentUsd || ROOM_RATES[enq.room]?.monthly;
-            const stripeUrl = enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
-            await resend(FROM, enq.email, `Monthly rent due ${fmt(dueDate)} — Ta.Garden`, buildMonthlyReminderGuestEmail(enq, dueDate, rentUsd, stripeUrl), null, env);
-            // Also notify admin with calendar link
-            const gcalUrl = buildGCalLink(`Rent Due — ${enq.name} (${enq.room})`, dueDate, `$${rentUsd || '?'} monthly rent due. Guest: ${enq.email}`);
-            const adminHtml = buildMonthlyReminderAdminEmail(enq, dueDate, rentUsd, gcalUrl);
-            await Promise.all(TO_EMAILS.map(to => resend(FROM, to, `Payment reminder: ${enq.name} — ${enq.room} — ${fmt(dueDate)}`, adminHtml, null, env)));
-            ae[reminderKey] = new Date().toISOString();
-            changed = true; sent++;
-          } catch (e) { errors.push(`monthlyReminder ${enq.id}: ${e.message}`); }
+          const dueDate = `${nextYear}-${String(normNm).padStart(2,'0')}-${String(dueDay).padStart(2,'0')}`;
+          // Skip if this is the first month's due date and the guest already paid their first month's rent
+          const isFirstDue = enq.checkIn && Math.abs(new Date(dueDate + 'T00:00:00Z') - new Date(enq.checkIn + 'T00:00:00Z')) < 35 * 86400000;
+          const firstMonthPaid = !!(enq.onboarding?.balanceReceived || enq.onboarding?.paymentReceived);
+          if (isFirstDue && firstMonthPaid) {
+            ae[reminderKey] = 'skipped_first_month_already_paid';
+            changed = true;
+          } else {
+            try {
+              const rentUsd = enq.rentUsd || ROOM_RATES[enq.room]?.monthly;
+              const stripeUrl = enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+              await resend(FROM, enq.email, `Monthly rent due ${fmt(dueDate)} — Ta.Garden`, buildMonthlyReminderGuestEmail(enq, dueDate, rentUsd, stripeUrl), null, env);
+              // Also notify admin with calendar link
+              const gcalUrl = buildGCalLink(`Rent Due — ${enq.name} (${enq.room})`, dueDate, `$${rentUsd || '?'} monthly rent due. Guest: ${enq.email}`);
+              const adminHtml = buildMonthlyReminderAdminEmail(enq, dueDate, rentUsd, gcalUrl);
+              await Promise.all(TO_EMAILS.map(to => resend(FROM, to, `Payment reminder: ${enq.name} — ${enq.room} — ${fmt(dueDate)}`, adminHtml, null, env)));
+              ae[reminderKey] = new Date().toISOString();
+              changed = true; sent++;
+            } catch (e) { errors.push(`monthlyReminder ${enq.id}: ${e.message}`); }
+          }
         }
       }
     }

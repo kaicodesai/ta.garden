@@ -104,6 +104,8 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/onboarding'       && m === 'PATCH') return safeCall(() => adminUpdateOnboarding(request, env, cors), cors);
     if (p === '/api/admin/guest-profile'    && m === 'GET')   return safeCall(() => adminGetGuestProfile(request, env, cors), cors);
     if (p === '/api/admin/guest-profile'    && m === 'PATCH') return safeCall(() => adminUpdateGuestProfile(request, env, cors), cors);
+    if (p === '/api/admin/emails/upcoming'  && m === 'GET')   return safeCall(() => adminUpcomingEmails(request, env, cors), cors);
+    if (p === '/api/admin/emails/suppress'  && m === 'POST')  return safeCall(() => adminSuppressEmail(request, env, cors), cors);
 
     // Gallery (public read, admin write)
     if (p === '/api/gallery'               && m === 'GET')    return handleGalleryGet(request, env, cors);
@@ -1367,6 +1369,95 @@ async function adminSaveRoom(request, env, cors) {
 }
 
 // ── Email automation (cron + manual trigger) ──────────────────────────────────
+
+function addDaysStr(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function adminUpcomingEmails(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ upcoming: [] }, { headers: cors });
+
+  const LOOKAHEAD = 14;
+  const now = new Date();
+  now.setUTCHours(0, 0, 0, 0);
+  const upcoming = [];
+
+  const props = [...DEFAULT_PROPERTIES];
+  for (const prop of props) {
+    const raw = await env.BOOKINGS.get(enquiriesKey(prop.id));
+    if (!raw) continue;
+    const enquiries = safeJsonParse(raw);
+
+    for (const enq of enquiries) {
+      if (enq.status !== 'confirmed' || !enq.email) continue;
+      const ae = enq.autoEmails || {};
+
+      for (let d = 0; d <= LOOKAHEAD; d++) {
+        const checkDate = new Date(now);
+        checkDate.setUTCDate(checkDate.getUTCDate() + d);
+        const checkStr = checkDate.toISOString().slice(0, 10);
+
+        // Arrival reminder (fires 2 days before checkIn)
+        if (enq.checkIn && addDaysStr(enq.checkIn, -2) === checkStr && !ae.arrivalReminder) {
+          upcoming.push({ sendDate: checkStr, type: 'arrival_reminder', label: 'Arrival Reminder', detail: `Check-in ${fmt(enq.checkIn)}`, enquiryId: enq.id, name: enq.name, room: enq.room, email: enq.email, suppressKey: 'arrivalReminder' });
+        }
+
+        // Checkout reminder (fires on checkOut day)
+        if (enq.checkOut === checkStr && !ae.checkoutReminder) {
+          upcoming.push({ sendDate: checkStr, type: 'checkout_reminder', label: 'Checkout Reminder', detail: '', enquiryId: enq.id, name: enq.name, room: enq.room, email: enq.email, suppressKey: 'checkoutReminder' });
+        }
+
+        // Review request (fires 3 days after checkOut)
+        if (enq.checkOut && addDaysStr(enq.checkOut, 3) === checkStr && !ae.reviewRequest) {
+          upcoming.push({ sendDate: checkStr, type: 'review_request', label: 'Review Request', detail: `3 days after checkout`, enquiryId: enq.id, name: enq.name, room: enq.room, email: enq.email, suppressKey: 'reviewRequest' });
+        }
+
+        // Monthly payment reminder
+        if (enq.stayType === 'monthly' && enq.checkIn) {
+          const isOngoing = !enq.checkOut || enq.checkOut > checkStr;
+          if (isOngoing) {
+            const dueDay = new Date(enq.checkIn + 'T00:00:00Z').getUTCDate();
+            const reminderDay = dueDay <= 5 ? (dueDay - 5 + 28) : (dueDay - 5);
+            if (checkDate.getUTCDate() === reminderDay) {
+              const nm = checkDate.getUTCDate() < dueDay ? checkDate.getUTCMonth() + 1 : checkDate.getUTCMonth() + 2;
+              const nextYear = nm > 12 ? checkDate.getUTCFullYear() + 1 : checkDate.getUTCFullYear();
+              const normNm = nm > 12 ? 1 : nm;
+              const reminderKey = `payReminder_${nextYear}_${String(normNm).padStart(2,'0')}`;
+              const dueDate = `${nextYear}-${String(normNm).padStart(2,'0')}-${String(dueDay).padStart(2,'0')}`;
+              const isFirstDue = Math.abs(new Date(dueDate + 'T00:00:00Z') - new Date(enq.checkIn + 'T00:00:00Z')) < 35 * 86400000;
+              const firstMonthPaid = !!(enq.onboarding?.balanceReceived || enq.onboarding?.paymentReceived);
+              const autoSkip = isFirstDue && firstMonthPaid;
+              if (!ae[reminderKey]) {
+                upcoming.push({ sendDate: checkStr, type: 'payment_reminder', label: 'Payment Reminder', detail: `Due ${fmt(dueDate)}`, enquiryId: enq.id, name: enq.name, room: enq.room, email: enq.email, suppressKey: reminderKey, autoSkip, note: autoSkip ? 'Auto-skip — first month already paid' : null });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  upcoming.sort((a, b) => a.sendDate.localeCompare(b.sendDate));
+  return Response.json({ upcoming, lookahead: LOOKAHEAD }, { headers: cors });
+}
+
+async function adminSuppressEmail(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+  const { enquiryId, suppressKey, propertyId = 'ta-garden' } = await request.json();
+  if (!enquiryId || !suppressKey) return Response.json({ error: 'enquiryId and suppressKey required' }, { status: 400, headers: cors });
+  const key = enquiriesKey(propertyId);
+  const enquiries = safeJsonParse(await env.BOOKINGS.get(key));
+  const idx = enquiries.findIndex(e => e.id === enquiryId);
+  if (idx < 0) return Response.json({ error: 'Not found' }, { status: 404, headers: cors });
+  if (!enquiries[idx].autoEmails) enquiries[idx].autoEmails = {};
+  enquiries[idx].autoEmails[suppressKey] = 'suppressed_by_admin';
+  await env.BOOKINGS.put(key, JSON.stringify(enquiries));
+  return Response.json({ success: true }, { headers: cors });
+}
 
 async function adminRunEmails(request, env, cors) {
   if (!await checkAuth(request, env)) return unauthorized(cors);

@@ -490,6 +490,7 @@ body { font-family: 'Jost', sans-serif; font-weight: 300; background: #f0ebe4; c
           <button class="btn-sm" onclick="openRestoreGuestModal()" title="Re-activate a guest portal link using the original enquiry ID" style="font-size:10px;padding:5px 10px;">↺ Restore Guest Link</button>
         </div>
       </div>
+      <div id="scheduledEmailsWidget" style="margin-bottom:16px;"></div>
       <div id="enqContainer"><div class="loading">Loading…</div></div>
     </div>
 
@@ -1201,6 +1202,7 @@ async function bootApp() {
   renderStats();
   renderEnquiries();
   renderPropCards();
+  renderScheduledEmails();
 }
 
 async function loadCurrentProperty(id) {
@@ -4310,6 +4312,88 @@ async function doDeleteExpense(expId) {
     bootApp();
   } catch {}
 })();
+
+// ── Scheduled Emails Widget ───────────────────────────────────────────────────
+async function renderScheduledEmails() {
+  const widget = document.getElementById('scheduledEmailsWidget');
+  if (!widget) return;
+  widget.innerHTML = '';
+
+  try {
+    const r = await fetch('/api/admin/emails/upcoming', { headers: { 'x-admin-secret': secret } });
+    const data = await r.json();
+    const items = (data.upcoming || []);
+
+    const TYPE_META = {
+      arrival_reminder:  { label: 'Arrival Reminder',  bg: 'rgba(134,162,166,0.15)', fg: '#4a8085' },
+      checkout_reminder: { label: 'Checkout Reminder', bg: 'rgba(136,145,125,0.15)', fg: '#5a6350' },
+      review_request:    { label: 'Review Request',    bg: 'rgba(139,111,71,0.12)',  fg: '#7a5a30' },
+      payment_reminder:  { label: 'Payment Reminder',  bg: 'rgba(45,90,39,0.1)',     fg: '#2d5a27' },
+    };
+
+    const rows = items.map(item => {
+      const tm = TYPE_META[item.type] || { label: item.type, bg: '#eee', fg: '#666' };
+      const statusCell = item.autoSkip
+        ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(136,145,125,0.12);color:var(--mid,#88917d);">Auto-skip</span><div style="font-size:10px;color:var(--mid,#88917d);margin-top:2px;">${item.note}</div>`
+        : `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(45,90,39,0.1);color:#2d5a27;">Will send</span>`;
+      const suppressBtn = !item.autoSkip
+        ? `<button onclick="suppressEmail('${item.enquiryId}','${item.suppressKey}')" style="font-size:10px;padding:4px 10px;background:none;border:1px solid rgba(192,57,43,0.35);color:var(--red,#c0392b);border-radius:3px;cursor:pointer;white-space:nowrap;">Suppress</button>`
+        : '';
+      return `<tr style="border-bottom:1px solid rgba(136,145,125,0.1);">
+        <td style="padding:10px 12px;font-size:12px;color:var(--mid,#88917d);white-space:nowrap;">${fmt2(item.sendDate)}</td>
+        <td style="padding:10px 12px;">
+          <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${tm.bg};color:${tm.fg};">${tm.label}</span>
+          ${item.detail ? `<div style="font-size:10px;color:var(--mid,#88917d);margin-top:2px;">${item.detail}</div>` : ''}
+        </td>
+        <td style="padding:10px 12px;font-size:13px;color:var(--dark,#1a1a18);">${item.name}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--mid,#88917d);">${(item.room||'').replace('The ','')}</td>
+        <td style="padding:10px 12px;">${statusCell}</td>
+        <td style="padding:10px 12px;text-align:right;">${suppressBtn}</td>
+      </tr>`;
+    }).join('');
+
+    widget.innerHTML = `<div class="card" style="margin-bottom:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${items.length ? '0' : '4px'};">
+        <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--mid,#88917d);">Scheduled Emails — Next 14 Days</div>
+        <button onclick="renderScheduledEmails()" style="font-size:10px;padding:3px 9px;background:none;border:1px solid rgba(136,145,125,0.3);color:var(--mid,#88917d);border-radius:3px;cursor:pointer;">↺ Refresh</button>
+      </div>
+      ${items.length === 0
+        ? '<div style="font-size:13px;color:var(--mid,#88917d);padding:10px 0 2px;">No automated emails scheduled in the next 14 days.</div>'
+        : `<div style="overflow-x:auto;margin-top:4px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <thead><tr>
+                ${['Send Date','Type','Guest','Room','Status',''].map(h => `<th style="text-align:left;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mid,#88917d);padding:8px 12px;border-bottom:1px solid rgba(136,145,125,0.15);">${h}</th>`).join('')}
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`
+      }
+    </div>`;
+  } catch(e) {
+    widget.innerHTML = `<div style="font-size:12px;color:var(--red,#c0392b);padding:6px 0;">Could not load scheduled emails.</div>`;
+  }
+}
+
+function fmt2(s) {
+  if (!s) return '—';
+  const [y, m, d] = s.split('-');
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return MONTHS[+m-1] + ' ' + +d + ', ' + y;
+}
+
+async function suppressEmail(enquiryId, suppressKey) {
+  if (!confirm('Suppress this email? It will not be sent automatically.')) return;
+  try {
+    const r = await fetch('/api/admin/emails/suppress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ enquiryId, suppressKey }),
+    });
+    const d = await r.json();
+    if (d.success) renderScheduledEmails();
+    else alert('Suppress failed: ' + (d.error || 'Unknown'));
+  } catch { alert('Network error.'); }
+}
 </script>
 </body>
 </html>

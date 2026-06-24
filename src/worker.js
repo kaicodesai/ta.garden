@@ -106,6 +106,7 @@ async function handleFetch(request, env, ctx) {
     if (p === '/api/admin/guest-profile'    && m === 'PATCH') return safeCall(() => adminUpdateGuestProfile(request, env, cors), cors);
     if (p === '/api/admin/emails/upcoming'  && m === 'GET')   return safeCall(() => adminUpcomingEmails(request, env, cors), cors);
     if (p === '/api/admin/emails/suppress'  && m === 'POST')  return safeCall(() => adminSuppressEmail(request, env, cors), cors);
+    if (p === '/api/admin/emails/render'    && m === 'GET')   return safeCall(() => adminRenderEmail(request, env, cors), cors);
 
     // Gallery (public read, admin write)
     if (p === '/api/gallery'               && m === 'GET')    return handleGalleryGet(request, env, cors);
@@ -1457,6 +1458,46 @@ async function adminSuppressEmail(request, env, cors) {
   enquiries[idx].autoEmails[suppressKey] = 'suppressed_by_admin';
   await env.BOOKINGS.put(key, JSON.stringify(enquiries));
   return Response.json({ success: true }, { headers: cors });
+}
+
+async function adminRenderEmail(request, env, cors) {
+  if (!await checkAuth(request, env)) return unauthorized(cors);
+  if (!env.BOOKINGS) return Response.json({ error: 'KV not configured' }, { status: 503, headers: cors });
+  const url = new URL(request.url);
+  const enquiryId = url.searchParams.get('enquiryId');
+  const type      = url.searchParams.get('type');
+  const dueDate   = url.searchParams.get('dueDate');
+  if (!enquiryId || !type) return Response.json({ error: 'enquiryId and type required' }, { status: 400, headers: cors });
+
+  let enq = null;
+  for (const prop of DEFAULT_PROPERTIES) {
+    const raw = await env.BOOKINGS.get(enquiriesKey(prop.id));
+    if (!raw) continue;
+    const found = safeJsonParse(raw).find(e => e.id === enquiryId);
+    if (found) { enq = found; break; }
+  }
+  if (!enq) return Response.json({ error: 'Enquiry not found' }, { status: 404, headers: cors });
+
+  let html, subject;
+  if (type === 'arrival_reminder') {
+    html = buildArrivalReminderEmail(enq);
+    subject = `Your stay at Ta.Garden starts in 2 days`;
+  } else if (type === 'checkout_reminder') {
+    html = buildCheckoutReminderEmail(enq);
+    subject = `Checkout day — thank you for staying at Ta.Garden`;
+  } else if (type === 'review_request') {
+    html = buildReviewRequestEmail(enq);
+    subject = `How was your stay at Ta.Garden?`;
+  } else if (type === 'payment_reminder') {
+    if (!dueDate) return Response.json({ error: 'dueDate required for payment_reminder' }, { status: 400, headers: cors });
+    const rentUsd = enq.rentUsd || ROOM_RATES[enq.room]?.monthly;
+    const stripeUrl = enq.stripeUrl || 'https://buy.stripe.com/7sY6oH1rO3CJeMJehC53O02';
+    html = buildMonthlyReminderGuestEmail(enq, dueDate, rentUsd, stripeUrl);
+    subject = `Monthly rent due ${fmt(dueDate)} — Ta.Garden`;
+  } else {
+    return Response.json({ error: 'Unknown type' }, { status: 400, headers: cors });
+  }
+  return Response.json({ html, subject, to: enq.email, name: enq.name }, { headers: cors });
 }
 
 async function adminRunEmails(request, env, cors) {

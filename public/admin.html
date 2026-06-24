@@ -4336,6 +4336,8 @@ async function renderScheduledEmails() {
       const statusCell = item.autoSkip
         ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(136,145,125,0.12);color:var(--mid,#88917d);">Auto-skip</span><div style="font-size:10px;color:var(--mid,#88917d);margin-top:2px;">${item.note}</div>`
         : `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(45,90,39,0.1);color:#2d5a27;">Will send</span>`;
+      const dueDateArg = item.dueDate ? `,'${item.dueDate}'` : '';
+      const previewBtn = `<button onclick="previewEmail('${item.enquiryId}','${item.type}'${dueDateArg})" style="font-size:10px;padding:4px 10px;background:none;border:1px solid rgba(134,162,166,0.4);color:#4a8085;border-radius:3px;cursor:pointer;margin-right:6px;white-space:nowrap;">Preview</button>`;
       const suppressBtn = !item.autoSkip
         ? `<button onclick="suppressEmail('${item.enquiryId}','${item.suppressKey}')" style="font-size:10px;padding:4px 10px;background:none;border:1px solid rgba(192,57,43,0.35);color:var(--red,#c0392b);border-radius:3px;cursor:pointer;white-space:nowrap;">Suppress</button>`
         : '';
@@ -4348,7 +4350,7 @@ async function renderScheduledEmails() {
         <td style="padding:10px 12px;font-size:13px;color:var(--dark,#1a1a18);">${item.name}</td>
         <td style="padding:10px 12px;font-size:12px;color:var(--mid,#88917d);">${(item.room||'').replace('The ','')}</td>
         <td style="padding:10px 12px;">${statusCell}</td>
-        <td style="padding:10px 12px;text-align:right;">${suppressBtn}</td>
+        <td style="padding:10px 12px;text-align:right;white-space:nowrap;">${previewBtn}${suppressBtn}</td>
       </tr>`;
     }).join('');
 
@@ -4394,6 +4396,54 @@ async function suppressEmail(enquiryId, suppressKey) {
     else alert('Suppress failed: ' + (d.error || 'Unknown'));
   } catch { alert('Network error.'); }
 }
+
+async function previewEmail(enquiryId, type, dueDate) {
+  const modal = document.getElementById('emailPreviewModal');
+  const frame = document.getElementById('emailPreviewFrame');
+  const titleEl = document.getElementById('emailPreviewSubject');
+  const toEl    = document.getElementById('emailPreviewTo');
+  titleEl.textContent = 'Loading…';
+  toEl.textContent = '';
+  frame.srcdoc = '';
+  modal.style.display = 'flex';
+
+  try {
+    const params = new URLSearchParams({ enquiryId, type });
+    if (dueDate) params.set('dueDate', dueDate);
+    const r = await fetch(`/api/admin/emails/render?${params}`, { headers: { 'x-admin-secret': secret } });
+    const d = await r.json();
+    if (d.html) {
+      titleEl.textContent = d.subject;
+      toEl.textContent = `To: ${d.name} <${d.to}>`;
+      frame.srcdoc = d.html;
+    } else {
+      titleEl.textContent = 'Error';
+      frame.srcdoc = `<p style="padding:20px;font-family:Arial;color:#c0392b;">${d.error || 'Could not render email.'}</p>`;
+    }
+  } catch {
+    titleEl.textContent = 'Error';
+    frame.srcdoc = '<p style="padding:20px;font-family:Arial;color:#c0392b;">Network error.</p>';
+  }
+}
+
+function closeEmailPreview() {
+  document.getElementById('emailPreviewModal').style.display = 'none';
+  document.getElementById('emailPreviewFrame').srcdoc = '';
+}
 </script>
+
+<!-- Email Preview Modal -->
+<div id="emailPreviewModal" onclick="if(event.target===this)closeEmailPreview()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9000;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;">
+  <div style="width:100%;max-width:680px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="background:#1a1a18;padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+      <div style="min-width:0;">
+        <div id="emailPreviewSubject" style="color:#ede0d1;font-size:14px;font-weight:500;line-height:1.4;"></div>
+        <div id="emailPreviewTo" style="color:rgba(237,224,209,0.5);font-size:11px;margin-top:4px;font-family:monospace;"></div>
+      </div>
+      <button onclick="closeEmailPreview()" style="background:none;border:none;color:rgba(237,224,209,0.5);font-size:22px;cursor:pointer;padding:0;line-height:1;flex-shrink:0;">×</button>
+    </div>
+    <iframe id="emailPreviewFrame" style="width:100%;min-height:600px;border:none;display:block;" sandbox="allow-same-origin"></iframe>
+  </div>
+</div>
 </body>
 </html>

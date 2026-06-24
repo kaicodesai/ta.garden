@@ -25,6 +25,7 @@
   --fitness: #2d6b8c;
   --shop: #8c6b2d;
   --culture: #2d7a6e;
+  --grocery: #4a7c3f;
 }
 html { scroll-behavior: smooth; }
 body { font-family: 'Jost', Arial, sans-serif; background: var(--white); color: var(--dark); line-height: 1.7; }
@@ -111,9 +112,10 @@ nav { background: var(--dark); padding: 18px 32px; display: flex; align-items: c
   flex-direction: column;
   gap: 8px;
   transition: border-color 0.15s, box-shadow 0.15s;
-  cursor: default;
+  cursor: pointer;
 }
 .place-card:hover { border-color: var(--teal); box-shadow: 0 2px 12px rgba(134,162,166,0.12); }
+.card-dist { font-size: 11px; color: var(--mid); font-family: Arial, sans-serif; letter-spacing: 0.02em; }
 .card-cat {
   display: inline-flex;
   align-items: center;
@@ -135,6 +137,7 @@ nav { background: var(--dark); padding: 18px 32px; display: flex; align-items: c
 .card-cat.fitness { background: var(--fitness); }
 .card-cat.shop    { background: var(--shop); }
 .card-cat.culture { background: var(--culture); }
+.card-cat.grocery { background: var(--grocery); }
 .card-name {
   font-family: 'Cormorant Garamond', serif;
   font-size: 18px;
@@ -167,6 +170,55 @@ nav { background: var(--dark); padding: 18px 32px; display: flex; align-items: c
 .place-card:hover .card-link svg { transform: translateX(2px); }
 
 .no-results { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--mid); font-size: 14px; }
+
+/* Place detail modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 1000; align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+@media (min-width: 600px) { .modal-overlay { align-items: center; } }
+.modal-sheet {
+  background: var(--white); width: 100%; max-width: 520px;
+  border-radius: 12px 12px 0 0; padding: 28px 28px 40px;
+  position: relative; max-height: 90vh; overflow-y: auto;
+}
+@media (min-width: 600px) { .modal-sheet { border-radius: 6px; padding: 36px 36px 36px; } }
+.modal-close {
+  position: absolute; top: 16px; right: 18px;
+  background: none; border: none; font-size: 22px; color: var(--mid);
+  cursor: pointer; line-height: 1; padding: 4px;
+}
+.modal-close:hover { color: var(--dark); }
+.modal-cat { margin-bottom: 12px; }
+.modal-name {
+  font-family: 'Cormorant Garamond', serif; font-size: 28px;
+  font-weight: 400; color: var(--dark); line-height: 1.2; margin-bottom: 8px;
+}
+.modal-note { font-size: 14px; color: rgba(26,26,24,0.6); line-height: 1.75; margin-bottom: 16px; }
+.modal-dist {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--mid); background: var(--light);
+  padding: 6px 12px; border-radius: 20px; margin-bottom: 22px;
+  font-family: Arial, sans-serif;
+}
+.modal-actions { display: flex; flex-direction: column; gap: 10px; }
+.modal-btn-primary {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--dark); color: var(--cream); text-decoration: none;
+  padding: 15px 24px; border-radius: 3px; font-family: 'Jost', Arial, sans-serif;
+  font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase;
+  transition: opacity 0.15s;
+}
+.modal-btn-primary:hover { opacity: 0.8; }
+.modal-btn-secondary {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid rgba(134,162,166,0.5); color: var(--teal); text-decoration: none;
+  padding: 13px 24px; border-radius: 3px; font-family: 'Jost', Arial, sans-serif;
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  transition: border-color 0.15s, color 0.15s;
+}
+.modal-btn-secondary:hover { border-color: var(--teal); color: var(--dark); }
 
 /* Footer */
 footer { background: var(--dark); text-align: center; padding: 32px 20px; }
@@ -207,6 +259,7 @@ footer a { color: var(--teal); text-decoration: none; }
     <button class="filter-btn" data-cat="fitness">💪 Fitness</button>
     <button class="filter-btn" data-cat="shop">🛍️ Shop</button>
     <button class="filter-btn" data-cat="culture">🗺️ Explore</button>
+    <button class="filter-btn" data-cat="grocery">🛒 Groceries</button>
   </div>
 </div>
 
@@ -228,8 +281,51 @@ footer a { color: var(--teal); text-decoration: none; }
   <p>Ta.Garden · Hội An, Vietnam · <a href="/">ta.garden</a></p>
 </footer>
 
+<!-- Place detail modal -->
+<div class="modal-overlay" id="placeModal" onclick="if(event.target===this)closePlace()">
+  <div class="modal-sheet">
+    <button class="modal-close" onclick="closePlace()">×</button>
+    <div class="modal-cat"><span class="card-cat" id="modalCat"></span></div>
+    <div class="modal-name" id="modalName"></div>
+    <div class="modal-note" id="modalNote"></div>
+    <div class="modal-dist" id="modalDist"></div>
+    <div class="modal-actions">
+      <a class="modal-btn-primary" id="modalMapsBtn" href="#" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Open in Google Maps
+      </a>
+      <a class="modal-btn-secondary" id="modalDirBtn" href="#" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        Get Directions from Ta.Garden
+      </a>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
+// ── Home location (Ta.Garden, Cam Nam Island) ────────────────────
+// Update HOME_LAT / HOME_LNG if coordinates are off — drop a pin on Google
+// Maps at the front door and paste the lat/lng here.
+const HOME_LAT = 15.867740;
+const HOME_LNG = 108.355771;
+const HOME_NAME = 'Ta.Garden';
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function distFromHome(lat, lng) {
+  if (!lat || !lng) return null;
+  const straight = haversine(HOME_LAT, HOME_LNG, lat, lng);
+  const road = straight * 1.4;            // road-distance factor
+  const mins = Math.max(1, Math.round(road / 25 * 60)); // ~25 km/h avg motorbike
+  return { km: road.toFixed(1), mins };
+}
+
 const CAT_LABELS = {
   cafe:     { label: '☕ Coffee',      color: '#c8873a' },
   eat:      { label: '🍜 Eat Out',     color: '#b84c4c' },
@@ -238,6 +334,7 @@ const CAT_LABELS = {
   fitness:  { label: '💪 Fitness',     color: '#2d6b8c' },
   shop:     { label: '🛍️ Shop',       color: '#8c6b2d' },
   culture:  { label: '🗺️ Explore',    color: '#2d7a6e' },
+  grocery:  { label: '🛒 Groceries',  color: '#4a7c3f' },
 };
 
 const PLACES = [
@@ -355,6 +452,10 @@ const PLACES = [
   { name: 'Hội An Lune Center for the Performing Arts', cat: 'culture', note: 'World-class performances in a stunning riverside venue.', lat: 15.8793, lng: 108.3363, url: 'https://www.google.com/maps/place/H%E1%BB%99i+An+Lune+Center+for+the+Performing+Arts/data=!4m2!3m1!1s0x31420e7e38509d01:0x6bc5e7726a81b4c5' },
   { name: 'Hội An Ancient Town (Old Town)',      cat: 'culture', note: 'The UNESCO-listed ancient town. Explore on foot at sunrise or dusk.', lat: 15.8800, lng: 108.3360, url: 'https://www.google.com/maps/place/Old+Town/data=!4m2!3m1!1s0x31420e7efc19667d:0x2f53b38bfba265bc' },
   { name: 'Cổng Chùa Bà Mụ',                    cat: 'culture', note: 'Ancient temple gate — a quiet, photogenic spot off the tourist trail.', lat: 15.8779, lng: 108.3303, url: 'https://www.google.com/maps/place/C%E1%BB%95ng+ch%C3%B9a+B%C3%A0+M%E1%BB%A5/data=!4m2!3m1!1s0x31420f000b629463:0xf1bd317bef32799f' },
+
+  // ── Groceries ─────────────────────────────────────────────────
+  { name: 'Moon Milk',                           cat: 'grocery', note: 'International & organic grocery. Western imports, fresh produce, deli, and dairy — the expat staple for a full fridge.', lat: 15.8796, lng: 108.3395, url: 'https://www.google.com/maps/search/Moon+Milk+712+Hai+Ba+Trung+Hoi+An' },
+  { name: 'Ba Le Market (Belay Market)',          cat: 'grocery', note: 'Local residential market in Cẩm Châu — fresh produce, meat, seafood, and everyday Vietnamese ingredients at market prices.', lat: 15.8873, lng: 108.3448, url: 'https://www.google.com/maps/search/Ba+Le+Market+Cam+Chau+Hoi+An' },
 ];
 
 // ── Cards + Filter + Search ───────────────────────────────────────
@@ -365,11 +466,13 @@ const markers = {};
 
 function render() {
   const grid = document.getElementById('cardsGrid');
-  const filtered = PLACES.filter(p => {
-    const matchCat = activeCat === 'all' || p.cat === activeCat;
-    const matchSearch = !searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal);
-    return matchCat && matchSearch;
-  });
+  const filtered = PLACES
+    .map((p, i) => ({ ...p, _i: i }))
+    .filter(p => {
+      const matchCat = activeCat === 'all' || p.cat === activeCat;
+      const matchSearch = !searchVal || p.name.toLowerCase().includes(searchVal) || (p.note||'').toLowerCase().includes(searchVal);
+      return matchCat && matchSearch;
+    });
 
   document.getElementById('countLbl').textContent = filtered.length + ' place' + (filtered.length !== 1 ? 's' : '');
 
@@ -390,14 +493,13 @@ function render() {
 
   grid.innerHTML = filtered.map(p => {
     const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
-    return `<div class="place-card" data-cat="${p.cat}">
+    const d = distFromHome(p.lat, p.lng);
+    const distHtml = d ? `<div class="card-dist">🛵 ~${d.mins} min &nbsp;·&nbsp; ${d.km} km from home</div>` : '';
+    return `<div class="place-card" data-cat="${p.cat}" onclick="openPlace(${p._i})">
       <span class="card-cat ${p.cat}">${catLabel}</span>
       <div class="card-name">${p.name}</div>
       ${p.note ? `<div class="card-note">${p.note}</div>` : ''}
-      <a class="card-link" href="${p.url}" target="_blank" rel="noopener">
-        View on Maps
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 9.5l7-7M4 2.5h5.5V8"/></svg>
-      </a>
+      ${distHtml}
     </div>`;
   }).join('');
 }
@@ -417,6 +519,43 @@ document.getElementById('searchInput').addEventListener('input', e => {
 
 // Render cards immediately — independent of map
 render();
+
+// ── Place modal ───────────────────────────────────────────────────
+function openPlace(idx) {
+  const p = PLACES[idx];
+  const catLabel = (CAT_LABELS[p.cat] || {}).label || p.cat;
+  const d = distFromHome(p.lat, p.lng);
+
+  document.getElementById('modalCat').textContent = catLabel;
+  document.getElementById('modalCat').className = 'card-cat ' + p.cat;
+  document.getElementById('modalName').textContent = p.name;
+  document.getElementById('modalNote').textContent = p.note || '';
+  document.getElementById('modalNote').style.display = p.note ? '' : 'none';
+
+  const distEl = document.getElementById('modalDist');
+  if (d) {
+    distEl.innerHTML = `🛵 &nbsp;~${d.mins} min &nbsp;·&nbsp; ${d.km} km from ${HOME_NAME}`;
+    distEl.style.display = '';
+  } else {
+    distEl.style.display = 'none';
+  }
+
+  document.getElementById('modalMapsBtn').href = p.url;
+
+  const dirUrl = `https://www.google.com/maps/dir/${HOME_LAT},${HOME_LNG}/${p.lat || ''},${p.lng || ''}/${encodeURIComponent(p.name + ' Hoi An')}`;
+  document.getElementById('modalDirBtn').href = dirUrl;
+
+  const modal = document.getElementById('placeModal');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePlace() {
+  document.getElementById('placeModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePlace(); });
 
 // ── Map (init after full page load) ─────────────────────────────
 function catColor(cat) { return (CAT_LABELS[cat] || {}).color || '#86a2a6'; }
@@ -447,6 +586,13 @@ window.addEventListener('load', function() {
       `);
       markers[i] = m;
     });
+
+    // Home marker
+    const homeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="38" viewBox="0 0 32 38"><path fill="#1a1a18" stroke="#ede0d1" stroke-width="1.5" d="M16 0C8.268 0 2 6.268 2 14c0 10.5 14 24 14 24s14-13.5 14-24C30 6.268 23.732 0 16 0z"/><text x="16" y="19" text-anchor="middle" font-size="13" font-family="Arial" fill="#ede0d1">🏡</text></svg>`;
+    const homeIcon = L.divIcon({ html: homeSvg, className: '', iconSize: [32, 38], iconAnchor: [16, 38], popupAnchor: [0, -40] });
+    L.marker([HOME_LAT, HOME_LNG], { icon: homeIcon, zIndexOffset: 1000 })
+      .addTo(map)
+      .bindPopup(`<div class="popup-name">🏡 Ta.Garden</div><div class="popup-cat" style="color:#86a2a6;font-size:10px;letter-spacing:.1em;text-transform:uppercase;">Home base</div>`);
 
     setTimeout(() => map.invalidateSize(), 100);
   } catch(e) {

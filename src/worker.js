@@ -1,7 +1,7 @@
 // RESEND_API_KEY must be set as a secret in Cloudflare Workers dashboard
 // (Settings → Variables & Secrets → Add Secret → RESEND_API_KEY)
 const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
-const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
+const FROM = 'Ta.Garden <hi@soulandlunawellness.com>';
 const REPLY_TO = 'hi@soulandlunawellness.com';
 // ── Stripe room-specific payment links (VND fixed-price) ─────────────────────
 // IMPORTANT: Replace PLACEHOLDER URLs with real Stripe payment links.

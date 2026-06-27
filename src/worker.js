@@ -2,6 +2,7 @@
 // (Settings → Variables & Secrets → Add Secret → RESEND_API_KEY)
 const TO_EMAILS = ['ashleyedwards305@gmail.com', 'hi@soulandlunawellness.com'];
 const FROM = 'Ta.Garden <hello@soulandlunawellness.com>';
+const REPLY_TO = 'hi@soulandlunawellness.com';
 // ── Stripe room-specific payment links (VND fixed-price) ─────────────────────
 // IMPORTANT: Replace PLACEHOLDER URLs with real Stripe payment links.
 // To create: Stripe Dashboard → Payment Links → Create → set fixed VND price.
@@ -264,7 +265,7 @@ async function appendLog(env, enqId, entry) {
 }
 
 async function sendAndLog(env, enqId, type, to, subject, html, replyTo) {
-  const res = await resend(FROM, to, subject, html, replyTo || null, env);
+  const res = await resend(FROM, to, subject, html, replyTo || REPLY_TO, env);
   const status = res?.ok ? 'sent' : 'failed';
   await appendLog(env, enqId, { type, to, subject, emailStatus: status });
   return res;
